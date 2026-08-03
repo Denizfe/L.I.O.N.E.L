@@ -26,3 +26,24 @@ node_modules/
 # os
 Thumbs.db
 desktop.ini
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+.idea/
+.vscode/
+*.log
+models/
+artifacts/
+*.onnx
+*.gguf
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+data/
+tmp/
+.cache/
