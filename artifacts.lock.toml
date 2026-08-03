@@ -1,0 +1,14 @@
+# SUPERSEDED — do not edit, do not read for current state.
+#
+# The authoritative lockfile is  artifacts.lock.yaml  (schema v3).
+# Current verification state and residual risks:  Artifact_Verification_Report.md
+# Gate:  bash scripts/verify_artifacts.sh
+#
+# This file is retained only so that a stale reference to artifacts.lock.toml fails
+# loudly with a pointer instead of silently reading obsolete hashes.
+
+[superseded]
+by      = "artifacts.lock.yaml"
+on      = "2026-08-02"
+reason  = "Moved to YAML with per-artifact verification tier, method, and retrieval date."
+report  = "Artifact_Verification_Report.md"

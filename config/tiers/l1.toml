@@ -1,0 +1,21 @@
+# Tier L1 — Host Runtime + Cluster Runtime on Minikube, same machine. (ADR-0007)
+# Proves service boundaries without leaving the box. Loopback only.
+
+[tier]
+active = "l1"
+network_allowed = "loopback"
+
+[brain]
+provider = "ollama"              # in-cluster
+
+[services]
+memory  = "http://127.0.0.1:8081"
+brain   = "http://127.0.0.1:8082"
+stt     = "grpc://127.0.0.1:8083"
+tts     = "grpc://127.0.0.1:8084"
+
+[telemetry]
+otlp_endpoint = "http://127.0.0.1:4317"
+
+[security]
+mtls_required = false            # loopback only (v1.0 binding rule preserved)

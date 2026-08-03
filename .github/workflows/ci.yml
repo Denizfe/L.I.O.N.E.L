@@ -1,0 +1,246 @@
+# .github/workflows/ci.yml — L.I.O.N.E.L policy pipeline.
+#
+# THIS PIPELINE ENFORCES THE ARCHITECTURE. It is not a linter with opinions: every gate
+# corresponds to a recorded decision, and a decision with no test is a preference.
+#
+# DESIGN
+#   * One job per gate. Jobs are INDEPENDENT — no `needs:` between policy gates, so a
+#     failure never cascades and hides the other fifteen results. You get the whole
+#     picture from one run instead of peeling an onion across five pushes.
+#   * Every gate runs standalone locally:  python3 ci/gates/gate_<name>.py
+#     or via the runner:                   bash ci/run_gates.sh <name>
+#   * Exit codes: 0 pass · 1 policy violation · 2 the gate itself is broken.
+#     A broken gate is not a passing build and not a failing repository. Collapsing
+#     those teaches people to ignore red, which is how a gate stops being a gate.
+#
+# CURRENT STATE (Phase 0)
+#   15/16 gates green. `artifacts` is RED BY DESIGN — one artifact digest is unresolved
+#   and ADR-0013 blocks G0 until it is zero. See Artifact_Verification_Report.md §5.
+#   The l0-conformance gate is a stub: it cannot run until Phase 6 builds the sensory
+#   harness. It is wired now so that offline operation cannot erode unnoticed (ADR-0007).
+
+name: lionel-policy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NO_COLOR: "1"
+  PYTHONPATH: ci/gates
+
+jobs:
+
+  # ── Structural ─────────────────────────────────────────────────────────────
+  structure:
+    name: "structure · repository layout"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_structure.py
+
+  adr:
+    name: "adr · decision records"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_adr.py
+
+  contracts:
+    name: "contracts · metadata + manifest"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_contracts.py
+
+  jsonschema:
+    name: "jsonschema · schemas + examples"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml jsonschema
+      - run: python3 ci/gates/gate_jsonschema.py
+
+  protobuf:
+    name: "protobuf · compile + field hygiene"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml grpcio-tools
+      - run: python3 ci/gates/gate_protobuf.py
+
+  # ── Supply chain ───────────────────────────────────────────────────────────
+  artifacts:
+    name: "artifacts · lockfile integrity"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # RED BY DESIGN until every artifact is pinned (ADR-0013).
+      - run: python3 ci/gates/gate_artifacts.py
+
+  docker-digests:
+    name: "docker-digests · immutable pinning"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_docker_digests.py
+
+  licenses:
+    name: "licenses · allowlist + review"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_licenses.py
+
+  dependencies:
+    name: "dependencies · bounds + policy"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_dependencies.py
+
+  # ── Hygiene ────────────────────────────────────────────────────────────────
+  no-latest:
+    name: "no-latest · mutable tags"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_no_latest.py
+
+  no-pending:
+    name: "no-pending · placeholders"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_no_pending.py
+
+  no-todo:
+    name: "no-todo · unregistered markers"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_no_todo.py
+
+  secrets:
+    name: "secrets · credential scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # history matters: a rotated secret is still in it
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_secrets.py
+
+  markdown:
+    name: "markdown · links + structure"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_markdown.py
+
+  shell:
+    name: "shell · script policy"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - run: python3 ci/gates/gate_shell.py
+
+  # ── The one that matters most ──────────────────────────────────────────────
+  architecture:
+    name: "architecture · ADR conformance"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # Enforces ADR-0006, 0007, 0008, 0009, 0010, 0011, 0012, 0016, 0018, 0025, 0026.
+      # An architectural rule with no test is a preference. This job is the test.
+      - run: python3 ci/gates/gate_architecture.py
+
+  # ── Meta ───────────────────────────────────────────────────────────────────
+  gate-self-test:
+    name: "gate-self-test · gates catch violations"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml jsonschema grpcio-tools
+      # A gate that passes a clean repo but would miss a real violation is decoration.
+      # This plants known violations and asserts each is caught.
+      - run: bash ci/self_test.sh
+
+  # ── Standing gate, stubbed until Phase 6 ───────────────────────────────────
+  #
+  # ADR-0007. A change that improves L2/L3 while breaking L0 is a REJECTED change,
+  # not a tradeoff.
+  #
+  # This job was previously two `echo` statements: it exited 0 and reported a green
+  # checkmark for asserting nothing. There is a third state the original comment did
+  # not consider — present, green, and hollow — which is worse than absent, because
+  # an absent gate is visibly missing and a green stub is not.
+  #
+  # It now enforces eight invariants and installs a network egress guard on itself.
+  l0-conformance:
+    name: "l0-conformance · offline invariants (BLOCKING — ADR-0007)"
+    runs-on: ubuntu-latest
+    needs: [structure, contracts, architecture]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # Proves the egress guard is armed before trusting anything the gate reports.
+      - name: Prove the network egress guard blocks outbound connections
+        run: python3 ci/gates/gate_l0_conformance.py --prove-egress-guard
+      # Eight invariants, enforced. Replaces the `echo` stubs that reported green
+      # while asserting nothing — a hollow gate is worse than an absent one.
+      - name: L0 offline conformance
+        run: python3 ci/gates/gate_l0_conformance.py

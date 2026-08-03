@@ -1,0 +1,277 @@
+# ci/policy/policy.yaml — declarative CI policy.
+#
+# Thresholds, allowlists and exemptions live HERE, not scattered through gate code,
+# for the same reason ADR-0012 puts tool authorization in config: a policy you can
+# read as a diff is a policy that gets reviewed.
+#
+# Every exemption must carry an owner and an expiry condition. An exemption with no
+# route to removal is not an exemption, it is a silently lowered standard.
+
+version: 1
+phase: "0"
+
+repository:
+  # Phase 0 forbids runtime code. This is the single loudest architectural signal
+  # in the repo and it is machine-checked (ADR: MASTER_PLAN_v2 Phase 0).
+  runtime_code_forbidden_until: "G0"
+  runtime_code_globs: ["src/lionel/**/*.py"]
+
+  required_paths:
+    - MASTER_PLAN_v2.md
+    - README.md
+    - artifacts.lock.yaml
+    - Artifact_Verification_Report.md
+    - .gitattributes
+    - .gitignore
+    - contracts/MANIFEST.json
+    - contracts/README.md
+    - contracts/Contract_Inventory.md
+    - docs/decisions/README.md
+    - docs/LATENCY_BUDGET.md
+    - ci/policy/policy.yaml
+
+  required_dirs:
+    - contracts/core/v1
+    - contracts/mcp/v1
+    - contracts/events/v1
+    - contracts/media/v1
+    - contracts/grpc/v1
+    - docs/decisions
+    - config/tiers
+    - config/policy
+    - ci/gates
+    - scripts
+
+  # ADR-0011 abolished shell execution. Its absence is a decision, so it is checked.
+  forbidden_paths:
+    - path: src/lionel/capabilities/shell
+      why: "ADR-0011 abolished arbitrary shell execution. This directory must never exist."
+    # MASTER_PLAN.md is intentionally retained as a POINTER STUB. It reduces ambiguity
+    # rather than creating it: a stale reference lands on a file that says which document
+    # is authoritative, instead of silently reading a superseded plan.
+
+adr:
+  dir: docs/decisions
+  expected_count: 28
+  required_sections: ["## Context", "## Decision", "## Consequences", "## Alternatives Rejected", "## Verification"]
+  valid_statuses: ["Accepted", "Provisional", "Superseded", "Proposed", "Deprecated"]
+  # ADR-0004 is a superseded record and intentionally has a different shape.
+  shape_exempt:
+    - id: "0004"
+      why: "Superseded record. Uses Original Context / Original Decision / Why It Was Superseded / What Carried Forward."
+      owner: architecture
+
+contracts:
+  dir: contracts
+  manifest: contracts/MANIFEST.json
+  required_x_lionel: [version, adr, stability, plane, owner, producer, consumers, compatibility]
+  required_compatibility: [since, breaking_changes, notes]
+  valid_planes: [control, data, internal]
+  valid_stability: [stable, provisional, deprecated]
+  valid_owners: [core-orchestration, brain, memory, capabilities, sensory, platform, observability]
+  ulid_pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+
+artifacts:
+  lockfile: artifacts.lock.yaml
+  valid_tiers: [A, B, C, D, E]
+  valid_provenance: [host-published-lfs, registry-manifest, vcs-commit, git-blob-sha1, local-tofu, pinned-model-id, project-produced]
+  # Tier D is a single uncorroborated mirror. Allowed, but never silently.
+  max_tier_d: 1
+  require_blocker_classification: true
+  require_reproducible_alternative: true
+
+docker:
+  # ADR-0013. A tag is a mutable pointer; only a digest is a pin.
+  require_digest: true
+  digest_pattern: "^sha256:[0-9a-f]{64}$"
+  forbid_tags: ["latest", "main", "master", "dev", "edge", "stable"]
+
+placeholders:
+  # ADR-0013: a fabricated value that looks real is worse than an absent one.
+  forbidden_tokens: ["PENDING", "CHANGEME", "REPLACEME", "XXXXXX", "<pinned-tag>"]
+  # UNRESOLVED is a legitimate, documented state — not a placeholder.
+  allowed_tokens: ["UNRESOLVED", "NOT_YET_BUILT"]
+
+todo:
+  forbid: ["TODO", "FIXME", "HACK", "XXX:"]
+  # A registered TODO carries an owner and the gate that removes it.
+  # An unregistered TODO fails the build. An entry with no unblocked_by is rejected.
+  registry:
+    - pattern: "TODO wire runner"
+      path_glob: ".github/workflows/ci.yml"
+      owner: platform
+      unblocked_by: "M3 — replaced by real gates in this milestone"
+    - pattern: "TODO"
+      path_glob: ".github/workflows/ci.yml"
+      owner: platform
+      unblocked_by: "G6 — L0 conformance needs the sensory harness to exist"
+
+secrets:
+  # NO PATH EXCLUSIONS. Every file in the repository is scanned, including ci/.
+  # See Secret_Scanning_Design.md for why this is now possible.
+  #
+  # Each pattern declares:
+  #   regex            the detector
+  #   sample_parts     fragments that JOIN into a matching credential at runtime.
+  #                    Never a literal — the separators here break the pattern, and
+  #                    SEC-SELF-SPEC proves it on every run.
+  #   negative_sample  a near-miss that MUST NOT match, so a regex loosened by a
+  #                    typo (e.g. a stray `?`) fails loudly instead of silently
+  #                    matching everything.
+  patterns:
+    - id: SEC-AWS
+      regex: "AKIA[0-9A-Z]{16}"
+      label: "AWS access key id"
+      sample_parts: ["AKIA", "IOSFODNN7EXAMPLE"]
+      negative_sample: "AKIA-not-a-key"
+    - id: SEC-GH
+      regex: "gh[pousr]_[A-Za-z0-9]{36,}"
+      label: "GitHub token"
+      sample_parts: ["ghp", "_", "0123456789abcdefghijABCDEFGHIJklmnop12"]
+      negative_sample: "ghp_short"
+    - id: SEC-ANTHROPIC
+      regex: "sk-ant-[A-Za-z0-9_\\-]{20,}"
+      label: "Anthropic API key"
+      sample_parts: ["sk-ant-", "0123456789abcdefghijABCDEF"]
+      negative_sample: "sk-ant-tooshort"
+    - id: SEC-OPENAI
+      regex: "sk-[A-Za-z0-9]{32,}"
+      label: "OpenAI-style key"
+      sample_parts: ["sk-", "0123456789abcdefghijABCDEFGHIJ0123456"]
+      negative_sample: "sk-tooshort"
+    - id: SEC-PEM
+      regex: "-----BEGIN [A-Z ]*PRIVATE KEY-----"
+      label: "private key"
+      sample_parts: ["-----BEGIN ", "RSA PRIVATE KEY-----"]
+      negative_sample: "-----BEGIN CERTIFICATE-----"
+    - id: SEC-SLACK
+      regex: "xox[baprs]-[A-Za-z0-9-]{10,}"
+      label: "Slack token"
+      sample_parts: ["xox", "b-", "0123456789abcdef"]
+      negative_sample: "xoxb-short"
+
+  # ADR-0015: config references secrets by URI, never by value.
+  require_secret_uri_scheme: "^secret://(env|file|dpapi|k8s)/[A-Za-z0-9_./-]+$"
+  forbid_env_interpolation: true
+
+licenses:
+  allow:
+    - MIT
+    - Apache-2.0
+    - BSD-2-Clause
+    - BSD-3-Clause
+    - ISC
+    - MPL-2.0
+    - Unlicense
+    - CC0-1.0
+    - project-owned
+  # Flagged rather than blocked: correct for personal use, a problem if distributed.
+  # Licences genuinely unresolved upstream. Same contract as todo.registry: an owner and
+  # the gate that closes it. Deferred is acceptable; forgotten is not.
+  unresolved_registry:
+    - artifact: models.piper_tr_dfki
+      owner: sensory
+      resolve_by: "G6c"
+      why: "Piper voice licences vary per MODEL_CARD; must be read before release."
+    - artifact: models.piper_tr_dfki_config
+      owner: sensory
+      resolve_by: "G6c"
+      why: "Inherits the voice licence; resolves with it."
+    - artifact: models.wake_bootstrap
+      owner: sensory
+      resolve_by: "G6a"
+      why: "openWakeWord model licence is ambiguous (NC vs Apache). Self-liquidating — ADR-0023 replaces this model."
+  review_required:
+    - id: CC-BY-NC-SA-4.0
+      why: "Non-commercial. Fine for personal use; blocks distribution."
+    - id: GPL-3.0
+      why: "Strong copyleft. Would impose obligations on the whole project."
+    - id: AGPL-3.0
+      why: "Network copyleft. Incompatible with shipping a service without source release."
+
+dependencies:
+  manifest: pyproject.toml
+  require_version_bounds: true
+  forbid_packages:
+    - name: requests
+      why: "httpx is already a dependency. Two HTTP clients is drift, not choice."
+  require_lockfile: uv.lock
+  lockfile_required_at: "G1"
+
+shell:
+  require_strict_mode: true              # set -euo pipefail
+  require_lf_endings: true               # CRLF in a .sh fails with \r: command not found
+  forbid_patterns:
+    - id: SH-CURLPIPE
+      regex: "curl[^|]*\\|\\s*(ba)?sh"
+      why: "Piping a download straight into a shell executes unverified remote code."
+    - id: SH-RMRF-ROOT
+      regex: "rm\\s+-rf\\s+/(\\s|$)"
+      why: "Unbounded recursive delete from root."
+    - id: SH-EVAL
+      regex: "\\beval\\s+\"?\\$"
+      why: "eval on a variable is command injection waiting for the right input."
+
+architecture:
+  # ADR-0009: callers branch on ProviderCapabilities, never on provider identity.
+  provider_names: [anthropic, ollama, llamacpp]
+  provider_branch_allowed_dirs: ["src/lionel/brain/providers", "contracts", "ci", "docs", "evals"]
+  # ADR-0006: the control plane never carries media payload.
+  control_plane_dirs: ["contracts/mcp", "contracts/events", "contracts/core"]
+  media_payload_keys: ["payload_b64", "payload", "pcm", "audio_bytes"]
+  # ADR-0012: metadata that must never reach a remote peer.
+  mcp_tool_forbidden_fields: [side_effect, trust_required, rate_limit_per_minute, audit, idempotency_key_param]
+  # ADR-0007: L0 is the autonomy guarantee.
+  l0_tier_file: config/tiers/l0.toml
+  l0_forbidden_providers: [anthropic]
+  l0_required_settings:
+    network_allowed: "false"
+
+markdown:
+  # MASTER_PLAN_v1.md is a frozen historical record, preserved verbatim by decision.
+  # Linting it would mean editing it, which would destroy the thing it exists to be.
+  exempt_paths:
+    - MASTER_PLAN_v1.md
+  exempt_reasons:
+    MASTER_PLAN_v1.md: "frozen historical record, preserved verbatim"
+  check_internal_links: true
+  check_heading_hierarchy: true
+  forbid_trailing_whitespace: true
+  max_heading_jump: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# L0 CONFORMANCE — ADR-0007. The offline autonomy guarantee.
+# This section belongs to gate_l0_conformance.py alone. No other gate reads it.
+# ─────────────────────────────────────────────────────────────────────────────
+l0:
+  tier_file: config/tiers/l0.toml
+  # Settings that MUST hold in the L0 tier config, exactly.
+  required_settings:
+    network_allowed: "false"
+    mtls_required: "false"      # no network boundary exists to protect
+  # Providers that declare requires_network and therefore cannot serve L0.
+  forbidden_providers: [anthropic]
+  # Every L0 service must be in-process. A URL means a network hop.
+  required_service_placement: inproc
+  # Runtime surface examined for hidden shell execution (ADR-0011).
+  runtime_surface: ["src/lionel", "config"]
+  shell_execution_patterns:
+    - "shell\\s*=\\s*True"
+    - "os\\.system\\s*\\("
+    - "subprocess\\.(call|run|Popen|check_output)\\s*\\([^)]*shell"
+    - "\\bcommands\\.getoutput\\("
+    - "\\beval\\s*\\(\\s*[\"']?\\$"
+    - "curl[^|]*\\|\\s*(ba)?sh"
+  # Config reachable by the L0 runtime. Images here must be digest-pinned.
+  l0_reachable_config: ["config/tiers/l0.toml", "config/lionel.toml", "config/capabilities.registry.json"]
+  mutable_tags: [latest, main, master, dev, edge, stable]
+  # Contracts the L0 turn loop depends on.
+  required_contracts:
+    - contracts/events/v1/trust-context.schema.json
+    - contracts/events/v1/cancellation.schema.json
+    - contracts/mcp/v1/tool-call.schema.json
+    - contracts/mcp/v1/tool-result.schema.json
+    - contracts/mcp/v1/policy-ruleset.schema.json
+    - contracts/media/v1/audio-frame.schema.json
+  control_plane_dirs: ["contracts/mcp", "contracts/events", "contracts/core"]
+  media_payload_keys: [payload_b64, payload, pcm, audio_bytes, raw_audio]

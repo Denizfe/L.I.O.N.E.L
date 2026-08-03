@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/policy-ruleset.schema.json",
+  "title": "PolicyRuleset",
+  "description": "Schema for the parsed form of config/policy/*.toml (ADR-0012). Rules are DECLARATIVE, not code, so authorization is reviewable as a diff and testable without running the agent.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0012",
+      "ADR-0026",
+      "ADR-0011"
+    ],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "capabilities",
+    "producer": [
+      "operator (config file)"
+    ],
+    "consumers": [
+      "policy_engine"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Config schema: additionalProperties is FALSE throughout (ADR-0015). Changing rule EVALUATION ORDER is MAJOR even with no schema change — order determines which rule matches, and a reordering silently alters every decision. The order is: first match wins, evaluated top to bottom, with defaults.decision as the fallthrough."
+    }
+  },
+  "type": "object",
+  "required": [
+    "defaults",
+    "rule"
+  ],
+  "properties": {
+    "defaults": {
+      "type": "object",
+      "required": [
+        "decision"
+      ],
+      "properties": {
+        "decision": {
+          "type": "string",
+          "const": "deny",
+          "description": "PINNED TO deny BY THE SCHEMA. Not a default that can be overridden — allow-by-default means a forgotten tool registration becomes an open door. If this ever needs to change it requires a superseding ADR, and the schema change makes that visible."
+        },
+        "audit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Log allows AND denies. A log of refusals alone cannot reconstruct what the system actually did."
+        }
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Evaluated top to bottom. FIRST MATCH WINS. Falls through to defaults.decision.",
+      "items": {
+        "$ref": "#/$defs/Rule"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Rule": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Appears verbatim in the AuditRecord.rule_name, so it should read well in an incident review."
+        },
+        "match": {
+          "$ref": "#/$defs/Match"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "deny",
+            "confirm"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Surfaced to the user on a denial and recorded in the audit log."
+        },
+        "confirmation_scope": {
+          "type": "string",
+          "enum": [
+            "per_invocation"
+          ],
+          "description": "ONLY per_invocation is permitted. A session-wide 'yes to all' is how confirmation prompts become rubber stamps, which is the failure mode confirmation exists to avoid. The enum has one value on purpose."
+        },
+        "rate_limit_per_minute": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_calls_per_turn": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Runaway containment. A tool-calling bug can loop; this bounds the blast radius and the bill."
+        },
+        "on_exceeded": {
+          "type": "string",
+          "enum": [
+            "halt_turn",
+            "deny_call"
+          ],
+          "default": "deny_call"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Match": {
+      "type": "object",
+      "description": "All present conditions must hold (AND). An absent condition is a wildcard.",
+      "properties": {
+        "any": {
+          "type": "boolean",
+          "const": true,
+          "description": "Matches everything. Use only for a terminal containment rule."
+        },
+        "tool": {
+          "type": "string",
+          "description": "Exact ToolSpec name, or a `capability.*` prefix glob."
+        },
+        "capability": {
+          "type": "string"
+        },
+        "side_effect": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write",
+            "destructive"
+          ]
+        },
+        "trust": {
+          "type": "string",
+          "enum": [
+            "operator",
+            "user_originated",
+            "tool_result",
+            "external_content",
+            "untrusted"
+          ],
+          "description": "Matches the EFFECTIVE turn trust — the minimum across all sources (trust-context.schema.json). `untrusted` is an alias for external_content, retained because it reads more clearly in a deny rule."
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "l0",
+            "l1",
+            "l2",
+            "l3"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "defaults": {
+        "decision": "deny",
+        "audit": true
+      },
+      "rule": [
+        {
+          "name": "reads are broadly permitted",
+          "match": {
+            "side_effect": "read"
+          },
+          "decision": "allow",
+          "rate_limit_per_minute": 120
+        },
+        {
+          "name": "writes require user-originated trust",
+          "match": {
+            "side_effect": "write",
+            "trust": "user_originated"
+          },
+          "decision": "allow",
+          "rate_limit_per_minute": 20
+        },
+        {
+          "name": "writes from untrusted content are denied",
+          "match": {
+            "side_effect": "write",
+            "trust": "untrusted"
+          },
+          "decision": "deny",
+          "reason": "ADR-0012: injected content must not reach a write tool."
+        },
+        {
+          "name": "destructive requires per-invocation confirmation",
+          "match": {
+            "side_effect": "destructive"
+          },
+          "decision": "confirm",
+          "confirmation_scope": "per_invocation",
+          "rate_limit_per_minute": 5
+        },
+        {
+          "name": "runaway containment",
+          "match": {
+            "any": true
+          },
+          "max_calls_per_turn": 40,
+          "on_exceeded": "halt_turn"
+        }
+      ]
+    }
+  ]
+}

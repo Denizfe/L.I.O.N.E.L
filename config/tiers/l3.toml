@@ -1,0 +1,19 @@
+# Tier L3 — L2 plus Claude API as the brain. (ADR-0007)
+# Maximum capability, minimum independence. Legitimate and useful — but it is the rung
+# that must never become the only one that works.
+
+[tier]
+active = "l3"
+network_allowed = true
+
+[brain]                          # ADR-0001, ADR-0009
+provider = "anthropic"
+api_key = "secret://env/ANTHROPIC_API_KEY"     # ADR-0015 — never interpolated
+fallback_chain = ["anthropic", "ollama"]       # degrades toward local, not away from it
+
+[brain.quota]                    # a metered API on an autonomous loop needs a hard stop
+max_spend_per_day_usd = 10.0
+on_exceeded = "halt"
+
+[security]
+mtls_required = true

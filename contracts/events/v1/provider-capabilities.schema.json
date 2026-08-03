@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/provider-capabilities.schema.json",
+  "title": "ProviderCapabilities and HealthStatus",
+  "description": "What a BrainProvider declares about itself (ADR-0009). Callers branch on these flags, NEVER on provider name — that rule is what makes ADR-0001's provider independence real rather than nominal, and a static check enforces it.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0009",
+      "ADR-0001"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "brain",
+    "producer": [
+      "anthropic_provider",
+      "ollama_provider",
+      "llamacpp_provider"
+    ],
+    "consumers": [
+      "brain_gateway",
+      "turn_executor",
+      "provider_router",
+      "eval_harness"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Adding an optional capability flag is MINOR, but every new flag needs a documented default for providers that predate it, and the default must be the CONSERVATIVE value (false / unsupported). A flag defaulting to true would make an old adapter claim a capability it lacks."
+    }
+  },
+  "type": "object",
+  "required": [
+    "provider",
+    "model",
+    "native_tools",
+    "structured_output",
+    "streaming",
+    "max_context_tokens"
+  ],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "enum": [
+        "anthropic",
+        "ollama",
+        "llamacpp"
+      ]
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Content hash where available. Pins evaluation results to an exact artifact (ADR-0013, ADR-0021) — 'llama3:8b' is not a reproducible identifier. Null where the provider publishes none — Ollama tags are not content-addressed."
+    },
+    "native_tools": {
+      "type": "boolean",
+      "description": "True if the provider accepts tool schemas natively. When FALSE the adapter falls back to JSON-schema prompting and MUST set tool_call_reliability to 'degraded' — the caller is entitled to know it is getting the approximation."
+    },
+    "parallel_tool_calls": {
+      "type": "boolean",
+      "default": false
+    },
+    "structured_output": {
+      "type": "boolean",
+      "description": "Schema-constrained generation. When false the adapter uses a documented prompt-based fallback with validation and retry."
+    },
+    "streaming": {
+      "type": "boolean"
+    },
+    "vision": {
+      "type": "boolean",
+      "default": false
+    },
+    "token_counting": {
+      "type": "boolean",
+      "default": false,
+      "description": "False means Usage.input_tokens is estimated. The quota ceiling must then apply a safety margin."
+    },
+    "extended_thinking": {
+      "type": "boolean",
+      "default": false,
+      "description": "Emits thinking_delta StreamEvents."
+    },
+    "cancellation": {
+      "type": "boolean",
+      "default": true,
+      "description": "MUST be true. ADR-0025 makes cancellation non-optional; an adapter that cannot cancel cannot meet the 300 ms barge-in budget and is not admissible."
+    },
+    "max_context_tokens": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_output_tokens": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "tool_call_reliability": {
+      "type": "string",
+      "enum": [
+        "native",
+        "degraded",
+        "unreliable"
+      ],
+      "default": "native",
+      "description": "Set from the eval harness (ADR-0021), not self-asserted. 'unreliable' excludes the provider from turns requiring destructive tools."
+    },
+    "requires_network": {
+      "type": "boolean",
+      "description": "ADR-0007. A provider with requires_network=true MUST NOT be selectable at tier L0. The L0 conformance gate asserts this."
+    },
+    "cost_per_1k_input_usd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "cost_per_1k_output_usd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "en"
+      ],
+      "description": "BCP-47. Must include 'tr' to serve Turkish turns."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "HealthStatus": {
+      "title": "HealthStatus",
+      "description": "Liveness and readiness are DISTINCT. Ollama loading a 30 GB model is alive and not ready; routing a turn to it produces a timeout that looks like a broken assistant.",
+      "type": "object",
+      "required": [
+        "live",
+        "ready",
+        "checked_at"
+      ],
+      "properties": {
+        "live": {
+          "type": "boolean",
+          "description": "The process/endpoint responds at all."
+        },
+        "ready": {
+          "type": "boolean",
+          "description": "Can accept a turn RIGHT NOW. False during model load, warmup, or quota halt."
+        },
+        "checked_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "loading",
+            "warming",
+            "degraded",
+            "quota_exceeded",
+            "unreachable",
+            "error"
+          ]
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "load_progress": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "latency_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "provider": "ollama",
+      "model": "qwen2.5:14b-instruct-q4_K_M",
+      "model_digest": null,
+      "native_tools": true,
+      "parallel_tool_calls": false,
+      "structured_output": false,
+      "streaming": true,
+      "vision": false,
+      "token_counting": false,
+      "extended_thinking": false,
+      "cancellation": true,
+      "max_context_tokens": 32768,
+      "max_output_tokens": 4096,
+      "tool_call_reliability": "degraded",
+      "requires_network": false,
+      "cost_per_1k_input_usd": null,
+      "cost_per_1k_output_usd": null,
+      "languages": [
+        "en",
+        "tr"
+      ]
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5",
+      "model_digest": null,
+      "native_tools": true,
+      "parallel_tool_calls": true,
+      "structured_output": true,
+      "streaming": true,
+      "vision": true,
+      "token_counting": true,
+      "extended_thinking": true,
+      "cancellation": true,
+      "max_context_tokens": 200000,
+      "max_output_tokens": 8192,
+      "tool_call_reliability": "native",
+      "requires_network": true,
+      "languages": [
+        "en",
+        "tr"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+# config/lionel.toml — non-secret base configuration.
+#
+# ADR-0015 layering, in order:
+#   defaults -> this file -> config/tiers/<tier>.toml -> environment -> CLI
+# Typed and validated at load. UNKNOWN KEYS ARE AN ERROR, not a silent ignore.
+#
+# Secrets appear ONLY as secret:// URIs. No ${interpolation} anywhere.
+# Windows paths use forward slashes so Bash does not consume them as escapes (ADR-0002).
+
+[project]
+name = "lionel"
+root = "C:/Users/deniz/Desktop/L.I.O.N.E.L"   # ADR-0002
+
+[tier]
+active = "l0"                                  # ADR-0007. Overridden by LIONEL_TIER.
+
+[brain]                                        # ADR-0001, ADR-0009
+provider = "ollama"                            # anthropic | ollama | llamacpp
+fallback_chain = ["ollama", "llamacpp"]        # M5 degradation; no network deps at L0
+
+[brain.quota]                                  # ADR-0009 — L3 without a ceiling is a liability
+max_tokens_per_turn = 8192
+max_spend_per_day_usd = 5.0
+on_exceeded = "halt"                           # halt | warn
+
+[memory]                                       # ADR-0010
+service_url = "inproc://memory"                # tier config overrides for L1+
+durable_collection = "lionel_memory"
+episodic_collection = "lionel_episodic"
+episodic_ttl_days = 30
+dedup_similarity_threshold = 0.95
+
+[memory.ranking]                               # hybrid, not raw cosine
+weight_similarity = 0.6
+weight_recency    = 0.2
+weight_importance = 0.2
+
+[sensory.audio]
+sample_rate_hz = 16000
+channels = 1
+frame_ms = 80
+
+[sensory.wake]                                 # ONNX only — tflite unsupported on Windows
+model = "hey_jarvis"
+inference_framework = "onnx"
+threshold = 0.5                                # tuned against the negative corpus at G6a
+
+[sensory.vad]
+trailing_silence_ms = 400
+
+[sensory.stt]                                  # ADR-0018 — .en variants are rejected
+model = "large-v3-turbo"
+language = "auto"                              # detection routes TTS engine + normalization
+
+[sensory.tts]                                  # ADR-0017
+default_language = "tr"
+[sensory.tts.engines]
+en = "kokoro"
+tr = "piper"
+
+[locale]                                       # ADR-0023
+identifier_casing = "invariant"                # NEVER locale-dependent for identifiers
+display_casing = "locale_aware"
+
+[policy]                                       # ADR-0012
+default = "deny"
+rules_dir = "config/policy"
+audit_all_decisions = true                     # allows AND denies
+
+[telemetry]                                    # ADR-0019
+enabled = true
+otlp_endpoint = "http://localhost:4317"
+buffer_to_disk_when_unreachable = true         # L0 must still produce telemetry
+buffer_path = "logs/otel-buffer"
+
+[capabilities]
+registry = "config/capabilities.registry.json"
+# ADR-0011: no shell capability exists. There is nothing to disable here.

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/core/v1/metrics.schema.json",
+  "title": "MetricRecord",
+  "description": "A single metric emission. Fixing the shape and the names at Phase 0 is what lets the Phase 5 Grafana dashboards and the docs/LATENCY_BUDGET.md alerts be written once and keep working — a renamed metric silently empties a panel rather than erroring.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0019", "ADR-0007", "ADR-0021"],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "observability",
+    "producer": ["all components via platform/telemetry"],
+    "consumers": ["otel_collector", "prometheus", "grafana", "eval_harness"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "RENAMING A METRIC IS MAJOR and additionally requires updating every dashboard and alert rule in deploy/observability. Changing a metric's `unit` or `type` after release is also MAJOR: Prometheus will happily ingest the new values alongside the old, producing a series that is silently wrong rather than broken. Adding a new metric name is MINOR."
+    }
+  },
+
+  "type": "object",
+  "required": ["name", "type", "value", "emitted_at"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^lionel\\.[a-z_]+(\\.[a-z_]+)+$",
+      "description": "OTel convention: lionel.<component>.<operation>.<measure>. Enforced by pattern so a typo'd metric name fails at emission rather than becoming an orphan series nobody notices."
+    },
+    "type": { "type": "string", "enum": ["counter", "gauge", "histogram", "updowncounter"] },
+    "value": { "type": "number" },
+    "unit": {
+      "type": "string",
+      "enum": ["ms", "s", "bytes", "tokens", "usd", "count", "ratio", "1"],
+      "default": "1",
+      "description": "Histograms in this system are milliseconds unless stated. `1` is the OTel dimensionless unit."
+    },
+    "emitted_at": { "type": "string", "format": "date-time" },
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "tier": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Tier" },
+    "runtime": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Runtime" },
+    "component": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Component" },
+    "labels": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "number", "boolean"] },
+      "description": "Prometheus labels. KEEP CARDINALITY LOW — never put turn_id, session_id, a file path, or free text here. A high-cardinality label is the standard way to take down a Prometheus instance; correlation belongs in traces, not label values."
+    },
+    "budget_target_ms": {
+      "type": ["number", "null"],
+      "description": "Present on latency histograms that map to a row in docs/LATENCY_BUDGET.md. Carrying the target alongside the measurement is what turns the budget from a document into an alert."
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "reserved_names": {
+      "$comment": "Normative inventory. Every histogram maps 1:1 to a LATENCY_BUDGET.md row.",
+      "histograms_ms": [
+        "lionel.wake.detect.duration", "lionel.vad.endpoint.duration",
+        "lionel.stt.transcribe.duration", "lionel.memory.recall.duration",
+        "lionel.brain.first_token.duration", "lionel.brain.total.duration",
+        "lionel.tool.execute.duration", "lionel.policy.evaluate.duration",
+        "lionel.tts.first_audio.duration", "lionel.turn.wake_to_speech.duration",
+        "lionel.interrupt.playback_stop.duration"
+      ],
+      "counters": [
+        "lionel.turn.count", "lionel.turn.degraded.count", "lionel.tool.calls.count",
+        "lionel.policy.denials.count", "lionel.wake.false_accept.count",
+        "lionel.wake.false_reject.count", "lionel.brain.tokens.count",
+        "lionel.telemetry.buffered_offline.count"
+      ],
+      "gauges": ["lionel.brain.ready", "lionel.memory.ready", "lionel.cost.daily_spend_usd"],
+      "alerting": "p95 over target across a 5-minute window. p50 hides the tail the user notices; max fires on every cold start."
+    }
+  },
+
+  "examples": [
+    {
+      "name": "lionel.turn.wake_to_speech.duration",
+      "type": "histogram",
+      "value": 2180.4,
+      "unit": "ms",
+      "emitted_at": "2026-08-02T09:14:05.401Z",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "tier": "l0",
+      "runtime": "host",
+      "component": "session_coordinator",
+      "labels": { "language": "tr", "provider": "ollama" },
+      "budget_target_ms": 2500
+    },
+    {
+      "name": "lionel.policy.denials.count",
+      "type": "counter",
+      "value": 1,
+      "unit": "count",
+      "emitted_at": "2026-08-02T09:20:14.882Z",
+      "tier": "l0",
+      "runtime": "host",
+      "component": "policy_engine",
+      "labels": { "reason": "trust_insufficient", "side_effect": "write" }
+    }
+  ]
+}

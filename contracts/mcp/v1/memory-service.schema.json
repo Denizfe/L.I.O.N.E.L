@@ -1,0 +1,401 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/memory-service.schema.json",
+  "title": "Memory Service MCP surface",
+  "description": "The tool surface the Memory Service exposes (ADR-0010). Qdrant's own qdrant-store and qdrant-find are NOT exposed — callers reach memory only through this interface, which is what stops every caller becoming an ad-hoc memory-policy author.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0010",
+      "ADR-0012",
+      "ADR-0016"
+    ],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "memory",
+    "producer": [
+      "memory_service"
+    ],
+    "consumers": [
+      "tool_router",
+      "context_assembler"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "memory.forget is required from v1.0.0 and MUST NOT become optional. 'No, that's wrong, forget it' has to be actionable, and a memory system without a forget path accumulates errors permanently. Adding a `kind` value is MAJOR: retention policy keys on it and an unknown kind has no defined expiry."
+    }
+  },
+  "type": "object",
+  "required": [
+    "service",
+    "contract_version",
+    "tools"
+  ],
+  "properties": {
+    "service": {
+      "type": "string",
+      "const": "memory"
+    },
+    "contract_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "tools": {
+      "type": "object",
+      "required": [
+        "memory.remember",
+        "memory.recall",
+        "memory.forget"
+      ],
+      "properties": {
+        "memory.remember": {
+          "$ref": "#/$defs/RememberTool"
+        },
+        "memory.recall": {
+          "$ref": "#/$defs/RecallTool"
+        },
+        "memory.forget": {
+          "$ref": "#/$defs/ForgetTool"
+        },
+        "memory.consolidate": {
+          "$ref": "#/$defs/ConsolidateTool"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "RememberTool": {
+      "type": "object",
+      "properties": {
+        "side_effect": {
+          "const": "write"
+        },
+        "trust_required": {
+          "const": "any"
+        },
+        "input": {
+          "type": "object",
+          "required": [
+            "text",
+            "kind"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "durable",
+                "episodic",
+                "decision"
+              ]
+            },
+            "importance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.5
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "en",
+                "tr"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "output": {
+          "type": "object",
+          "required": [
+            "stored"
+          ],
+          "properties": {
+            "stored": {
+              "type": "boolean",
+              "description": "FALSE IS A NORMAL OUTCOME. Ingestion policy may reject a low-salience item, or dedup may fold it into an existing record. Storing everything is what a vector index does; deciding what is worth keeping is what a memory service does."
+            },
+            "id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "stored",
+                "below_salience_threshold",
+                "duplicate_of_existing",
+                null
+              ]
+            },
+            "duplicate_of": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "RecallTool": {
+      "type": "object",
+      "properties": {
+        "side_effect": {
+          "const": "read"
+        },
+        "trust_required": {
+          "const": "any"
+        },
+        "input": {
+          "type": "object",
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "durable",
+                "episodic",
+                "decision",
+                "any"
+              ],
+              "default": "any"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 8
+            },
+            "min_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.3
+            }
+          },
+          "additionalProperties": false
+        },
+        "output": {
+          "type": "object",
+          "required": [
+            "results"
+          ],
+          "properties": {
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "record",
+                  "score"
+                ],
+                "properties": {
+                  "record": {
+                    "$ref": "https://lionel.local/contracts/events/v1/memory-record.schema.json"
+                  },
+                  "score": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "HYBRID rank, not raw cosine: similarity + recency + importance + provenance, weighted per config/lionel.toml [memory.ranking]."
+                  },
+                  "score_components": {
+                    "type": "object",
+                    "properties": {
+                      "similarity": {
+                        "type": "number"
+                      },
+                      "recency": {
+                        "type": "number"
+                      },
+                      "importance": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "description": "Exposed so ranking is debuggable and tunable rather than a black box."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "trust_floor": {
+              "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel",
+              "description": "The MINIMUM trust_level across returned records. The caller MUST fold this into the turn's TrustContext — recalling a memory that originated in a hostile document reintroduces that hostility. Laundering content through memory must not upgrade it."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "ForgetTool": {
+      "type": "object",
+      "description": "ADR-0010's redaction path. Required, never optional.",
+      "properties": {
+        "side_effect": {
+          "const": "destructive"
+        },
+        "trust_required": {
+          "const": "user_originated"
+        },
+        "input": {
+          "type": "object",
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "output": {
+          "type": "object",
+          "required": [
+            "redacted"
+          ],
+          "properties": {
+            "redacted": {
+              "type": "boolean"
+            },
+            "tombstoned": {
+              "type": "boolean",
+              "description": "Text is cleared and the record excluded from retrieval, but a tombstone remains so consolidation cannot resurrect the content from an earlier summary."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "ConsolidateTool": {
+      "type": "object",
+      "description": "Episodic -> durable summarization. Background job; not called by the brain during a turn.",
+      "properties": {
+        "side_effect": {
+          "const": "write"
+        },
+        "trust_required": {
+          "const": "operator"
+        },
+        "input": {
+          "type": "object",
+          "properties": {
+            "older_than_days": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 7
+            },
+            "dry_run": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "output": {
+          "type": "object",
+          "properties": {
+            "consolidated": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "created_durable_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "service": "memory",
+      "contract_version": "1.0.0",
+      "tools": {
+        "memory.remember": {
+          "side_effect": "write",
+          "trust_required": "any",
+          "input": {
+            "text": "Efe prefers Turkish for casual conversation and English for architecture discussions.",
+            "kind": "durable",
+            "importance": 0.8,
+            "tags": [
+              "preference"
+            ],
+            "language": "en"
+          },
+          "output": {
+            "stored": true,
+            "id": "01JQ4XG3H6J9K2M5N8P1Q4R7ST",
+            "reason": "stored",
+            "duplicate_of": null
+          }
+        },
+        "memory.recall": {
+          "side_effect": "read",
+          "trust_required": "any",
+          "input": {
+            "query": "how do we pick which LLM runs the agent?",
+            "kind": "decision",
+            "limit": 3,
+            "min_score": 0.3
+          },
+          "output": {
+            "results": [],
+            "trust_floor": "operator"
+          }
+        },
+        "memory.forget": {
+          "side_effect": "destructive",
+          "trust_required": "user_originated",
+          "input": {
+            "id": "01JQ4XD1QRS4T730V3W6X9Y2ZB",
+            "reason": "user said this was wrong"
+          },
+          "output": {
+            "redacted": true,
+            "tombstoned": true
+          }
+        }
+      }
+    }
+  ]
+}

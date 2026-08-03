@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/turn-event.schema.json",
+  "title": "TurnEvent",
+  "description": "Lifecycle events for a single conversational turn. The turn_id is also the OpenTelemetry trace id, which is what allows one Grafana trace to span both planes and both runtimes (ADR-0006, ADR-0019).",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0006",
+      "ADR-0008",
+      "ADR-0019",
+      "ADR-0025"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "observability",
+    "producer": [
+      "session_coordinator",
+      "turn_executor",
+      "wake",
+      "vad",
+      "stt_service",
+      "tts_service",
+      "memory_service"
+    ],
+    "consumers": [
+      "otel_collector",
+      "grafana",
+      "audit_log"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Adding a `phase` value is MINOR — this enum appears only in outputs and consumers must tolerate unknown phases (a dashboard showing an unrecognised phase is acceptable; refusing to render is not). Changing TurnId format is MAJOR: it is the trace id, and existing traces would not correlate."
+    }
+  },
+  "type": "object",
+  "required": [
+    "turn_id",
+    "phase",
+    "emitted_at",
+    "seq"
+  ],
+  "properties": {
+    "turn_id": {
+      "$ref": "#/$defs/TurnId"
+    },
+    "session_id": {
+      "$ref": "#/$defs/SessionId"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic within a turn. Gaps mean events were dropped; out-of-order means a bug in the emitter, not a network reorder — events are emitted locally."
+    },
+    "phase": {
+      "$ref": "#/$defs/TurnPhase"
+    },
+    "emitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "l0",
+        "l1",
+        "l2",
+        "l3"
+      ],
+      "description": "ADR-0007. Recorded per event because the latency budget differs per tier and a mixed-tier comparison is meaningless."
+    },
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "host",
+        "cluster"
+      ],
+      "description": "ADR-0005."
+    },
+    "component": {
+      "type": "string",
+      "enum": [
+        "session_coordinator",
+        "turn_executor",
+        "context_assembler",
+        "tool_router",
+        "interrupt_controller",
+        "memory_service",
+        "brain_gateway",
+        "stt_service",
+        "tts_service",
+        "audio_io",
+        "wake",
+        "vad"
+      ],
+      "description": "ADR-0008 coordinators plus the services. Constrained so dashboards can group reliably."
+    },
+    "duration_ms": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Set on phase-completion events. Feeds the histograms in docs/LATENCY_BUDGET.md."
+    },
+    "language": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "en",
+        "tr",
+        null
+      ],
+      "description": "Detected utterance language. Routes TTS engine (ADR-0017) and text normalization (ADR-0023)."
+    },
+    "trust": {
+      "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel"
+    },
+    "error": {
+      "$ref": "https://lionel.local/contracts/mcp/v1/error-envelope.schema.json"
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Free-form OTel attributes. See telemetry-attributes.schema.json for the reserved names.",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "TurnId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID — 26 chars, Crockford base32. Chosen over UUIDv4 because ULIDs sort lexicographically by creation time, which makes log and trace listings chronological for free. Doubles as the OpenTelemetry trace id."
+    },
+    "SessionId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "TurnPhase": {
+      "type": "string",
+      "enum": [
+        "wake_detected",
+        "capture_opened",
+        "capture_closed",
+        "stt_started",
+        "stt_partial",
+        "stt_final",
+        "memory_recall_started",
+        "memory_recall_completed",
+        "brain_started",
+        "brain_first_token",
+        "brain_completed",
+        "tool_requested",
+        "tool_policy_evaluated",
+        "tool_started",
+        "tool_completed",
+        "tts_started",
+        "tts_first_audio",
+        "playback_started",
+        "playback_completed",
+        "interrupted",
+        "cancelled",
+        "memory_ingested",
+        "turn_completed",
+        "turn_failed",
+        "turn_degraded"
+      ],
+      "description": "turn_degraded is emitted when a subsystem is unavailable and the turn proceeds with reduced capability (M5). A degraded turn still produces a response — the system must always answer, even if the answer is an honest statement that memory is down."
+    }
+  },
+  "examples": [
+    {
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "session_id": "01JQ4X8ADK1Z5H9RQWE7TY22JP",
+      "seq": 0,
+      "phase": "wake_detected",
+      "emitted_at": "2026-08-02T09:14:03.221Z",
+      "tier": "l0",
+      "runtime": "host",
+      "component": "wake",
+      "duration_ms": 68.4,
+      "language": null,
+      "trust": "user_originated",
+      "attributes": {
+        "lionel.wake.model": "hey_lionel",
+        "lionel.wake.score": 0.91
+      }
+    },
+    {
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "seq": 11,
+      "phase": "turn_degraded",
+      "emitted_at": "2026-08-02T09:14:05.902Z",
+      "tier": "l0",
+      "runtime": "host",
+      "component": "memory_service",
+      "language": "tr",
+      "trust": "user_originated",
+      "attributes": {
+        "lionel.degradation.subsystem": "memory",
+        "lionel.degradation.behavior": "proceed_without_recall",
+        "lionel.degradation.user_informed": true
+      }
+    }
+  ]
+}

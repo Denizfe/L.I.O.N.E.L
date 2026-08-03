@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "contract_set_version": "1.1.0",
+  "released": "2026-08-02",
+  "phase": "0",
+  "status": "proposed",
+  "description": "L.I.O.N.E.L contract set v1. Authored at Phase 0 / M2, before any implementation exists. See contracts/README.md for the compatibility policy.",
+  "negotiation": {
+    "field": "contract_version",
+    "declared_in": "mcp/v1/capability-manifest.schema.json",
+    "rule": "Compare major versions at connect. Server major greater than host major is refused at connect, never at first call.",
+    "adr": "MASTER_PLAN_v2.md M7"
+  },
+  "planes": {
+    "cross_cutting": {
+      "format": "json-schema-2020-12",
+      "path": "core/v1",
+      "transport": "in-process; serialized for telemetry and audit",
+      "adr": [
+        "ADR-0019",
+        "ADR-0009"
+      ],
+      "owner": "observability",
+      "schemas": [
+        "event.schema.json",
+        "health-status.schema.json",
+        "metrics.schema.json"
+      ],
+      "note": "Event is the base envelope every other event specializes. Changing it is the highest-blast-radius change in the contract set."
+    },
+    "control": {
+      "format": "json-schema-2020-12",
+      "path": "mcp/v1",
+      "transport": "MCP over stdio (L0) or Streamable HTTP (L1+)",
+      "adr": [
+        "ADR-0003",
+        "ADR-0006",
+        "ADR-0012"
+      ],
+      "owner": "capabilities",
+      "schemas": [
+        "capabilities-registry.schema.json",
+        "capability-manifest.schema.json",
+        "error-envelope.schema.json",
+        "mcp-tool.schema.json",
+        "memory-service.schema.json",
+        "policy-ruleset.schema.json",
+        "tool-call.schema.json",
+        "tool-result.schema.json"
+      ],
+      "note": "MCPTool is a PROJECTION of the ToolSpec IR, not a second source of truth. Authorization metadata (side_effect, trust_required) is deliberately withheld from the wire — emitting it would tell a remote peer which tool is the soft target."
+    },
+    "internal": {
+      "format": "json-schema-2020-12",
+      "path": "events/v1",
+      "transport": "in-process; serialized for telemetry and audit",
+      "adr": [
+        "ADR-0009",
+        "ADR-0012",
+        "ADR-0019",
+        "ADR-0025"
+      ],
+      "owner": "core-orchestration",
+      "schemas": [
+        "agent-decision.schema.json",
+        "audit-record.schema.json",
+        "cancellation.schema.json",
+        "memory-query.schema.json",
+        "memory-record.schema.json",
+        "provider-capabilities.schema.json",
+        "provider-request.schema.json",
+        "provider-response.schema.json",
+        "stream-event.schema.json",
+        "telemetry-attributes.schema.json",
+        "tool-spec.schema.json",
+        "trust-context.schema.json",
+        "turn-event.schema.json",
+        "workflow-event.schema.json"
+      ]
+    },
+    "data_descriptors": {
+      "format": "json-schema-2020-12",
+      "path": "media/v1",
+      "transport": "data plane only; also the ADR-0027 fixture format",
+      "adr": [
+        "ADR-0006",
+        "ADR-0028",
+        "ADR-0024"
+      ],
+      "owner": "sensory",
+      "schemas": [
+        "audio-frame.schema.json",
+        "vision-frame.schema.json"
+      ],
+      "note": "Separate namespace so the no-PCM-on-the-control-plane invariant stays checkable. Putting these in events/ would have made the invariant check fail, and the tempting fix would have been to weaken the check."
+    },
+    "data_wire": {
+      "format": "protobuf3",
+      "path": "grpc/v1",
+      "transport": "gRPC bidirectional streaming over HTTP/2, mTLS at L2+",
+      "adr": [
+        "ADR-0006",
+        "ADR-0028",
+        "ADR-0022"
+      ],
+      "owner": "sensory",
+      "files": [
+        "common.proto",
+        "stt.proto",
+        "tts.proto"
+      ]
+    }
+  },
+  "invariants": [
+    "No audio or image PAYLOAD appears in any control-plane schema. Descriptors live in media/, payload_b64 is fixtures-only. ADR-0006.",
+    "No schema permits free text destined for a shell interpreter. ADR-0011.",
+    "Every ToolSpec declares side_effect and trust_required; the registry rejects tools that do not. ADR-0026, ADR-0012.",
+    "MCPTool never carries side_effect, trust_required, rate limits or audit flags. Authorization metadata does not leave the system.",
+    "Trust is monotonically non-increasing within a turn. ToolResult.trust_of_output and MemoryQueryResult.trust_floor are both required so no path can restore it. ADR-0012.",
+    "turn_id is present on every event and doubles as the OpenTelemetry trace id. ADR-0019.",
+    "policy defaults.decision is pinned to deny by const. ADR-0012.",
+    "memory.forget is a required tool, never optional. ADR-0010.",
+    "Every schema declares version, plane, owner, producer, consumers and compatibility notes."
+  ],
+  "compatibility": {
+    "policy": "contracts/README.md#compatibility-policy",
+    "wire_payloads": "Consumers MUST ignore unknown properties.",
+    "configuration": "Unknown keys are an ERROR. ADR-0015.",
+    "protobuf": "Removed field numbers are permanently reserved. Never reused."
+  },
+  "ownership": {
+    "model": "module-level, not personal",
+    "escalation": "Any change to a `stable` contract requires an ADR and Efe's approval regardless of owner. Ownership decides who drafts it, not who may skip it.",
+    "owners": [
+      "core-orchestration",
+      "brain",
+      "memory",
+      "capabilities",
+      "sensory",
+      "platform",
+      "observability"
+    ]
+  },
+  "inventory": "contracts/Contract_Inventory.md"
+}

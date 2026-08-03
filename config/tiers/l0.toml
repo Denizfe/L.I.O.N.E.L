@@ -1,0 +1,28 @@
+# Tier L0 — fully offline. THE AUTONOMY GUARANTEE. (ADR-0007)
+#
+# Everything in-process in the Host Runtime. No network. No cluster.
+# L0 conformance is a BLOCKING CI GATE on every release. A change that improves
+# L2/L3 while breaking L0 is rejected, not traded off.
+
+[tier]
+active = "l0"
+network_allowed = false          # asserted by the conformance suite, not merely documented
+
+[brain]
+provider = "ollama"              # never "anthropic" at L0
+
+[memory]
+service_url = "inproc://memory"
+
+[services]                       # all in-process
+memory  = "inproc"
+brain   = "inproc"
+stt     = "inproc"
+tts     = "inproc"
+
+[telemetry]
+otlp_endpoint = ""               # no collector; buffer to disk and flush later
+buffer_to_disk_when_unreachable = true
+
+[security]
+mtls_required = false            # no network boundary to protect

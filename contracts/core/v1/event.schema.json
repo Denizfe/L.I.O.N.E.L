@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/core/v1/event.schema.json",
+  "title": "Event",
+  "description": "The base envelope every L.I.O.N.E.L event carries. TurnEvent, WorkflowEvent, AuditRecord and Metrics all specialize it. Defining the envelope once is what lets a single OpenTelemetry trace stitch across both planes and both runtimes (ADR-0006, ADR-0019) — if each subsystem invented its own correlation field, that stitching would be impossible.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0019", "ADR-0006", "ADR-0005"],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "observability",
+    "producer": ["any component"],
+    "consumers": ["otel_collector", "audit_log", "session_coordinator", "grafana"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "This is the most-consumed contract in the system, so it is the most expensive to change — which is the point of recording four consumers. Adding a REQUIRED field here breaks every producer at once. Adding an optional one is safe. `event_id` and `emitted_at` are deliberately the only universally required fields beyond `kind`: everything else varies by specialization, and forcing more into the base would push subsystem concerns into shared ground."
+    }
+  },
+
+  "type": "object",
+  "required": ["event_id", "kind", "emitted_at"],
+  "properties": {
+    "event_id": { "$ref": "#/$defs/Ulid" },
+    "kind": {
+      "type": "string",
+      "enum": ["turn", "workflow", "audit", "metric", "health", "lifecycle"],
+      "description": "Discriminator selecting the specialization. Consumers MUST skip unknown kinds rather than failing — a dashboard that cannot render a new event kind is acceptable; one that crashes is not."
+    },
+    "emitted_at": { "type": "string", "format": "date-time" },
+    "turn_id": {
+      "$ref": "#/$defs/Ulid",
+      "description": "ALSO THE OPENTELEMETRY TRACE ID. Absent only for events outside any turn (process lifecycle, scheduled jobs)."
+    },
+    "session_id": { "$ref": "#/$defs/Ulid" },
+    "seq": { "type": "integer", "minimum": 0, "description": "Monotonic within a turn. A gap means events were dropped." },
+    "tier": { "$ref": "#/$defs/Tier" },
+    "runtime": { "$ref": "#/$defs/Runtime" },
+    "component": { "$ref": "#/$defs/Component" },
+    "severity": { "type": "string", "enum": ["debug", "info", "warn", "error", "critical"], "default": "info" },
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "default": "1.0.0" },
+    "attributes": { "type": "object", "additionalProperties": true, "description": "Reserved names in events/v1/telemetry-attributes.schema.json. MUST NOT carry secrets, raw transcripts, or file contents." }
+  },
+  "additionalProperties": true,
+
+  "$defs": {
+    "Ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "26-char Crockford base32 (excludes I, L, O, U to avoid visual ambiguity with 1 and 0). Chosen over UUIDv4 because ULIDs sort lexicographically by creation time, which makes log and trace listings chronological for free."
+    },
+    "Tier": { "type": "string", "enum": ["l0", "l1", "l2", "l3"], "description": "ADR-0007. Recorded per event because the latency budget differs per tier and a cross-tier comparison is meaningless." },
+    "Runtime": { "type": "string", "enum": ["host", "cluster"], "description": "ADR-0005." },
+    "Component": {
+      "type": "string",
+      "enum": ["session_coordinator", "turn_executor", "context_assembler", "tool_router", "interrupt_controller", "policy_engine", "memory_service", "brain_gateway", "stt_service", "tts_service", "audio_io", "wake", "vad", "supervisor", "config", "telemetry"],
+      "description": "Closed set so dashboards can group reliably. Adding a component is a MINOR change; consumers treat unknown values as 'other'."
+    },
+    "Language": { "type": ["string", "null"], "enum": ["en", "tr", null] }
+  },
+
+  "examples": [
+    {
+      "event_id": "01JQ4XH5J8K1M4N7P0Q3R6S9TV",
+      "kind": "lifecycle",
+      "emitted_at": "2026-08-02T09:00:00.000Z",
+      "tier": "l0",
+      "runtime": "host",
+      "component": "supervisor",
+      "severity": "info",
+      "schema_version": "1.0.0",
+      "attributes": { "lionel.lifecycle.phase": "startup", "lionel.lifecycle.tier_asserted": "l0" }
+    },
+    {
+      "event_id": "01JQ4XJ7K0M3N6P9Q2R5S8TVWX",
+      "kind": "turn",
+      "emitted_at": "2026-08-02T09:14:03.221Z",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "session_id": "01JQ4X8ADK1Z5H9RQWE7TY22JP",
+      "seq": 0,
+      "tier": "l0",
+      "runtime": "host",
+      "component": "wake",
+      "severity": "info"
+    }
+  ]
+}

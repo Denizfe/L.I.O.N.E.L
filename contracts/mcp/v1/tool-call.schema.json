@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/tool-call.schema.json",
+  "title": "ToolCall",
+  "description": "A single tool invocation, assembled by TurnExecutor from streamed ToolCallDeltas and handed to ToolRouter. Carries the trust context, because the Policy Engine cannot decide anything without it (ADR-0012).",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0012", "ADR-0026", "ADR-0025", "ADR-0003"],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "core-orchestration",
+    "producer": ["turn_executor"],
+    "consumers": ["tool_router", "policy_engine", "capability servers", "audit_log"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "`trust` is REQUIRED and must never become optional. A ToolCall that reaches the Policy Engine without a trust context cannot be authorized, and the only safe default would be to deny everything — so an optional field here would either break the system or, worse, tempt someone to default it to user_originated. `call_id` must be stable from the first ToolCallDelta through the AuditRecord and the ToolResult; it is the only thing correlating the three."
+    }
+  },
+
+  "type": "object",
+  "required": ["call_id", "turn_id", "tool_name", "arguments", "trust", "requested_at"],
+  "properties": {
+    "call_id": { "type": "string", "minLength": 1, "description": "Stable across ToolCallDelta -> ToolCall -> AuditRecord -> ToolResult." },
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "tool_name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
+    "capability_version": { "type": ["string", "null"], "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Validated against the tool's input_schema BEFORE dispatch. ToolRouter rejects a call whose arguments do not validate rather than passing them through and letting the capability fail — the capability may have already done something by then."
+    },
+    "trust": {
+      "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json",
+      "description": "The FULL context, not just the level, so an audit entry can name which source degraded it."
+    },
+    "requested_at": { "type": "string", "format": "date-time" },
+    "index": { "type": "integer", "minimum": 0, "description": "Position within a parallel tool-call batch." },
+    "idempotency_key": { "type": ["string", "null"], "description": "Required before any `write` tool may be retried (ADR-0026)." },
+    "timeout_ms": { "type": "integer", "minimum": 1, "default": 30000 },
+    "cancellation_token_id": { "type": ["string", "null"], "description": "ADR-0025. Present so a cancelled turn can abort this call across a process or network boundary." },
+    "attempt": { "type": "integer", "minimum": 1, "default": 1, "description": "Retry counter. Greater than 1 is legal ONLY for idempotent calls or calls carrying an idempotency_key." }
+  },
+  "additionalProperties": false,
+
+  "examples": [
+    {
+      "call_id": "call_7f3a",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "tool_name": "system.get_disk_usage",
+      "capability_version": "1.0.0",
+      "arguments": { "volume": "C" },
+      "trust": {
+        "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+        "level": "user_originated",
+        "sources": [{ "source_id": "src-001", "level": "user_originated", "origin": "speech", "detail": "microphone", "entered_at": "2026-08-02T09:14:03.221Z" }],
+        "degraded_at": null,
+        "degraded_by": null
+      },
+      "requested_at": "2026-08-02T09:14:05.090Z",
+      "index": 0,
+      "idempotency_key": null,
+      "timeout_ms": 5000,
+      "cancellation_token_id": "01JQ4XB2M5N8P1QRST2VWX3YZA",
+      "attempt": 1
+    }
+  ]
+}

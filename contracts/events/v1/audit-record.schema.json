@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/audit-record.schema.json",
+  "title": "AuditRecord",
+  "description": "One immutable entry per Policy Engine decision (ADR-0012). ALLOWS ARE RECORDED, NOT ONLY DENIALS — a log of refusals alone cannot answer 'what did it actually do last Tuesday', which is the question that matters after an incident.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0012",
+      "ADR-0026",
+      "ADR-0011"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "capabilities",
+    "producer": [
+      "policy_engine"
+    ],
+    "consumers": [
+      "audit_log",
+      "security_review",
+      "otel_collector"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Append-only by construction; there is no update or delete operation on this record type. Adding a `decision` value is MAJOR because audit consumers and the Phase 9 review tooling enumerate them exhaustively — an unrecognised decision must never be silently bucketed as 'other'."
+    }
+  },
+  "type": "object",
+  "required": [
+    "audit_id",
+    "turn_id",
+    "tool_name",
+    "decision",
+    "evaluated_at",
+    "trust_level",
+    "side_effect"
+  ],
+  "properties": {
+    "audit_id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "turn_id": {
+      "$ref": "https://lionel.local/contracts/events/v1/turn-event.schema.json#/$defs/TurnId"
+    },
+    "call_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Correlates to the ToolCallDelta that requested it."
+    },
+    "tool_name": {
+      "type": "string"
+    },
+    "capability_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "deny",
+        "confirm_required",
+        "confirmed",
+        "confirm_declined",
+        "rate_limited",
+        "halted"
+      ],
+      "description": "halted is the runaway containment in config/policy/default.toml stopping the turn."
+    },
+    "rule_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Which declarative rule matched. Null means the default-deny fallthrough applied — which is itself the notable case."
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evaluation_us": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Microseconds. Policy sits on the hot path of every tool call and must not become a latency source."
+    },
+    "trust_level": {
+      "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel"
+    },
+    "trust_degraded_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Populated on a trust-based denial. This is the field that answers 'why did it refuse' — and in a red-team exercise (G9), the field that proves the injection was contained."
+    },
+    "side_effect": {
+      "type": "string",
+      "enum": [
+        "read",
+        "write",
+        "destructive"
+      ]
+    },
+    "arguments_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 of the canonicalized arguments. A DIGEST, NOT THE ARGUMENTS: tool arguments routinely contain file contents and user speech, and an audit log is exactly the wrong place to duplicate them. The digest still proves two calls were identical."
+    },
+    "outcome": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "success",
+        "error",
+        "timeout",
+        "cancelled",
+        "rolled_back",
+        null
+      ]
+    },
+    "duration_ms": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "l0",
+        "l1",
+        "l2",
+        "l3"
+      ]
+    },
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "host",
+        "cluster"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "audit_id": "01JQ4XE5F8G1H4J7K0M3N6P9QR",
+      "turn_id": "01JQ4X9AAB3Q8WYP4SVZC7XDEF",
+      "call_id": "call_9b2c",
+      "tool_name": "github.create_commit",
+      "capability_version": "1.0.0",
+      "decision": "deny",
+      "rule_name": "writes from untrusted content are denied",
+      "reason": "Turn trust degraded to external_content after reading README.md. Tool requires operator.",
+      "evaluated_at": "2026-08-02T09:20:14.882Z",
+      "evaluation_us": 41.0,
+      "trust_level": "external_content",
+      "trust_degraded_by": "src-002",
+      "side_effect": "write",
+      "arguments_digest": "sha256:3b1f8a2c9d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8",
+      "outcome": null,
+      "tier": "l0",
+      "runtime": "host"
+    },
+    {
+      "audit_id": "01JQ4XF9G2H5J8K1M4N7P0Q3RS",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "call_id": "call_7f3a",
+      "tool_name": "system.get_disk_usage",
+      "decision": "allow",
+      "rule_name": "reads are broadly permitted",
+      "evaluated_at": "2026-08-02T09:14:05.101Z",
+      "evaluation_us": 12.4,
+      "trust_level": "user_originated",
+      "side_effect": "read",
+      "arguments_digest": "sha256:a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "outcome": "success",
+      "duration_ms": 38.2,
+      "tier": "l0",
+      "runtime": "host"
+    }
+  ]
+}

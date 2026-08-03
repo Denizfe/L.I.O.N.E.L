@@ -1,0 +1,139 @@
+// contracts/grpc/v1/tts.proto
+//
+// Text-to-speech.  Server-streaming: text in, PCM frames out.  ADR-0006, ADR-0017, ADR-0028.
+//
+// VERSION      1.0.0
+// STABILITY    stable
+// ADR          ADR-0017 (dual engine), ADR-0023 (Turkish locale), ADR-0025 (cancellation)
+//
+// DUAL ENGINE — ADR-0017
+//   Kokoro has NO Turkish voice: English natively, Japanese and Chinese via misaki extras,
+//   a handful of European languages via espeak-ng fallback, Turkish explicitly unsupported.
+//   Piper ships tr_TR voices as ~15M-parameter VITS ONNX models.  Both run on CPU with the
+//   same operational profile, so the TTSProvider port routes by language and the caller
+//   sees one interface.
+//
+// STREAMING IS NOT OPTIONAL
+//   Synthesis is sentence-chunked and frames start flowing before the brain has finished
+//   generating.  Waiting for a full paragraph before the first phoneme is what makes local
+//   assistants feel dead.  The 300 ms first-audio budget assumes this.
+//
+// BACKWARD COMPATIBILITY
+//   Adding a TtsEngine value is MINOR only if callers treat unknown engines as
+//   ENGINE_UNSPECIFIED and fall back to language-based routing.  Removing one is MAJOR.
+
+syntax = "proto3";
+
+package lionel.v1;
+
+import "common.proto";
+
+option go_package = "github.com/lionel/contracts/grpc/v1;lionelv1";
+option java_multiple_files = true;
+option java_package = "local.lionel.contracts.v1";
+
+service TextToSpeech {
+  // Server-streaming.  One request, a stream of audio frames.
+  //
+  // CANCELLATION: client cancels the gRPC stream.  Per the ADR-0025 fan-out order,
+  // playback is stopped FIRST (the user-perceptible effect the 300 ms budget measures) and
+  // synthesis second — there is no point rendering audio nobody will hear.
+  rpc Synthesize(SynthesizeRequest) returns (stream SynthesizeResponse);
+
+  // Enumerate available voices per engine.  Used at G6c for the fettah-vs-dfki listening
+  // test with Efe: neither is obviously better on paper and a native speaker's judgment
+  // beats a model card.
+  rpc ListVoices(ListVoicesRequest) returns (ListVoicesResponse);
+
+  rpc Health(HealthRequest) returns (TtsHealthResponse);
+}
+
+message SynthesizeRequest {
+  TurnContext context = 1;
+
+  // ALREADY NORMALISED.  Locale text normalisation — numbers, dates, abbreviations,
+  // currency — happens caller-side in sensory/locale before this call, because Turkish
+  // number-to-words differs structurally from English and the engine will not do it.
+  // See ADR-0023.
+  string text = 2;
+
+  // "en" | "tr".  Selects the engine when `engine` is unspecified.
+  string language = 3;
+
+  // Optional explicit override.  Normally left unspecified so language routing applies.
+  TtsEngine engine = 4;
+
+  // Engine-specific voice id, e.g. "af_heart" (Kokoro) or "tr_TR-fettah-medium" (Piper).
+  string voice = 5;
+
+  AudioFormat output_format = 6;
+
+  float speed = 7;  // 1.0 = natural.  Range 0.5 - 2.0.
+
+  // Emit one FrameGroup boundary per sentence so the player can begin playback on the
+  // first sentence rather than buffering the whole response.
+  bool sentence_chunked = 8;
+}
+
+enum TtsEngine {
+  TTS_ENGINE_UNSPECIFIED = 0;  // route by language — the normal case
+  TTS_ENGINE_KOKORO      = 1;  // English.  82M params, ONNX, 24 kHz.
+  TTS_ENGINE_PIPER       = 2;  // Turkish.  VITS ~15M params, ONNX, 22.05 kHz.
+}
+
+message SynthesizeResponse {
+  oneof payload {
+    AudioFrame     frame  = 1;
+    SynthesisStats stats  = 2;
+    StreamError    error  = 3;
+  }
+
+  // Set on the frame that ends a sentence when sentence_chunked is true.  Lets the player
+  // start on sentence 1 while sentence 2 is still rendering.
+  bool sentence_boundary = 4;
+}
+
+message SynthesisStats {
+  // docs/LATENCY_BUDGET.md target: < 300 ms.  Measured to the FIRST frame, not the last —
+  // total synthesis time is irrelevant to perceived responsiveness.
+  uint64    first_audio_ms   = 1;
+  uint64    total_duration_ms = 2;
+  uint64    audio_duration_ms = 3;
+  TtsEngine engine_used       = 4;
+  string    voice_used        = 5;
+  // True when language routing fell back because the requested language had no engine.
+  // Should never be true for en or tr; if it is, that is a misconfiguration worth alerting.
+  bool      fallback_applied  = 6;
+}
+
+message ListVoicesRequest {
+  string language = 1;  // empty for all
+}
+
+message ListVoicesResponse {
+  repeated Voice voices = 1;
+}
+
+message Voice {
+  string    id       = 1;
+  string    language = 2;
+  TtsEngine engine   = 3;
+  string    quality  = 4;  // "low" | "medium" | "high"
+  uint32    sample_rate_hz = 5;
+  // From artifacts.lock.toml (ADR-0013).  Surfaced because Piper voice licences vary per
+  // MODEL_CARD and must be verified before release rather than discovered afterwards.
+  string    license  = 6;
+}
+
+message TtsHealthResponse {
+  HealthCore core = 1;
+
+  // Which engines have a model resident.  ADR-0017 runs two.
+  repeated TtsEngine engines_loaded = 2;
+
+  // MUST be true to serve Turkish.  Mirrors SttHealthResponse.multilingual: both are
+  // G6b/G6c gate criteria, so both are typed fields rather than map entries.
+  bool turkish_voice_available = 3;
+
+  repeated string voices_loaded = 4;
+}

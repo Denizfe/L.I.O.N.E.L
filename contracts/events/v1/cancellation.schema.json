@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/cancellation.schema.json",
+  "title": "CancellationToken and CancellationEvent",
+  "description": "ADR-0025. One token per turn, propagated to every async operation and across process and network boundaries. Barge-in has a 300 ms budget; cancellation that does not cross the runtime boundary leaves orphaned cluster work at L2.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0025",
+      "ADR-0008",
+      "ADR-0026"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "core-orchestration",
+    "producer": [
+      "interrupt_controller"
+    ],
+    "consumers": [
+      "turn_executor",
+      "brain_gateway",
+      "tts_service",
+      "stt_service",
+      "tool_router"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "The `fan_out_order` values are ordered and the ORDER IS THE DESIGN: playback first because it is the user-perceptible effect that the 300 ms budget actually measures. Reordering is MAJOR — it changes observable responsiveness even though every stage still gets cancelled."
+    }
+  },
+  "type": "object",
+  "required": [
+    "token_id",
+    "turn_id",
+    "reason",
+    "issued_at"
+  ],
+  "properties": {
+    "token_id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "turn_id": {
+      "$ref": "https://lionel.local/contracts/events/v1/turn-event.schema.json#/$defs/TurnId"
+    },
+    "reason": {
+      "$ref": "#/$defs/CancellationReason"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "issued_by": {
+      "type": "string",
+      "enum": [
+        "interrupt_controller",
+        "session_coordinator",
+        "turn_executor",
+        "quota_guard",
+        "policy_engine",
+        "supervisor"
+      ]
+    },
+    "deadline_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 300,
+      "description": "Budget for the FIRST fan-out stage to complete. Exceeding it is a latency-budget alert, not a hard failure — forcing a hard failure here would abandon in-flight writes, which ADR-0025 forbids."
+    },
+    "fan_out": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/FanOutStage"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "CancellationReason": {
+      "type": "string",
+      "enum": [
+        "barge_in",
+        "user_abort",
+        "timeout",
+        "shutdown",
+        "quota_exceeded",
+        "policy_halt",
+        "upstream_error",
+        "device_lost"
+      ],
+      "description": "barge_in is the 300 ms path. device_lost covers the audio device disappearing mid-utterance (a G6a criterion) — the turn cannot continue, but it must unwind cleanly rather than throw."
+    },
+    "FanOutTarget": {
+      "type": "string",
+      "enum": [
+        "audio_playback",
+        "tts_synthesis",
+        "brain_stream",
+        "tool_calls",
+        "stt_stream"
+      ],
+      "description": "Cancelled in the order listed in fan_out_order below. Cheapest and most visible first — the user perceives responsiveness while the tail unwinds."
+    },
+    "FanOutStage": {
+      "type": "object",
+      "required": [
+        "target",
+        "order",
+        "status"
+      ],
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/FanOutTarget"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "cancelled",
+            "completed",
+            "rolled_back",
+            "failed",
+            "not_applicable"
+          ]
+        },
+        "elapsed_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "side_effect_class": {
+          "$comment": "Present only for tool_calls. Governs whether abandonment is permitted.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "read",
+            "write",
+            "destructive",
+            null
+          ]
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "fan_out_order": {
+      "$comment": "Normative reference, not a validated property. 1 audio_playback -> 2 tts_synthesis -> 3 brain_stream -> 4 tool_calls -> 5 stt_stream. Tool cancellation semantics by side_effect (ADR-0026): read aborts freely; write and destructive MUST complete or roll back and are NEVER abandoned mid-flight — a half-written file is worse than either outcome."
+    }
+  },
+  "examples": [
+    {
+      "token_id": "01JQ4XB2M5N8P1QRST2VWX3YZA",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "reason": "barge_in",
+      "issued_at": "2026-08-02T09:14:07.410Z",
+      "issued_by": "interrupt_controller",
+      "deadline_ms": 300,
+      "fan_out": [
+        {
+          "target": "audio_playback",
+          "order": 1,
+          "status": "cancelled",
+          "elapsed_ms": 41.2
+        },
+        {
+          "target": "tts_synthesis",
+          "order": 2,
+          "status": "cancelled",
+          "elapsed_ms": 63.8
+        },
+        {
+          "target": "brain_stream",
+          "order": 3,
+          "status": "cancelled",
+          "elapsed_ms": 88.1
+        },
+        {
+          "target": "tool_calls",
+          "order": 4,
+          "status": "rolled_back",
+          "elapsed_ms": 152.7,
+          "side_effect_class": "write",
+          "detail": "fs.write on notes.md rolled back; ADR-0025 forbids abandoning a write mid-flight"
+        },
+        {
+          "target": "stt_stream",
+          "order": 5,
+          "status": "not_applicable"
+        }
+      ]
+    }
+  ]
+}

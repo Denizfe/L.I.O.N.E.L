@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/tool-result.schema.json",
+  "title": "ToolResult",
+  "description": "The normalized outcome of a ToolCall. Every capability reports success, failure, denial and cancellation in this one shape so TurnExecutor and the M5 degradation logic can react without knowing which capability ran.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0003", "ADR-0012", "ADR-0025", "ADR-0026"],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "core-orchestration",
+    "producer": ["tool_router"],
+    "consumers": ["turn_executor", "context_assembler", "audit_log", "brain_gateway"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "`trust_of_output` is required and is the subtle one: a tool result is content of UNKNOWN provenance and must degrade the turn's trust when it enters context. Making it optional would silently reopen the injection path that ADR-0012 closes — a tool that fetches a web page would otherwise return attacker text at whatever trust the turn already had. Adding an `outcome` value is MAJOR: consumers switch exhaustively on it and an unrecognised outcome must never fall through to 'treat as success'."
+    }
+  },
+
+  "type": "object",
+  "required": ["call_id", "turn_id", "tool_name", "outcome", "completed_at", "trust_of_output"],
+  "properties": {
+    "call_id": { "type": "string" },
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "tool_name": { "type": "string" },
+    "outcome": {
+      "type": "string",
+      "enum": ["success", "error", "denied", "timeout", "cancelled", "rolled_back", "confirmation_required"],
+      "description": "`denied` is a Policy Engine refusal and is a NORMAL outcome — the brain should be told plainly so it can explain, not retry. `rolled_back` means a write was cancelled mid-flight and undone (ADR-0025)."
+    },
+    "content": {
+      "description": "Result payload on success. Shape per the tool's output_schema. MUST NOT contain raw binary — a tool returning media returns a reference, never inline bytes (ADR-0006).",
+      "type": ["object", "array", "string", "number", "boolean", "null"]
+    },
+    "error": { "$ref": "https://lionel.local/contracts/mcp/v1/error-envelope.schema.json" },
+    "trust_of_output": {
+      "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel",
+      "description": "Trust level this result carries INTO the turn. Almost always `tool_result` or lower. A tool that reads a file or fetches a URL MUST report `external_content` — the turn's effective trust then drops to the minimum, and write tools become unreachable for the rest of the turn. This single field is what stops content laundering through a tool call."
+    },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "duration_ms": { "type": ["number", "null"], "minimum": 0 },
+    "side_effect_applied": {
+      "type": ["string", "null"],
+      "enum": ["read", "write", "destructive", null],
+      "description": "What actually happened, which may differ from what was declared if the tool short-circuited. Recorded for audit."
+    },
+    "retryable": { "type": "boolean", "default": false },
+    "truncated": { "type": "boolean", "default": false, "description": "Content was cut to fit the context budget. The brain must be told, or it will reason confidently about a partial answer." }
+  },
+  "additionalProperties": false,
+
+  "examples": [
+    {
+      "call_id": "call_7f3a",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "tool_name": "system.get_disk_usage",
+      "outcome": "success",
+      "content": { "volume": "C", "free_bytes": 187000000000, "total_bytes": 512000000000 },
+      "trust_of_output": "tool_result",
+      "completed_at": "2026-08-02T09:14:05.128Z",
+      "duration_ms": 38.2,
+      "side_effect_applied": "read",
+      "retryable": false,
+      "truncated": false
+    },
+    {
+      "call_id": "call_9b2c",
+      "turn_id": "01JQ4X9AAB3Q8WYP4SVZC7XDEF",
+      "tool_name": "github.create_commit",
+      "outcome": "denied",
+      "content": null,
+      "error": {
+        "code": "trust_insufficient",
+        "message": "This action needs to come from you directly. I read it from a file, so I won't act on it.",
+        "retryable": false,
+        "source": "policy_engine",
+        "detail": "tool requires operator; effective turn trust external_content"
+      },
+      "trust_of_output": "tool_result",
+      "completed_at": "2026-08-02T09:20:14.883Z",
+      "duration_ms": 0.4,
+      "side_effect_applied": null,
+      "retryable": false
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/media/v1/vision-frame.schema.json",
+  "title": "VisionFrame",
+  "description": "A single frame of visual input on the data plane. PROVISIONAL — nothing produces these yet. Defined now so the data plane is not accidentally designed around audio alone, which is the mistake that would make adding vision a redesign rather than an adapter (ADR-0024).",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0006", "ADR-0028", "ADR-0024"],
+    "stability": "provisional",
+    "plane": "data",
+    "owner": "sensory",
+    "producer": ["(none yet — camera_io at Phase 10)"],
+    "consumers": ["(none yet — vision_service, brain_gateway when vision capability is enabled)"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "PROVISIONAL and may change freely until promoted. NO PROTOBUF MIRROR EXISTS YET — unlike AudioFrame, this has no counterpart in common.proto, because writing wire format for a subsystem with no producer is speculative work. The .proto is added at the same time the first producer is. Promotion to stable is gated at G10, and ADR-0024 is explicit that Phase 10 is not committed."
+    },
+    "payload_policy": {
+      "rule": "Same as AudioFrame: image bytes NEVER cross the control plane. A brain request referencing an image uses ContentBlock.image_ref (a URI or content-addressed handle), never inline base64.",
+      "why": "Beyond the size argument, an inline base64 image in a prompt log is a privacy problem — frames of someone's room should not be recoverable from a debug trace."
+    }
+  },
+
+  "type": "object",
+  "required": ["seq", "format"],
+  "properties": {
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "seq": { "type": "integer", "minimum": 0, "description": "Monotonic. Gaps are legitimate — dropping frames under backpressure is required, blocking is forbidden." },
+    "format": { "$ref": "#/$defs/VisionFormat" },
+    "timestamp_ns": { "type": "integer", "minimum": 0, "description": "Relative to stream start. When audio and vision are fused later, both being stream-relative is what makes alignment possible." },
+    "keyframe": { "type": "boolean", "default": true, "description": "False for delta-encoded frames. A consumer joining mid-stream must wait for a keyframe." },
+    "payload_ref": {
+      "type": ["string", "null"],
+      "description": "URI or content-addressed handle. THE PREFERRED FORM — a reference, not bytes, so the frame can be passed through the control plane's neighbourhood without carrying an image."
+    },
+    "payload_b64": { "type": ["string", "null"], "contentEncoding": "base64", "description": "FIXTURES ONLY. See x-lionel.payload_policy." },
+    "payload_bytes": { "type": "integer", "minimum": 0 },
+    "source": { "type": "string", "enum": ["camera", "screen", "fixture", "file", "robot_sensor"], "description": "robot_sensor reserved for ADR-0024. Listed now so the enum does not need a MAJOR bump the day a camera is mounted on something that moves." },
+    "region_of_interest": {
+      "type": ["object", "null"],
+      "properties": {
+        "x": { "type": "integer", "minimum": 0 },
+        "y": { "type": "integer", "minimum": 0 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["x", "y", "width", "height"],
+      "additionalProperties": false
+    },
+    "privacy": {
+      "type": "object",
+      "description": "Vision is more invasive than audio and the contract says so explicitly rather than leaving it to policy documents.",
+      "properties": {
+        "consent_recorded": { "type": "boolean", "default": false, "description": "MUST be true before any frame is persisted or leaves the Host Runtime." },
+        "retention": { "type": "string", "enum": ["ephemeral", "session", "persisted"], "default": "ephemeral", "description": "Default ephemeral: process and discard. Anything else is a deliberate decision." },
+        "faces_present": { "type": ["boolean", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "VisionFormat": {
+      "type": "object",
+      "required": ["width", "height", "encoding"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "encoding": { "type": "string", "enum": ["rgb8", "bgr8", "gray8", "jpeg", "png", "h264"] },
+        "fps": { "type": ["number", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "examples": [
+    {
+      "seq": 0,
+      "format": { "width": 1280, "height": 720, "encoding": "jpeg", "fps": 15 },
+      "timestamp_ns": 0,
+      "keyframe": true,
+      "payload_ref": "blob://frames/01JQ4XS1T4VWXYZ0123456789A",
+      "payload_bytes": 84213,
+      "source": "camera",
+      "region_of_interest": null,
+      "privacy": { "consent_recorded": true, "retention": "ephemeral", "faces_present": null }
+    }
+  ]
+}

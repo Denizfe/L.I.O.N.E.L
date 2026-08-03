@@ -1,0 +1,50 @@
+{
+  "$comment": [
+    "Capability registry — ADR-0003. Renamed from v1.0's mcp.servers.json.",
+    "Secrets are secret:// URIs (ADR-0015). The ${GITHUB_PAT} interpolation from v1.0 was",
+    "broken — JSON does not expand variables and no component was named as the expander.",
+    "Container images are pinned by digest via artifacts.lock.toml (ADR-0013).",
+    "ADR-0011: there is no shell capability. Its absence is a decision, not an omission."
+  ],
+  "schema_version": 1,
+  "capabilities": {
+    "filesystem": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:/Users/deniz/Desktop/L.I.O.N.E.L"],
+      "scope": "project_root_only",
+      "side_effect_default": "read",
+      "trust_required": "any",
+      "supervised": true
+    },
+    "github": {
+      "transport": "stdio",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server@sha256:UNRESOLVED-see-artifacts.lock.yaml"],
+      "secrets": { "GITHUB_PERSONAL_ACCESS_TOKEN": "secret://env/GITHUB_PAT" },
+      "side_effect_default": "write",
+      "trust_required": "user_originated",
+      "supervised": true,
+      "note": "ADR-0012 trust gate: content read from a file or web page can never trigger a push. Image digest is UNRESOLVED — GHCR needs a bearer token the fetch tooling cannot supply. Resolve with: docker buildx imagetools inspect ghcr.io/github/github-mcp-server:<tag>. See Artifact_Verification_Report.md section 5 for four alternatives. requires_network=true means this capability is excluded at L0, so it does not block offline conformance."
+    },
+    "memory": {
+      "transport": "inproc",
+      "module": "lionel.services.memory_service",
+      "side_effect_default": "write",
+      "trust_required": "any",
+      "note": "ADR-0010. Direct qdrant-store / qdrant-find are NOT exposed."
+    },
+    "system": {
+      "transport": "inproc",
+      "module": "lionel.capabilities.system",
+      "side_effect_default": "read",
+      "trust_required": "any"
+    },
+    "media": {
+      "transport": "inproc",
+      "module": "lionel.capabilities.media",
+      "side_effect_default": "write",
+      "trust_required": "user_originated"
+    }
+  }
+}

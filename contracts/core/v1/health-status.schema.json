@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/core/v1/health-status.schema.json",
+  "title": "HealthStatus",
+  "description": "Uniform health report for every service and provider. LIVENESS AND READINESS ARE DISTINCT and that distinction is the entire reason this contract exists: Ollama loading a 30 GB model is alive and not ready, and routing a turn to it produces a timeout that is indistinguishable from a broken assistant.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0009", "ADR-0005", "ADR-0007"],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "observability",
+    "producer": ["memory_service", "brain_gateway", "stt_service", "tts_service", "capability servers"],
+    "consumers": ["session_coordinator", "tool_router", "kubernetes_probes", "grafana"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Mirrors HealthCore in contracts/grpc/v1/common.proto — KEEP THEM IN STEP. Adding a `state` value is MINOR; consumers must treat unknown states as `degraded`, which is the conservative reading. Note that this schema has five producers: that is legitimate here because health is genuinely uniform across services, and it is the one case where many producers is a feature rather than the design smell the README warns about."
+    }
+  },
+
+  "type": "object",
+  "required": ["service", "live", "ready", "checked_at"],
+  "properties": {
+    "service": { "type": "string", "minLength": 1 },
+    "live": { "type": "boolean", "description": "Responds at all. Maps to a Kubernetes livenessProbe — false means RESTART ME." },
+    "ready": { "type": "boolean", "description": "Can accept work right now. Maps to a readinessProbe — false means STOP SENDING TRAFFIC, but do not restart. Conflating the two causes a loading model to be killed and restarted forever." },
+    "state": { "type": "string", "enum": ["ready", "starting", "loading", "warming", "degraded", "quota_exceeded", "unreachable", "error", "shutting_down"] },
+    "checked_at": { "type": "string", "format": "date-time" },
+    "load_progress": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "latency_ms": { "type": ["number", "null"], "minimum": 0 },
+    "version": { "type": ["string", "null"] },
+    "tier": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Tier" },
+    "runtime": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Runtime" },
+    "requires_network": {
+      "type": "boolean",
+      "description": "ADR-0007. True means this service CANNOT be selected at tier L0. Reported rather than assumed, so the L0 conformance gate can assert it at runtime instead of trusting configuration."
+    },
+    "degraded_reason": { "type": ["string", "null"], "description": "Required when state is `degraded`. M5 requires the system to keep answering; this is what it says when asked why the answer is thinner than usual." },
+    "dependencies": {
+      "type": "array",
+      "description": "Downstream health, one level deep only. Deeper nesting turns a health check into a distributed trace, which is what ADR-0019 is for.",
+      "items": {
+        "type": "object",
+        "required": ["name", "ready"],
+        "properties": {
+          "name": { "type": "string" },
+          "ready": { "type": "boolean" },
+          "detail": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+
+  "examples": [
+    {
+      "service": "brain_gateway",
+      "live": true,
+      "ready": false,
+      "state": "loading",
+      "checked_at": "2026-08-02T09:13:40.100Z",
+      "load_progress": 0.62,
+      "version": "qwen2.5:14b-instruct-q4_K_M",
+      "tier": "l0",
+      "runtime": "host",
+      "requires_network": false,
+      "degraded_reason": null,
+      "dependencies": []
+    },
+    {
+      "service": "memory_service",
+      "live": true,
+      "ready": true,
+      "state": "degraded",
+      "checked_at": "2026-08-02T09:14:05.900Z",
+      "latency_ms": 41.2,
+      "tier": "l1",
+      "runtime": "cluster",
+      "requires_network": false,
+      "degraded_reason": "Qdrant reachable but consolidation job is backlogged; recall quality may be reduced.",
+      "dependencies": [{ "name": "qdrant", "ready": true, "detail": "v1.18.3" }]
+    }
+  ]
+}

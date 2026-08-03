@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/agent-decision.schema.json",
+  "title": "AgentDecision",
+  "description": "A record of a choice L.I.O.N.E.L made during a turn: which tool to call, which provider to route to, whether to ask for confirmation, whether to degrade. Exists so 'why did it do that?' is answerable from data rather than from re-reading a prompt and guessing.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0008", "ADR-0012", "ADR-0016", "ADR-0019"],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "core-orchestration",
+    "producer": ["turn_executor", "tool_router", "session_coordinator", "brain_gateway"],
+    "consumers": ["audit_log", "otel_collector", "eval_harness"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Four producers is more than the README prefers, and it is accepted here for a specific reason: decisions genuinely originate in several coordinators, and forcing them through one would recreate the god object ADR-0008 exists to prevent. `rationale` is deliberately NOT free-form model output — see its description. Adding a `decision_type` value is MINOR; consumers group unknown types as 'other'."
+    }
+  },
+
+  "type": "object",
+  "required": ["decision_id", "turn_id", "decision_type", "chosen", "decided_at", "decided_by"],
+  "properties": {
+    "decision_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "decision_type": {
+      "type": "string",
+      "enum": ["tool_selection", "provider_routing", "confirmation_requested", "degradation", "memory_ingestion", "cancellation", "language_routing", "context_pruning"],
+      "description": "context_pruning is worth recording: dropping history to fit a token budget is a decision that changes answers, and it is invisible unless logged."
+    },
+    "chosen": { "type": "string", "minLength": 1, "description": "The option taken — a tool name, provider name, engine, or an action label." },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["option"],
+        "properties": {
+          "option": { "type": "string" },
+          "rejected_because": { "type": "string" },
+          "score": { "type": ["number", "null"] }
+        },
+        "additionalProperties": false
+      },
+      "description": "What was available and not taken. An empty array means there was no choice — which is itself worth knowing when a capability turns out to have been unreachable all along."
+    },
+    "rationale": {
+      "type": ["string", "null"],
+      "maxLength": 1024,
+      "description": "A SHORT STRUCTURED REASON produced by the deciding component — e.g. 'policy: trust below required', 'provider: primary not ready'. NOT the model's own chain of thought: that is unreliable as an explanation of what the system did, and storing it here would make the audit trail a narrative rather than a record."
+    },
+    "decided_by": {
+      "type": "string",
+      "enum": ["policy_engine", "turn_executor", "session_coordinator", "brain_model", "provider_router", "interrupt_controller", "operator"],
+      "description": "`brain_model` means the model chose (e.g. which tool). `operator` means Efe confirmed. The distinction matters for the ADR-0021 evals — only brain_model decisions measure model quality."
+    },
+    "decided_at": { "type": "string", "format": "date-time" },
+    "deterministic": {
+      "type": "boolean",
+      "default": true,
+      "description": "False when the decision came from model sampling. Non-deterministic decisions need tolerance bands in replay tests rather than exact matching (ADR-0027)."
+    },
+    "trust_level": { "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel" },
+    "reversible": { "type": "boolean", "default": true, "description": "False for decisions with committed side effects. Combined with side_effect classification, this is what a post-incident review reads first." },
+    "tier": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Tier" }
+  },
+  "additionalProperties": false,
+
+  "examples": [
+    {
+      "decision_id": "01JQ4XN3P6Q9R2S5T8VWXYZ012",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "decision_type": "provider_routing",
+      "chosen": "ollama",
+      "alternatives": [{ "option": "anthropic", "rejected_because": "tier l0 forbids requires_network providers (ADR-0007)" }],
+      "rationale": "tier: l0 offline; only local providers admissible",
+      "decided_by": "provider_router",
+      "decided_at": "2026-08-02T09:14:03.980Z",
+      "deterministic": true,
+      "trust_level": "user_originated",
+      "reversible": true,
+      "tier": "l0"
+    },
+    {
+      "decision_id": "01JQ4XP5Q8R1S4T7VWXYZ01234",
+      "turn_id": "01JQ4X9AAB3Q8WYP4SVZC7XDEF",
+      "decision_type": "degradation",
+      "chosen": "proceed_without_recall",
+      "alternatives": [
+        { "option": "fail_turn", "rejected_because": "M5: the system must always produce a response" },
+        { "option": "retry_memory", "rejected_because": "circuit breaker open" }
+      ],
+      "rationale": "memory_service unreachable; answered without recall and told the user",
+      "decided_by": "turn_executor",
+      "decided_at": "2026-08-02T09:20:12.400Z",
+      "deterministic": true,
+      "trust_level": "external_content",
+      "reversible": true,
+      "tier": "l0"
+    }
+  ]
+}

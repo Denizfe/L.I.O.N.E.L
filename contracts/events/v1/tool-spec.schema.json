@@ -1,0 +1,294 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/tool-spec.schema.json",
+  "title": "ToolSpec",
+  "description": "The provider-neutral tool schema intermediate representation (ADR-0009). Capability servers author ToolSpec; each BrainProvider adapter translates it at the edge into Anthropic tool blocks, OpenAI function definitions, or Ollama's format. Without this IR, provider independence holds at the brain boundary and fails everywhere else, because every capability server would have to author its schema in some vendor's dialect.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0009",
+      "ADR-0026",
+      "ADR-0012"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "brain",
+    "producer": [
+      "capability servers"
+    ],
+    "consumers": [
+      "brain_gateway",
+      "tool_router",
+      "anthropic_provider",
+      "ollama_provider",
+      "llamacpp_provider"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "The `input_schema` deliberately restricts JSON Schema to a conservative common subset (see $defs/ParameterSchema). Widening the subset is MINOR only if every provider adapter can express the addition; if any adapter must degrade or approximate, it is MAJOR. Adding a `side_effect` value is MAJOR: policy rules match on it and an unknown value must never fall through to allow."
+    }
+  },
+  "type": "object",
+  "required": [
+    "name",
+    "description",
+    "input_schema",
+    "side_effect",
+    "trust_required"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+      "maxLength": 64,
+      "description": "Namespaced, lowercase-invariant: `<capability>.<operation>`, e.g. `fs.read`, `system.get_cpu_load`. Lowercase-only by construction so no case folding is ever needed — see ADR-0023, where naive .lower() under a Turkish locale maps I to dotless ı and silently breaks comparison."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 1024,
+      "description": "Written for the model, not for a developer. This is the only text the brain reads when deciding whether to call the tool, which makes it the highest-leverage string in the capability. State when to use it AND when not to."
+    },
+    "input_schema": {
+      "$ref": "#/$defs/ParameterSchema"
+    },
+    "output_schema": {
+      "description": "Optional. Documents the result shape for the ToolRouter's normalization and for contract tests. Not sent to providers — none of them consume output schemas.",
+      "$ref": "#/$defs/ParameterSchema"
+    },
+    "side_effect": {
+      "type": "string",
+      "enum": [
+        "read",
+        "write",
+        "destructive"
+      ],
+      "description": "ADR-0026. Declared, never inferred from the name. Drives retry safety, cancellation semantics, confirmation, and audit. When in doubt classify HIGHER: mis-classifying a read as a write costs a prompt; the reverse costs data."
+    },
+    "trust_required": {
+      "type": "string",
+      "enum": [
+        "any",
+        "user_originated",
+        "operator"
+      ],
+      "description": "ADR-0012. The MINIMUM effective TrustContext level permitted to invoke this tool. A tool requiring user_originated cannot run on a turn whose trust has degraded to external_content."
+    },
+    "idempotent": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if repeating the call with identical arguments has the same effect as calling once. `read` tools are idempotent by definition. A `write` tool is retried ONLY if this is true or an idempotency_key_param is declared."
+    },
+    "idempotency_key_param": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null,
+      "description": "Name of the input property carrying a caller-supplied idempotency key. Required for any non-idempotent `write` tool that wants retry."
+    },
+    "rate_limit_per_minute": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "default": null
+    },
+    "audit": {
+      "type": "boolean",
+      "default": true,
+      "description": "Emit an AuditRecord. Forced true for write and destructive regardless of declared value."
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 30000
+    },
+    "cancellable": {
+      "type": "boolean",
+      "default": true,
+      "description": "False only for operations that genuinely cannot be interrupted safely. Such a tool must complete or roll back — ADR-0025 forbids abandoning it mid-flight."
+    },
+    "capability_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "deprecated": {
+      "type": "boolean",
+      "default": false
+    },
+    "deprecation_note": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ParameterSchema": {
+      "title": "ParameterSchema — the portable JSON Schema subset",
+      "description": "A DELIBERATELY CONSERVATIVE subset of JSON Schema. Providers differ in what they accept: some handle rich composition, others historically restricted function parameters severely. Authoring against the intersection means one ToolSpec produces a valid native schema everywhere with no adapter-side degradation.\n\nSUPPORTED: type (object/string/number/integer/boolean/array/null), properties, required, enum, description, items, minimum, maximum, minLength, maxLength, pattern, default, additionalProperties, format, nested objects to depth 3.\n\nNOT SUPPORTED, and rejected at registration: oneOf, anyOf, allOf, not, if/then/else, $ref to external documents, patternProperties, dependentSchemas, recursion, tuple-form items.\n\nRATIONALE: composition keywords are the exact place provider support diverges. A tool needing a union should expose two tools — which is also better for the model, since it turns a schema puzzle into a naming decision.",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "object",
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "array",
+            "null"
+          ]
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ParameterSchema"
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "items": {
+          "$ref": "#/$defs/ParameterSchema"
+        },
+        "enum": {
+          "type": "array",
+          "minItems": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "default": true,
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "date-time",
+            "date",
+            "time",
+            "uri",
+            "email",
+            "uuid",
+            "hostname",
+            "ipv4",
+            "ipv6"
+          ]
+        },
+        "additionalProperties": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "name": "system.get_disk_usage",
+      "description": "Report free and total disk space for a mounted volume on this machine. Use when the user asks about storage, free space, or whether something will fit. Does not delete or move anything.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "volume": {
+            "type": "string",
+            "enum": [
+              "C",
+              "D",
+              "all"
+            ],
+            "default": "all",
+            "description": "Drive letter, or 'all' for every mounted volume."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "side_effect": "read",
+      "trust_required": "any",
+      "idempotent": true,
+      "rate_limit_per_minute": 60,
+      "audit": false,
+      "timeout_ms": 5000,
+      "cancellable": true,
+      "capability_version": "1.0.0"
+    },
+    {
+      "name": "github.create_commit",
+      "description": "Create a git commit from staged changes with the given message. Use ONLY after Efe has explicitly approved the diff — the project's standing rule forbids autonomous commits. Never call this to 'save progress'.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2048
+          },
+          "idempotency_key": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "message",
+          "idempotency_key"
+        ],
+        "additionalProperties": false
+      },
+      "side_effect": "write",
+      "trust_required": "operator",
+      "idempotent": false,
+      "idempotency_key_param": "idempotency_key",
+      "rate_limit_per_minute": 5,
+      "audit": true,
+      "timeout_ms": 20000,
+      "cancellable": false,
+      "capability_version": "1.0.0",
+      "tags": [
+        "vcs",
+        "requires-approval"
+      ]
+    }
+  ]
+}

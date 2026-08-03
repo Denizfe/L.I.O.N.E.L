@@ -1,0 +1,28 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# artifacts (verified against artifacts.lock.toml, never committed)
+models/
+vendor/whisper.cpp/
+data/
+logs/
+backups/
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# node
+node_modules/
+
+# os
+Thumbs.db
+desktop.ini

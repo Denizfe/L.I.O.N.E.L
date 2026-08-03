@@ -1,0 +1,24 @@
+# Tier L2 — Host on Windows + Cluster on remote Kubernetes. (ADR-0007, ADR-0022)
+# The cloud-portable target. Latency budget MUST be re-measured at this tier.
+
+[tier]
+active = "l2"
+network_allowed = true
+
+[brain]
+provider = "ollama"              # in-cluster; L3 switches this to anthropic
+
+[services]                       # resolved from the cluster endpoint at deploy time
+memory  = "https://lionel-memory.cluster.local"
+brain   = "https://lionel-brain.cluster.local"
+stt     = "grpcs://lionel-stt.cluster.local"
+tts     = "grpcs://lionel-tts.cluster.local"
+
+[security]                       # ADR-0022 — zero trust. Audio is the most sensitive
+mtls_required = true             # traffic in the system and is NOT exempt.
+client_cert = "secret://k8s/lionel-host-tls/tls.crt"
+client_key  = "secret://k8s/lionel-host-tls/tls.key"
+ca_bundle   = "secret://k8s/lionel-ca/ca.crt"
+
+[telemetry]
+otlp_endpoint = "https://otel-collector.cluster.local:4317"

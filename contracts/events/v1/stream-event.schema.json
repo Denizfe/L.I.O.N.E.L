@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/stream-event.schema.json",
+  "title": "StreamEvent",
+  "description": "The single normalized streaming event union emitted by every BrainProvider (ADR-0009). Callers never see provider-native chunk formats. A discriminated union on `type`.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0009",
+      "ADR-0001",
+      "ADR-0025"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "brain",
+    "producer": [
+      "anthropic_provider",
+      "ollama_provider",
+      "llamacpp_provider"
+    ],
+    "consumers": [
+      "turn_executor",
+      "tts_service",
+      "otel_collector"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Adding a variant is MINOR ONLY IF consumers are required to skip unknown `type` values — they are, and this is stated in the description of `type`. Changing the discriminator from `type` would be MAJOR and is not anticipated. `thinking_delta` is provisional: it exists so extended-reasoning providers have somewhere to put content, and consumers may discard it entirely."
+    }
+  },
+  "type": "object",
+  "required": [
+    "type",
+    "turn_id",
+    "seq"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "text_delta",
+        "thinking_delta",
+        "tool_call_delta",
+        "usage",
+        "done",
+        "error"
+      ],
+      "description": "Discriminator. CONSUMERS MUST SKIP UNKNOWN VALUES rather than failing — this is what allows a newer provider adapter to run against an older consumer during a rolling upgrade."
+    },
+    "turn_id": {
+      "$ref": "https://lionel.local/contracts/events/v1/turn-event.schema.json#/$defs/TurnId"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic within a stream. Consumers reassemble deltas in seq order and MUST detect gaps."
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "anthropic",
+        "ollama",
+        "llamacpp"
+      ],
+      "description": "For telemetry and debugging ONLY. No caller may branch on this value — ADR-0009 requires branching on ProviderCapabilities instead. A static check enforces it."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "text_delta"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "thinking_delta"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "tool_call_delta"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "tool_call"
+        ],
+        "properties": {
+          "tool_call": {
+            "$ref": "#/$defs/ToolCallDelta"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "usage"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "usage"
+        ],
+        "properties": {
+          "usage": {
+            "$ref": "#/$defs/Usage"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "done"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "stop_reason"
+        ],
+        "properties": {
+          "stop_reason": {
+            "$ref": "#/$defs/StopReason"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "error"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "https://lionel.local/contracts/mcp/v1/error-envelope.schema.json"
+          }
+        }
+      }
+    }
+  ],
+  "properties_note": "Variant payload properties are declared inside allOf above; this schema does not set additionalProperties:false because consumers must tolerate unknown fields per contracts/README.md.",
+  "$defs": {
+    "ToolCallDelta": {
+      "type": "object",
+      "required": [
+        "call_id",
+        "index"
+      ],
+      "properties": {
+        "call_id": {
+          "type": "string",
+          "description": "Stable for the whole call. Correlates deltas, the AuditRecord, and the result."
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Position in the batch when a provider emits parallel tool calls."
+        },
+        "name": {
+          "type": "string",
+          "description": "Present on the FIRST delta of a call. Absent on continuations."
+        },
+        "arguments_delta": {
+          "type": "string",
+          "description": "Partial JSON text. Accumulate across deltas; parse ONLY after `complete` is true. Parsing early on a partial fragment is the classic streaming-tool-call bug."
+        },
+        "complete": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Usage": {
+      "type": "object",
+      "properties": {
+        "input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cached_input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated_cost_usd": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Null where the provider is local and has no monetary cost. Feeds the ADR-0009 quota ceiling — an autonomous loop against a metered API needs a hard stop."
+        }
+      },
+      "additionalProperties": false
+    },
+    "StopReason": {
+      "type": "string",
+      "enum": [
+        "end_turn",
+        "tool_use",
+        "max_tokens",
+        "stop_sequence",
+        "cancelled",
+        "quota_exceeded",
+        "provider_error"
+      ],
+      "description": "`cancelled` is emitted when a CancellationToken fires (ADR-0025) and is a normal outcome, not an error. `quota_exceeded` is the ADR-0009 ceiling halting generation."
+    }
+  },
+  "examples": [
+    {
+      "type": "text_delta",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "seq": 4,
+      "provider": "ollama",
+      "text": "Şu anda C sürücünde "
+    },
+    {
+      "type": "tool_call_delta",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "seq": 7,
+      "provider": "ollama",
+      "tool_call": {
+        "call_id": "call_7f3a",
+        "index": 0,
+        "name": "system.get_disk_usage",
+        "arguments_delta": "{\"volume\":",
+        "complete": false
+      }
+    },
+    {
+      "type": "tool_call_delta",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "seq": 8,
+      "provider": "ollama",
+      "tool_call": {
+        "call_id": "call_7f3a",
+        "index": 0,
+        "arguments_delta": "\"C\"}",
+        "complete": true
+      }
+    },
+    {
+      "type": "usage",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "seq": 21,
+      "provider": "ollama",
+      "usage": {
+        "input_tokens": 1420,
+        "output_tokens": 88,
+        "estimated_cost_usd": null
+      }
+    },
+    {
+      "type": "done",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "seq": 22,
+      "provider": "ollama",
+      "stop_reason": "cancelled"
+    }
+  ]
+}

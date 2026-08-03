@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/telemetry-attributes.schema.json",
+  "title": "Telemetry semantic conventions",
+  "description": "Validates an attribute bag. Reserved keys are typed; unknown keys are permitted because ad-hoc debugging attributes are useful and harmless.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0019",
+      "ADR-0007",
+      "ADR-0015"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "observability",
+    "producer": [
+      "all components via platform/telemetry"
+    ],
+    "consumers": [
+      "otel_collector",
+      "prometheus",
+      "grafana"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Renaming ANY attribute or metric is MAJOR and additionally requires updating every dashboard and alert rule in deploy/observability. Metric names follow OTel convention: lionel.<component>.<operation>.<unit-implied-name>. Histograms are milliseconds unless the name says otherwise."
+    }
+  },
+  "type": "object",
+  "properties": {
+    "lionel.turn.id": {
+      "type": "string",
+      "description": "ULID. ALSO THE OTEL TRACE ID — this identity is what makes one trace span both planes and both runtimes."
+    },
+    "lionel.session.id": {
+      "type": "string"
+    },
+    "lionel.tier": {
+      "type": "string",
+      "enum": [
+        "l0",
+        "l1",
+        "l2",
+        "l3"
+      ]
+    },
+    "lionel.runtime": {
+      "type": "string",
+      "enum": [
+        "host",
+        "cluster"
+      ]
+    },
+    "lionel.component": {
+      "type": "string"
+    },
+    "lionel.language": {
+      "type": "string",
+      "enum": [
+        "en",
+        "tr"
+      ]
+    },
+    "lionel.trust.level": {
+      "type": "string",
+      "enum": [
+        "operator",
+        "user_originated",
+        "tool_result",
+        "external_content"
+      ]
+    },
+    "lionel.brain.provider": {
+      "type": "string"
+    },
+    "lionel.brain.model": {
+      "type": "string"
+    },
+    "lionel.brain.stop_reason": {
+      "type": "string"
+    },
+    "lionel.tokens.input": {
+      "type": "integer"
+    },
+    "lionel.tokens.output": {
+      "type": "integer"
+    },
+    "lionel.cost.usd": {
+      "type": "number"
+    },
+    "lionel.tool.name": {
+      "type": "string"
+    },
+    "lionel.tool.side_effect": {
+      "type": "string",
+      "enum": [
+        "read",
+        "write",
+        "destructive"
+      ]
+    },
+    "lionel.policy.decision": {
+      "type": "string"
+    },
+    "lionel.policy.rule": {
+      "type": "string"
+    },
+    "lionel.stt.model": {
+      "type": "string"
+    },
+    "lionel.stt.wer": {
+      "type": "number"
+    },
+    "lionel.tts.engine": {
+      "type": "string",
+      "enum": [
+        "kokoro",
+        "piper"
+      ]
+    },
+    "lionel.wake.model": {
+      "type": "string"
+    },
+    "lionel.wake.score": {
+      "type": "number"
+    },
+    "lionel.degradation.subsystem": {
+      "type": "string"
+    },
+    "lionel.degradation.behavior": {
+      "type": "string"
+    },
+    "lionel.degradation.user_informed": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "reserved_metrics": {
+      "$comment": "Normative metric inventory. Every histogram below maps 1:1 to a row in docs/LATENCY_BUDGET.md — that mapping is what converts the budget from a document into a Prometheus alert.",
+      "histograms_ms": [
+        "lionel.wake.detect.duration",
+        "lionel.vad.endpoint.duration",
+        "lionel.stt.transcribe.duration",
+        "lionel.memory.recall.duration",
+        "lionel.brain.first_token.duration",
+        "lionel.brain.total.duration",
+        "lionel.tool.execute.duration",
+        "lionel.policy.evaluate.duration",
+        "lionel.tts.first_audio.duration",
+        "lionel.turn.wake_to_speech.duration",
+        "lionel.interrupt.playback_stop.duration"
+      ],
+      "counters": [
+        "lionel.turn.count",
+        "lionel.turn.degraded.count",
+        "lionel.tool.calls.count",
+        "lionel.policy.denials.count",
+        "lionel.wake.false_accept.count",
+        "lionel.wake.false_reject.count",
+        "lionel.brain.tokens.count",
+        "lionel.telemetry.buffered_offline.count"
+      ],
+      "gauges": [
+        "lionel.brain.ready",
+        "lionel.memory.ready",
+        "lionel.cost.daily_spend_usd"
+      ],
+      "alerting": "p95 over target across a 5-minute window. p50 hides the tail the user notices; max fires on every cold start."
+    },
+    "redaction": {
+      "$comment": "ADR-0015. Redaction happens at the FORMATTER, not the call site — call-site redaction is forgotten exactly once and that once is enough. No attribute may carry a secret, a raw transcript, or file contents. Transcripts are conversation content, not telemetry; lionel.stt.wer is a metric, the transcript is not."
+    }
+  },
+  "examples": [
+    {
+      "lionel.turn.id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "lionel.tier": "l0",
+      "lionel.runtime": "host",
+      "lionel.component": "brain_gateway",
+      "lionel.language": "tr",
+      "lionel.trust.level": "user_originated",
+      "lionel.brain.provider": "ollama",
+      "lionel.brain.model": "qwen2.5:14b-instruct-q4_K_M",
+      "lionel.brain.stop_reason": "tool_use",
+      "lionel.tokens.input": 1420,
+      "lionel.tokens.output": 88,
+      "lionel.cost.usd": 0
+    }
+  ]
+}

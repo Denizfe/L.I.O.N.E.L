@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/media/v1/audio-frame.schema.json",
+  "title": "AudioFrame",
+  "description": "A single frame of audio on the data plane. This JSON Schema is the validatable mirror of AudioFrame in contracts/grpc/v1/common.proto, and the fixture format for the ADR-0027 sensory harness — the mechanism that makes the entire voice pipeline testable in CI with no microphone attached.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0006", "ADR-0028", "ADR-0025", "ADR-0027"],
+    "stability": "stable",
+    "plane": "data",
+    "owner": "sensory",
+    "producer": ["audio_io", "tts_service"],
+    "consumers": ["wake", "vad", "stt_service", "audio_playback", "sensory_harness"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "MUST STAY IN STEP WITH common.proto — protobuf is the wire format, this is the mirror. Changing sample_rate_hz defaults is MAJOR in practice even though the schema permits any value: every trained model (wake word, STT) assumes 16 kHz capture, and a mismatch degrades accuracy silently rather than erroring.",
+      "wire_format": "protobuf (lionel.v1.AudioFrame). This schema is for validation, fixtures and documentation, never for live transport."
+    },
+    "payload_policy": {
+      "rule": "ADR-0006. On the CONTROL PLANE, only the descriptor travels — `payload_b64` MUST be absent. It may be populated ONLY in test fixtures and on the data plane, where the protobuf `bytes payload` field carries it as binary.",
+      "why": "Base64 inflates by ~33% on the highest-volume path in the system, and a control plane carrying PCM has no backpressure, no jitter buffer and head-of-line blocking behind unrelated tool calls.",
+      "enforcement": "The contracts CI invariant check asserts payload_b64 never appears in a control-plane schema or a live control-plane payload."
+    }
+  },
+
+  "type": "object",
+  "required": ["seq", "format"],
+  "properties": {
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic from 0 within a stream. A GAP IS LEGITIMATE, not an error: ADR-0025 requires the data plane to apply backpressure by DROPPING frames and never by blocking, because a blocked data plane stalls the control plane. Consumers detect gaps and conceal, they do not abort."
+    },
+    "format": { "$ref": "#/$defs/AudioFormat" },
+    "timestamp_ns": { "type": "integer", "minimum": 0, "description": "Nanoseconds since STREAM START — relative, not wall clock. Wall-clock skew between host and cluster would corrupt jitter calculations at L2." },
+    "end_of_utterance": { "type": "boolean", "default": false, "description": "Set on the final frame so the receiver finalizes immediately rather than waiting out a timeout." },
+    "payload_b64": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "description": "FIXTURES AND DATA PLANE ONLY. See x-lionel.payload_policy. Absent on the control plane, always."
+    },
+    "payload_bytes": { "type": "integer", "minimum": 0, "description": "Length of the frame payload. Present even when payload_b64 is absent, so a descriptor still describes something." },
+    "source": { "type": "string", "enum": ["microphone", "fixture", "tts_synthesis", "file"], "description": "`fixture` marks harness-injected audio. The L0 conformance suite asserts that a CI run sees only `fixture`, which is how 'tested without hardware' is proven rather than assumed." },
+    "sentence_boundary": { "type": "boolean", "default": false, "description": "TTS output only. Lets the player start on sentence 1 while sentence 2 is still rendering — the 300 ms first-audio budget assumes this." }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "AudioFormat": {
+      "type": "object",
+      "required": ["sample_rate_hz", "channels", "codec"],
+      "properties": {
+        "sample_rate_hz": { "type": "integer", "enum": [16000, 22050, 24000, 44100, 48000], "description": "16000 capture and STT · 24000 Kokoro · 22050 Piper. Resampling between them is the TTS service's job, not the player's." },
+        "channels": { "type": "integer", "const": 1, "description": "Mono only. Stereo capture is not supported and would not help — wake word, VAD and STT are all single-channel models." },
+        "codec": { "type": "string", "enum": ["pcm_s16le", "pcm_f32le", "opus"], "default": "pcm_s16le", "description": "opus is reserved for L2 over constrained links; unused at L0/L1." },
+        "frame_ms": { "type": "integer", "enum": [10, 20, 30, 80], "default": 80, "description": "80 on the capture path. 10/20/30 exist because VAD implementations commonly require one of those." }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "examples": [
+    {
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "seq": 0,
+      "format": { "sample_rate_hz": 16000, "channels": 1, "codec": "pcm_s16le", "frame_ms": 80 },
+      "timestamp_ns": 0,
+      "end_of_utterance": false,
+      "payload_bytes": 2560,
+      "source": "microphone"
+    },
+    {
+      "seq": 41,
+      "format": { "sample_rate_hz": 16000, "channels": 1, "codec": "pcm_s16le", "frame_ms": 80 },
+      "timestamp_ns": 3280000000,
+      "end_of_utterance": true,
+      "payload_b64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=",
+      "payload_bytes": 44,
+      "source": "fixture"
+    }
+  ]
+}

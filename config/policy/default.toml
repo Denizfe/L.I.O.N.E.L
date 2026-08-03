@@ -1,0 +1,45 @@
+# config/policy/default.toml — ADR-0012. Declarative, not code. DEFAULT IS DENY.
+#
+# Trust propagation (the anti-injection mechanism):
+#   Text spoken by Efe            -> user_originated
+#   Text read from a file/web/tool-> untrusted, and it STAYS untrusted for the whole turn.
+# A tool requiring user_originated CANNOT be invoked on a turn whose triggering content
+# is untrusted. This is structural, not a filter.
+
+[defaults]
+decision = "deny"
+audit = true                     # log allows AND denies. A log of refusals alone cannot
+                                 # answer "what did it actually do last Tuesday".
+
+[[rule]]
+name = "reads are broadly permitted"
+match.side_effect = "read"
+decision = "allow"
+rate_limit_per_minute = 120
+
+[[rule]]
+name = "writes require user-originated trust"
+match.side_effect = "write"
+match.trust = "user_originated"
+decision = "allow"
+rate_limit_per_minute = 20
+
+[[rule]]
+name = "writes from untrusted content are denied"
+match.side_effect = "write"
+match.trust = "untrusted"
+decision = "deny"
+reason = "ADR-0012: injected content must not reach a write tool."
+
+[[rule]]
+name = "destructive requires per-invocation confirmation"
+match.side_effect = "destructive"
+decision = "confirm"
+confirmation_scope = "per_invocation"   # never session-wide; "yes to all" is a rubber stamp
+rate_limit_per_minute = 5
+
+[[rule]]
+name = "runaway containment"
+match.any = true
+max_calls_per_turn = 40
+on_exceeded = "halt_turn"

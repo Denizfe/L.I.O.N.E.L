@@ -1,0 +1,134 @@
+// contracts/grpc/v1/stt.proto
+//
+// Speech-to-text.  Bidirectional streaming: audio frames in, partial and final
+// transcripts out.  ADR-0006, ADR-0018, ADR-0028.
+//
+// VERSION      1.0.0
+// STABILITY    stable
+// ADR          ADR-0018 (multilingual mandatory), ADR-0006 (data plane), ADR-0028 (gRPC)
+//
+// MODEL CONSTRAINT — ADR-0018
+//   Whisper `.en` models are REJECTED PROJECT-WIDE.  They are English-only by construction,
+//   not merely English-optimised, so they cannot serve Turkish at any quality.  v1.0 of the
+//   master plan specified ggml-base.en; that was a hard incompatibility that would have
+//   surfaced at the final sensory gate, after the pipeline was already built around the
+//   wrong model class.  `model` in StreamConfig MUST name a multilingual model.
+//
+// BACKWARD COMPATIBILITY
+//   Field numbers 1-15 use a single encoding byte and are reserved for high-frequency
+//   fields.  AudioFrame and Transcript members deliberately stay inside that range; new
+//   low-frequency fields must take 16+.
+//   Removed numbers are `reserved` permanently — see common.proto.
+
+syntax = "proto3";
+
+package lionel.v1;
+
+import "common.proto";
+
+option go_package = "github.com/lionel/contracts/grpc/v1;lionelv1";
+option java_multiple_files = true;
+option java_package = "local.lionel.contracts.v1";
+
+service SpeechToText {
+  // Bidirectional.  Client sends one StreamConfig, then AudioFrames.  Server streams
+  // partial transcripts as they stabilise and one final transcript per utterance.
+  //
+  // CANCELLATION: the client half-closes OR sends CancelRequest.  gRPC stream cancellation
+  // carries the ADR-0025 token across the runtime boundary, which is what makes barge-in
+  // work at L2 rather than only at L0.
+  rpc Transcribe(stream TranscribeRequest) returns (stream TranscribeResponse);
+
+  // Readiness is DISTINCT from liveness (ADR-0009 applies the same rule to brain
+  // providers).  A whisper model still loading is alive and not ready; routing an
+  // utterance to it produces a timeout that looks like a broken assistant.
+  rpc Health(HealthRequest) returns (SttHealthResponse);
+}
+
+message TranscribeRequest {
+  oneof payload {
+    StreamConfig  config = 1;  // MUST be the first message on the stream
+    AudioFrame    frame  = 2;
+    CancelRequest cancel = 3;
+  }
+}
+
+message StreamConfig {
+  TurnContext context = 1;
+  AudioFormat format  = 2;
+
+  // Multilingual model identifier, e.g. "large-v3-turbo".  ADR-0018 forbids `.en` variants.
+  // The server MUST reject a config naming an English-only model rather than silently
+  // producing garbage for Turkish input.
+  string model = 3;
+
+  // "auto" | "en" | "tr".  Detection routes TTS engine selection (ADR-0017) and locale
+  // text normalisation (ADR-0023).
+  string language_hint = 4;
+
+  // Emit interim results.  Costs CPU; enables the O6 latency optimisation (start reasoning
+  // before the user stops speaking) without committing to it now.
+  bool emit_partials = 5;
+
+  // Server-side VAD.  False when the host has already endpointed, which is the normal case
+  // at every tier — VAD is host-resident per ADR-0005 because it sits in the capture path.
+  bool enable_vad = 6;
+}
+
+message TranscribeResponse {
+  oneof payload {
+    Transcript  transcript = 1;
+    StreamError error      = 2;
+    StreamStats stats      = 3;
+  }
+}
+
+message Transcript {
+  uint64 seq = 1;
+
+  // FALSE = interim, may be revised.  TRUE = stable, will not change.
+  // Consumers MUST NOT act on a partial: sending a partial to the brain and then revising
+  // it produces a turn answering a question the user did not ask.
+  bool   is_final = 2;
+
+  string text     = 3;
+
+  // Detected language.  Authoritative once is_final is true.
+  string language = 4;
+
+  // 0..1.  Low confidence on a final transcript is a signal to ask for a repeat rather
+  // than to guess — guessing wrong is more annoying than asking.
+  float  confidence = 5;
+
+  uint64 start_ms = 6;
+  uint64 end_ms   = 7;
+}
+
+message StreamStats {
+  // Measured against the docs/LATENCY_BUDGET.md target.
+  //
+  // NOTE FOR G6b: v1.0's 800 ms target was set against base.en.  ADR-0018 replaces that
+  // model with multilingual large-v3-turbo, which is materially heavier.  This value MUST
+  // be re-measured, not assumed.  If CPU inference breaks the budget, that measurement is
+  // the trigger to move STT into the Cluster Runtime for GPU inference — one of the
+  // clearest practical justifications for the ADR-0007 tiering.
+  // Discover it here by measurement, not at G6d by disappointment.
+  uint64 transcribe_duration_ms = 1;
+
+  uint64 audio_duration_ms      = 2;
+  // Frames the server dropped under backpressure.  Non-zero is acceptable (ADR-0025
+  // requires dropping over blocking) but a rising trend means capacity, not a bug.
+  uint64 frames_dropped         = 3;
+  float  realtime_factor        = 4;  // < 1.0 means faster than realtime
+}
+
+message SttHealthResponse {
+  HealthCore core = 1;
+
+  string model = 2;
+
+  // MUST be true to serve Turkish (ADR-0018).  A server reporting false here cannot be
+  // selected for a Turkish turn, and at G6b that is a gate failure rather than a runtime
+  // surprise.  Typed rather than a map entry precisely because it is a gate criterion.
+  bool multilingual = 3;
+}

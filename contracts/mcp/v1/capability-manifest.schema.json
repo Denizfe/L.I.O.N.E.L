@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/capability-manifest.schema.json",
+  "title": "CapabilityManifest",
+  "description": "What an MCP server declares about itself at connect. This is the version-negotiation payload (M7): the host compares majors and REFUSES AT CONNECT rather than failing at first call, because an incompatibility discovered mid-conversation is a bad experience and a confusing bug report.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0003",
+      "ADR-0011",
+      "ADR-0026",
+      "ADR-0007"
+    ],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "capabilities",
+    "producer": [
+      "capability servers"
+    ],
+    "consumers": [
+      "tool_router",
+      "capabilities registry loader"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "`contract_version` is the negotiated field and its semantics are frozen: MAJOR mismatch refuses at connect, MINOR mismatch connects. Changing that rule is MAJOR. `requires_network` gained meaning from ADR-0007 and is required, not optional — a server that does not declare it cannot be admitted at L0, and defaulting it to false would let a network-dependent server silently break offline conformance."
+    }
+  },
+  "type": "object",
+  "required": [
+    "name",
+    "contract_version",
+    "capability_version",
+    "tools",
+    "requires_network"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 32
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "contract_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Which CONTRACT SET this server speaks (contracts/MANIFEST.json). Not the server's own version."
+    },
+    "capability_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "This server's own version."
+    },
+    "requires_network": {
+      "type": "boolean",
+      "description": "ADR-0007. TRUE EXCLUDES THIS SERVER FROM TIER L0, enforced by the L0 conformance gate. Required rather than defaulted: a silent default is how offline operation erodes."
+    },
+    "placement": {
+      "type": "string",
+      "enum": [
+        "host_only",
+        "cluster_preferred",
+        "either"
+      ],
+      "default": "either",
+      "description": "ADR-0005. host_only for anything touching physical devices or the local filesystem — those components cannot move regardless of tier."
+    },
+    "transport": {
+      "type": "string",
+      "enum": [
+        "stdio",
+        "http",
+        "inproc"
+      ]
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "$ref": "https://lionel.local/contracts/events/v1/tool-spec.schema.json"
+      },
+      "description": "Full ToolSpec per tool. THE REGISTRY REJECTS ANY TOOL MISSING side_effect OR trust_required (ADR-0012, ADR-0026) — incomplete metadata is a registration failure, not a warning."
+    },
+    "health_endpoint": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "en",
+        "tr"
+      ]
+    },
+    "deprecated": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "name": "system",
+      "display_name": "System Telemetry",
+      "description": "Read-only host telemetry: CPU, memory, disk, battery, GPU.",
+      "contract_version": "1.0.0",
+      "capability_version": "1.0.0",
+      "requires_network": false,
+      "placement": "host_only",
+      "transport": "inproc",
+      "tools": [
+        {
+          "name": "system.get_disk_usage",
+          "description": "Report free and total disk space for a mounted volume on this machine. Use when the user asks about storage, free space, or whether something will fit. Does not delete or move anything.",
+          "input_schema": {
+            "type": "object",
+            "properties": {
+              "volume": {
+                "type": "string",
+                "enum": [
+                  "C",
+                  "D",
+                  "all"
+                ],
+                "default": "all"
+              }
+            },
+            "required": [],
+            "additionalProperties": false
+          },
+          "side_effect": "read",
+          "trust_required": "any",
+          "idempotent": true,
+          "audit": false
+        }
+      ],
+      "health_endpoint": null,
+      "languages": [
+        "en",
+        "tr"
+      ],
+      "deprecated": false
+    }
+  ]
+}

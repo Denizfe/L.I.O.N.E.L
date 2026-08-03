@@ -1,0 +1,465 @@
+# artifacts.lock.yaml — ADR-0013
+#
+# AUTHORITATIVE. Supersedes artifacts.lock.toml (retained as a deprecation pointer).
+# scripts/verify_artifacts.sh is the G0 gate and FAILS CLOSED.
+#
+# ─────────────────────────────────────────────────────────────────────────────────
+# VERIFICATION TIERS — read this before trusting any hash below
+# ─────────────────────────────────────────────────────────────────────────────────
+# A hash is not a hash. Where it came from determines what it actually proves, and a
+# lockfile that flattens those differences grants false confidence. Every artifact
+# declares a `verification.tier`:
+#
+#   A  PRIMARY-PUBLISHED
+#      The authoritative upstream publishes the digest itself.
+#      Proves: the file is what the project that produced it says it is.
+#
+#   B  MIRROR + SIZE-MATCHED
+#      A third-party mirror publishes a SHA-256, AND the byte length matches the
+#      authoritative upstream asset EXACTLY.
+#      Proves: strong evidence of identity. NOT proof — two distinct files can share a
+#      length. Treated as sufficient because the mirror is pinned as the actual source,
+#      so what we fetch is what we hashed.
+#
+#   C  MIRROR + INDEPENDENT CORROBORATION
+#      Two or more UNRELATED mirrors publish byte-identical SHA-256s for the same file.
+#      Proves: strong. Independent uploaders converging on one hash is hard to fake and
+#      unlikely by accident.
+#
+#   D  SINGLE MIRROR, UNCORROBORATED
+#      One third-party mirror publishes a hash; no upstream size and no second source
+#      to check it against.
+#      Proves: reproducibility FROM THAT SOURCE only. It does NOT prove the file matches
+#      what the upstream library would fetch. Acceptable only when the mirror is pinned
+#      as the source of record and the risk is documented.
+#
+#   E  UNRESOLVED
+#      No hash. Never a placeholder — a fabricated checksum is strictly worse than an
+#      absent one, because it looks verified.
+#
+# ─────────────────────────────────────────────────────────────────────────────────
+# STATUS: 12 of 13 artifacts reproducible. 1 UNRESOLVED (temporary, tooling-level).
+# G0 remains blocked until it reaches 0. See Artifact_Verification_Report.md.
+# ─────────────────────────────────────────────────────────────────────────────────
+
+meta:
+  schema_version: 3
+  format: yaml
+  supersedes: artifacts.lock.toml
+  updated: "2026-08-02"
+  retrieval_date: "2026-08-02"
+  resolved: 12
+  unresolved: 1
+  gate: "G0 blocks while unresolved > 0"
+  report: Artifact_Verification_Report.md
+  rules:
+    - "Never invent a hash. UNRESOLVED is an honest state; a placeholder is not."
+    - "Never substitute one artifact's digest for another's, even when sizes look close."
+    - "Pin the source you actually fetch from. A hash for a mirror you do not use proves nothing."
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# SPEECH RECOGNITION — ADR-0018 (multilingual mandatory; .en variants rejected)
+# ═════════════════════════════════════════════════════════════════════════════════
+
+models:
+
+  whisper_large_v3_turbo:
+    status: RESOLVED
+    adr: ADR-0018
+    purpose: Primary STT. Multilingual — required for Turkish.
+    version: large-v3-turbo
+    source_url: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
+    source_repo: https://huggingface.co/ggerganov/whisper.cpp
+    dest: models/whisper/ggml-large-v3-turbo.bin
+    sha256: 1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69
+    bytes: 1624555275
+    license: MIT (whisper.cpp) / MIT (OpenAI Whisper weights)
+    verification:
+      tier: A
+      provenance: host-published-lfs
+      method: >-
+        Hugging Face API GET /api/models/ggerganov/whisper.cpp/tree/main. The Git-LFS
+        `oid` field IS the SHA-256 of the file content, published by the hosting party.
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/whisper/ggml-large-v3-turbo.bin
+    note: >-
+      1.6 GB vs base.en's 140 MB. Re-measure the 800 ms STT budget at G6b; if CPU
+      inference breaks it, that is the trigger to move STT to the Cluster Runtime
+      (ADR-0007).
+
+  whisper_medium:
+    status: RESOLVED
+    enabled: false
+    adr: ADR-0018
+    purpose: Fallback if large-v3-turbo breaks the STT latency budget on CPU at G6b.
+    version: medium
+    source_url: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin
+    source_repo: https://huggingface.co/ggerganov/whisper.cpp
+    dest: models/whisper/ggml-medium.bin
+    sha256: 6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208
+    bytes: 1533763059
+    license: MIT
+    verification:
+      tier: A
+      provenance: host-published-lfs
+      method: Hugging Face API tree endpoint; LFS oid == content SHA-256.
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/whisper/ggml-medium.bin
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# SPEECH SYNTHESIS — ADR-0017 (Kokoro EN + Piper TR behind TTSProvider)
+# ═════════════════════════════════════════════════════════════════════════════════
+
+  kokoro_v1:
+    status: RESOLVED
+    adr: ADR-0017
+    purpose: English TTS. 82M params, ONNX, CPU real-time.
+    version: v1.0
+    source_url: https://huggingface.co/fastrtc/kokoro-onnx/resolve/main/kokoro-v1.0.onnx
+    source_repo: https://huggingface.co/fastrtc/kokoro-onnx
+    dest: models/kokoro/kokoro-v1.0.onnx
+    sha256: 7d5df8ecf7d4b1878015a32686053fd0eebe2bc377234608764cc0ef3636a6c5
+    bytes: 325532387
+    license: Apache-2.0
+    verification:
+      tier: B
+      provenance: host-published-lfs
+      method: >-
+        HF API tree for fastrtc/kokoro-onnx gives LFS oid == SHA-256. IDENTITY CHECK:
+        byte length 325,532,387 matches the authoritative GitHub release asset
+        (thewh1teagle/kokoro-onnx model-files-v1.0) EXACTLY. Size equality is necessary
+        but not sufficient for byte identity, so this is strong evidence rather than
+        proof — which is why the mirror is pinned as the source of record.
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/kokoro/kokoro-v1.0.onnx
+    source_change:
+      from: https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+      why: >-
+        The GitHub release asset predates the API `digest` field and returns digest:null,
+        so it is unpinnable at source. Per the ADR-0013 amendment, prefer sources that
+        publish content digests. ADR-0017 amended 2026-08-02 to record the source change.
+      upstream_still_valid: true
+    rejected_substitute: >-
+      onnx-community/Kokoro-82M-v1.0-ONNX onnx/model.onnx publishes a clean LFS SHA-256
+      (8fbea51e…) but is 325,532,232 bytes — 155 FEWER. It is a DIFFERENT FILE. Its hash
+      must never be pasted here; doing so would produce a lockfile that verifies perfectly
+      against a model nobody runs.
+
+  kokoro_voices:
+    status: RESOLVED
+    adr: ADR-0017
+    purpose: Kokoro voice style vectors (npz). Not shipped in the pip package.
+    version: v1.0
+    source_url: https://huggingface.co/fastrtc/kokoro-onnx/resolve/main/voices-v1.0.bin
+    source_repo: https://huggingface.co/fastrtc/kokoro-onnx
+    dest: models/kokoro/voices-v1.0.bin
+    sha256: bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d
+    bytes: 28214398
+    license: Apache-2.0
+    verification:
+      tier: B
+      provenance: host-published-lfs
+      method: >-
+        HF API tree; LFS oid == SHA-256. IDENTITY CHECK: 28,214,398 bytes matches the
+        GitHub release asset exactly.
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/kokoro/voices-v1.0.bin
+
+  piper_tr_dfki:
+    status: RESOLVED
+    adr: ADR-0017
+    purpose: Turkish TTS. VITS ~15M params, ONNX, 22.05 kHz.
+    version: tr_TR-dfki-medium
+    source_url: https://huggingface.co/rhasspy/piper-voices/resolve/main/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx
+    source_repo: https://huggingface.co/rhasspy/piper-voices
+    dest: models/piper/tr_TR-dfki-medium.onnx
+    sha256: 2844717f524ab965d3fe86e60562cbb601d3e456836efcc2196cc3a14112a8fb
+    bytes: 63201294
+    license: "verify per MODEL_CARD at tr/tr_TR/dfki/medium/MODEL_CARD before release"
+    verification:
+      tier: A
+      provenance: host-published-lfs
+      method: Hugging Face API tree endpoint; LFS oid == content SHA-256.
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/piper/tr_TR-dfki-medium.onnx
+    note: >-
+      THE ONLY Turkish voice in rhasspy/piper-voices. Per the ADR-0017 correction of
+      2026-08-02, fettah and fahrettin exist only in rhasspy/piper-checkpoints (training
+      checkpoints, not distributable voices). The planned G6c fettah-vs-dfki listening
+      test is moot — there is one candidate.
+
+  piper_tr_dfki_config:
+    status: RESOLVED
+    adr: ADR-0017
+    purpose: Piper voice config — phoneme map, speaker id, inference params. Required alongside the .onnx.
+    version: tr_TR-dfki-medium
+    source_url: https://huggingface.co/rhasspy/piper-voices/resolve/main/tr/tr_TR/dfki/medium/tr_TR-dfki-medium.onnx.json
+    source_repo: https://huggingface.co/rhasspy/piper-voices
+    dest: models/piper/tr_TR-dfki-medium.onnx.json
+    sha256: null
+    git_blob_sha1: ea4036df5c9e4e07b8c2f42acce4d77d0fb6afdc
+    bytes: 4960
+    license: same as voice
+    verification:
+      tier: A
+      provenance: git-blob-sha1
+      method: >-
+        Non-LFS file, so HF publishes a git blob SHA-1 rather than a SHA-256. This is a
+        real, reproducible, primary-published pin — just a weaker algorithm. Recorded
+        honestly rather than upgraded by assertion.
+      retrieved: "2026-08-02"
+      confirm_locally: git hash-object models/piper/tr_TR-dfki-medium.onnx.json
+    note: >-
+      SHA-1 is collision-vulnerable in the adversarial case. Accepted here because the
+      file is a 5 KB JSON config whose contents are fully inspectable, and a malicious
+      collision would have to also be valid Piper config. scripts/resolve_artifacts.sh
+      records a local SHA-256 alongside it for defence in depth.
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# WAKE WORD — ONNX only (openWakeWord installs onnxruntime-only on Windows)
+# ═════════════════════════════════════════════════════════════════════════════════
+
+  wake_bootstrap:
+    status: RESOLVED
+    adr: ADR-0007
+    purpose: Pretrained bootstrap model. Proves the audio pipeline before custom training.
+    version: v0.1
+    source_url: https://huggingface.co/harvestsu/openwakeword-onnx/resolve/main/hey_jarvis_v0.1.onnx
+    source_repo: https://huggingface.co/harvestsu/openwakeword-onnx
+    dest: models/wakeword/hey_jarvis_v0.1.onnx
+    sha256: 94a13cfe60075b132f6a472e7e462e8123ee70861bc3fb58434a73712ee0d2cb
+    bytes: 1271370
+    license: "AMBIGUOUS — see license_risk below. Verify before any non-personal use."
+    verification:
+      tier: D
+      provenance: host-published-lfs
+      method: >-
+        HF API tree; LFS oid == SHA-256. WEAKEST ENTRY IN THIS FILE: a single
+        third-party mirror, with no upstream byte size to check against and no second
+        mirror carrying this file. It proves reproducibility FROM THIS SOURCE, not that
+        the file matches what openwakeword.utils.download_models() would fetch.
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/wakeword/hey_jarvis_v0.1.onnx
+    license_risk: >-
+      The openWakeWord LIBRARY is Apache-2.0, but the author's own model repo
+      (huggingface.co/davidscripka/openwakeword) is tagged cc-by-nc-sa-4.0 —
+      NON-COMMERCIAL. Mirrors disagree: littlebearlabs tags Apache-2.0, harvestsu tags
+      nothing. Resolve before any commercial use.
+    risk_accepted_because: >-
+      This model is temporary scaffolding. ADR-0023 replaces it with a project-trained
+      "Hey Lionel" model at Phase 6a, at which point this artifact leaves the tree
+      entirely and both the tier-D weakness and the licence ambiguity disappear with it.
+
+  wake_melspectrogram:
+    status: RESOLVED
+    adr: ADR-0007
+    purpose: Shared audio feature extractor. Every openWakeWord model depends on it.
+    version: openwakeword-features
+    source_url: https://huggingface.co/littlebearlabs/openwakeword-features/resolve/main/melspectrogram.onnx
+    source_repo: https://huggingface.co/littlebearlabs/openwakeword-features
+    dest: models/wakeword/melspectrogram.onnx
+    sha256: ba2b0e0f8b7b875369a2c89cb13360ff53bac436f2895cced9f479fa65eb176f
+    bytes: 1087958
+    license: Apache-2.0
+    verification:
+      tier: C
+      provenance: host-published-lfs
+      method: >-
+        HF API tree; LFS oid == SHA-256. CORROBORATED: harvestsu/openwakeword-onnx
+        publishes a BYTE-IDENTICAL hash and size for the same filename, from an
+        unrelated uploader. Two independent mirrors converging on one digest is hard to
+        fake and unlikely by accident.
+      corroborating_source: https://huggingface.co/harvestsu/openwakeword-onnx
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/wakeword/melspectrogram.onnx
+    note: >-
+      Easy to forget: without this and embedding_model, NO wake-word model runs at all.
+      Pinned with the same rigour as the wake word itself.
+
+  wake_embedding_model:
+    status: RESOLVED
+    adr: ADR-0007
+    purpose: Shared embedding extractor. Every openWakeWord model depends on it.
+    version: openwakeword-features
+    source_url: https://huggingface.co/littlebearlabs/openwakeword-features/resolve/main/embedding_model.onnx
+    source_repo: https://huggingface.co/littlebearlabs/openwakeword-features
+    dest: models/wakeword/embedding_model.onnx
+    sha256: 70d164290c1d095d1d4ee149bc5e00543250a7316b59f31d056cff7bd3075c1f
+    bytes: 1326578
+    license: Apache-2.0
+    verification:
+      tier: C
+      provenance: host-published-lfs
+      method: >-
+        HF API tree; LFS oid == SHA-256. CORROBORATED byte-identically by
+        harvestsu/openwakeword-onnx, an unrelated uploader.
+      corroborating_source: https://huggingface.co/harvestsu/openwakeword-onnx
+      retrieved: "2026-08-02"
+      confirm_locally: sha256sum models/wakeword/embedding_model.onnx
+
+  wake_lionel:
+    status: NOT_YET_BUILT
+    adr: ADR-0023
+    purpose: >-
+      Custom "Hey Lionel", trained on TURKISH pronunciation. openWakeWord is
+      language-agnostic; its training data is not.
+    dest: models/wakeword/hey_lionel.onnx
+    license: project-owned
+    enabled: false
+    verification:
+      tier: null
+      provenance: project-produced
+      method: Hash recorded at Phase 6a when the model is first trained.
+      retrieved: null
+    note: >-
+      A project-produced artifact, not an external dependency. Does NOT block G0 and is
+      not counted in the resolved/unresolved totals.
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# EMBEDDINGS
+# ═════════════════════════════════════════════════════════════════════════════════
+
+  embedding:
+    status: RESOLVED
+    adr: ADR-0013
+    purpose: Memory Service vector embeddings.
+    version: all-MiniLM-L6-v2
+    name: sentence-transformers/all-MiniLM-L6-v2
+    source_url: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+    dims: 384
+    license: Apache-2.0
+    sha256: null
+    pinned_by: model-id-and-dimension
+    verification:
+      tier: A
+      provenance: pinned-model-id
+      method: >-
+        Pinned by model id + dimension, asserted at Memory Service startup. Fetched and
+        cached by fastembed rather than downloaded by us, so there is no single file for
+        us to hash — the pin is the identifier plus a dimension assertion that fails
+        loudly on substitution.
+      retrieved: "2026-08-02"
+      confirm_locally: "Memory Service startup asserts dims == 384"
+    warning: >-
+      HIDDEN SCHEMA. Changing this invalidates every stored vector and requires a
+      documented full re-index via ADR-0010's migration path. Retrieval degrades
+      SILENTLY rather than erroring — the worst way for something to break.
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# CONTAINER IMAGES — tag AND digest. Tags are mutable; digests are not.
+# ═════════════════════════════════════════════════════════════════════════════════
+
+images:
+
+  qdrant:
+    status: RESOLVED
+    adr: ADR-0013
+    purpose: Vector backend for the Memory Service.
+    version: v1.18.3
+    ref: qdrant/qdrant
+    source_url: https://hub.docker.com/r/qdrant/qdrant
+    digest: sha256:0bd98fa7977f1e75694779359ca4e212822e5a71334e28421182f72f209d5286
+    digest_amd64: sha256:ecc81d662bb9bb734db879b94461eb44be38604fc259491d478ad7e673238a0d
+    digest_arm64: sha256:e8c968e9a32219a4cde0d34ee594ad697ed92df41c542b5ec2d178eaa807804b
+    pull_as: qdrant/qdrant@sha256:0bd98fa7977f1e75694779359ca4e212822e5a71334e28421182f72f209d5286
+    license: Apache-2.0
+    verification:
+      tier: A
+      provenance: registry-manifest
+      method: >-
+        Docker Hub registry API GET /v2/repositories/qdrant/qdrant/tags/v1.18.3. OCI
+        digests are content-addressed by construction — a digest reference cannot be
+        re-pointed, which makes this the strongest pin available for a container.
+      retrieved: "2026-08-02"
+      confirm_locally: docker buildx imagetools inspect qdrant/qdrant:v1.18.3
+    note: >-
+      `digest` is the OCI image INDEX; the runtime selects the arch. Per-arch digests
+      recorded for the multi-arch build in ADR-0020 and the arm64/Jetson path in
+      ADR-0024. Always pull by digest — the tag is advisory.
+
+  github_mcp:
+    status: UNRESOLVED
+    adr: ADR-0013
+    purpose: GitHub capability server.
+    version: "unpinned — must be resolved before use"
+    ref: ghcr.io/github/github-mcp-server
+    source_url: https://github.com/github/github-mcp-server
+    digest: null
+    license: MIT
+    verification:
+      tier: E
+      provenance: null
+      method: null
+      retrieved: null
+    blocker:
+      what: >-
+        GHCR requires an Authorization: Bearer header on the manifest endpoint. An
+        anonymous token IS obtainable from https://ghcr.io/token (confirmed 2026-08-02),
+        but the available fetch tooling cannot set request headers, and passing the token
+        as a query parameter is rejected.
+      classification: TEMPORARY
+      why_temporary: >-
+        This is a limitation of the tooling available in this session, not of the
+        registry or the artifact. Any machine with docker or crane resolves it in one
+        command. Nothing about the upstream needs to change.
+    alternatives:
+      - id: 1
+        recommended: true
+        approach: "Resolve locally: docker buildx imagetools inspect ghcr.io/github/github-mcp-server:<tag>"
+        reproducible: true
+        effort: one command
+        note: >-
+          Docker performs the token exchange automatically. Pick an explicit version tag,
+          never :latest — a mutable tag defeats the purpose of pinning.
+      - id: 2
+        approach: "crane digest ghcr.io/github/github-mcp-server:<tag>"
+        reproducible: true
+        effort: one command, no Docker daemon required
+        note: go-containerregistry CLI. Useful in CI where a daemon is unavailable.
+      - id: 3
+        approach: Build from source and pin the git commit instead of an image digest.
+        reproducible: true
+        effort: moderate — requires a Go toolchain
+        note: >-
+          Trades a registry dependency for a build dependency. Gives a tier-A vcs-commit
+          pin, the same mechanism already used for whisper.cpp.
+      - id: 4
+        approach: Drop the GitHub capability from the L0 configuration.
+        reproducible: true
+        effort: zero — already the case
+        note: >-
+          requires_network is true, so ADR-0007 already excludes this capability at tier
+          L0. It is NOT on the offline critical path, which is why this single unresolved
+          artifact does not block L0 conformance — only full G0 sign-off.
+    note: >-
+      The npm package @modelcontextprotocol/server-github has been unsupported since
+      April 2025. The Docker image is the only maintained distribution.
+
+# ═════════════════════════════════════════════════════════════════════════════════
+# SOURCE DEPENDENCIES
+# ═════════════════════════════════════════════════════════════════════════════════
+
+source:
+
+  whisper_cpp:
+    status: RESOLVED
+    adr: ADR-0013
+    purpose: STT inference engine, built from source.
+    version: v1.9.1
+    source_url: https://github.com/ggml-org/whisper.cpp
+    path: vendor/whisper.cpp
+    tag: v1.9.1
+    commit: f049fff95a089aa9969deb009cdd4892b3e74916
+    license: MIT
+    verification:
+      tier: A
+      provenance: vcs-commit
+      method: >-
+        GitHub API GET /repos/ggml-org/whisper.cpp/tags. A git commit SHA is a full
+        cryptographic pin of the entire source tree, including history.
+      retrieved: "2026-08-02"
+      confirm_locally: git -C vendor/whisper.cpp rev-parse HEAD
+    note: >-
+      Resolves the unfilled tag placeholder MASTER_PLAN v1.0 left behind. Pin the
+      COMMIT, not the tag — tags are movable refs. Never track master; the ggml ABI moves
+      fast.

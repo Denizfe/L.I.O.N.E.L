@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/mcp-tool.schema.json",
+  "title": "MCPTool",
+  "description": "The MCP WIRE PROJECTION of a tool — exactly what appears in an MCP `tools/list` response. This is a strict subset of the ToolSpec IR (events/v1/tool-spec.schema.json), and the difference is the point: side_effect, trust_required, rate limits and audit flags are L.I.O.N.E.L's authorization metadata and MUST NOT leave the system. Emitting them would tell a remote peer exactly which tool is the soft target.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0003", "ADR-0009", "ADR-0012"],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "capabilities",
+    "producer": ["capability servers"],
+    "consumers": ["tool_router", "brain_gateway (via ToolSpec translation)"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Field names use MCP's camelCase `inputSchema`, NOT our snake_case — this schema describes someone else's wire format and must match it exactly. That inconsistency with the rest of contracts/ is deliberate and should not be 'fixed'. This is a PROJECTION, not a second source of truth: ToolSpec remains authoritative and MCPTool is derived from it. Never author an MCPTool by hand."
+    },
+    "projection_of": "https://lionel.local/contracts/events/v1/tool-spec.schema.json",
+    "fields_deliberately_omitted": ["side_effect", "trust_required", "rate_limit_per_minute", "audit", "idempotency_key_param", "tags"]
+  },
+
+  "type": "object",
+  "required": ["name", "description", "inputSchema"],
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$", "maxLength": 64 },
+    "description": { "type": "string", "minLength": 20, "maxLength": 1024 },
+    "inputSchema": {
+      "$ref": "https://lionel.local/contracts/events/v1/tool-spec.schema.json#/$defs/ParameterSchema",
+      "description": "MCP spells this camelCase. Constrained to the same portable JSON Schema subset as ToolSpec — no oneOf/anyOf/allOf, because that is where provider support diverges."
+    },
+    "title": { "type": "string" },
+    "annotations": {
+      "type": "object",
+      "description": "MCP's optional behavioural hints. HINTS ONLY — never a security control. `readOnlyHint` is a courtesy to the client, not a substitute for the Policy Engine's side_effect check (ADR-0012), which runs regardless of what a remote server claims about itself.",
+      "properties": {
+        "readOnlyHint": { "type": "boolean" },
+        "destructiveHint": { "type": "boolean" },
+        "idempotentHint": { "type": "boolean" },
+        "openWorldHint": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+
+  "examples": [
+    {
+      "name": "system.get_disk_usage",
+      "title": "Disk usage",
+      "description": "Report free and total disk space for a mounted volume on this machine. Use when the user asks about storage, free space, or whether something will fit. Does not delete or move anything.",
+      "inputSchema": {
+        "type": "object",
+        "properties": { "volume": { "type": "string", "enum": ["C", "D", "all"], "default": "all" } },
+        "required": [],
+        "additionalProperties": false
+      },
+      "annotations": { "readOnlyHint": true, "idempotentHint": true }
+    }
+  ]
+}

@@ -1,0 +1,165 @@
+// contracts/grpc/v1/common.proto
+//
+// L.I.O.N.E.L data-plane shared types.  ADR-0006, ADR-0028.
+//
+// VERSION      1.0.0
+// STABILITY    stable
+// ADR          ADR-0006 (plane separation), ADR-0028 (transport), ADR-0025 (cancellation)
+//
+// WHY PROTOBUF AND NOT MCP
+//   MCP is JSON-RPC.  Carrying 16 kHz PCM inside it means ~33% base64 inflation, no flow
+//   control, and audio frames queued behind unrelated tool calls.  That works in a demo and
+//   collapses in a conversation.  ADR-0006 makes the split a rule:
+//     1. No PCM ever crosses the control plane.
+//     2. No control decision ever rides the media stream.
+//
+// BACKWARD COMPATIBILITY
+//   * Adding an optional field with a FRESH number is MINOR.
+//   * Removing a field requires `reserved` on both the number and the name, PERMANENTLY.
+//     Reusing a number silently reinterprets old bytes as a new meaning — the single worst
+//     failure mode protobuf offers, because it does not error, it just lies.
+//   * Renumbering or changing a field's type is MAJOR.
+//   * Adding an enum value is MINOR ONLY for enums that appear in RESPONSES.  Consumers must
+//     treat unknown enum values as the zero value.  Every enum here therefore reserves 0 for
+//     an explicit UNSPECIFIED.
+
+syntax = "proto3";
+
+package lionel.v1;
+
+option go_package = "github.com/lionel/contracts/grpc/v1;lionelv1";
+option java_multiple_files = true;
+option java_package = "local.lionel.contracts.v1";
+
+// ---------------------------------------------------------------------------
+// Correlation
+// ---------------------------------------------------------------------------
+
+// Present on EVERY data-plane message.  turn_id is also the OpenTelemetry trace id
+// (ADR-0019), which is what allows one Grafana trace to span the gRPC data plane, the MCP
+// control plane, the Host Runtime and the Cluster Runtime.  Without this identity the
+// system becomes undebuggable the day it is distributed — which is why ADR-0019 lands in
+// Phase 5, before Kubernetes in Phase 7.
+message TurnContext {
+  // ULID, 26 chars, Crockford base32.  Chosen over UUIDv4 because ULIDs sort
+  // lexicographically by creation time, making trace listings chronological for free.
+  string turn_id     = 1;
+  string session_id  = 2;
+  Tier   tier        = 3;
+  // BCP-47.  "en" or "tr".  Empty until STT has detected it.
+  string language    = 4;
+}
+
+// ADR-0007.  Recorded per stream because the latency budget differs per tier and a
+// cross-tier latency comparison is meaningless.
+enum Tier {
+  TIER_UNSPECIFIED = 0;
+  TIER_L0          = 1;  // fully offline, in-process.  The autonomy guarantee.
+  TIER_L1          = 2;  // host + Minikube, loopback only
+  TIER_L2          = 3;  // host + remote cluster, mTLS required
+  TIER_L3          = 4;  // L2 + Claude API brain
+}
+
+// ---------------------------------------------------------------------------
+// Audio
+// ---------------------------------------------------------------------------
+
+// Negotiated once in a stream header, never per frame.  Repeating format on every frame
+// would waste bytes on the highest-volume path in the system.
+message AudioFormat {
+  uint32     sample_rate_hz = 1;  // 16000 for capture/STT; 24000 Kokoro; 22050 Piper
+  uint32     channels       = 2;  // 1.  Stereo capture is not supported.
+  AudioCodec codec          = 3;
+  uint32     frame_ms       = 4;  // 80 on the capture path
+}
+
+enum AudioCodec {
+  AUDIO_CODEC_UNSPECIFIED = 0;
+  AUDIO_CODEC_PCM_S16LE   = 1;  // default everywhere
+  AUDIO_CODEC_PCM_F32LE   = 2;
+  AUDIO_CODEC_OPUS        = 3;  // reserved for L2 over constrained links; not used at L0/L1
+}
+
+// A single frame of audio.
+message AudioFrame {
+  // Monotonic from 0 within a stream.  A GAP MEANS FRAMES WERE DROPPED, which is a
+  // legitimate outcome: ADR-0025 requires the data plane to apply backpressure by dropping
+  // frames and NEVER by blocking.  A blocked data plane stalls the control plane and
+  // produces exactly the stutter that plane separation exists to prevent.
+  uint64 seq         = 1;
+  bytes  payload     = 2;
+  // Nanoseconds since stream start.  Relative, not wall-clock — wall-clock skew between
+  // host and cluster would corrupt jitter calculations at L2.
+  uint64 timestamp_ns = 3;
+  // Set on the final frame so the receiver can finalize without waiting for a timeout.
+  bool   end_of_utterance = 4;
+}
+
+// ---------------------------------------------------------------------------
+// Cancellation
+// ---------------------------------------------------------------------------
+
+// ADR-0025.  Cancellation MUST cross the runtime boundary or L2 barge-in leaves orphaned
+// cluster work: a synthesis job still rendering audio nobody will hear.
+// Mirrors contracts/events/v1/cancellation.schema.json — keep the reason enums in step.
+message CancelRequest {
+  TurnContext      context  = 1;
+  CancelReason     reason   = 2;
+  // Budget for the first fan-out stage.  Default 300 — the barge-in budget, and what
+  // lionel.interrupt.playback_stop.duration measures.
+  uint32           deadline_ms = 3;
+}
+
+enum CancelReason {
+  CANCEL_REASON_UNSPECIFIED   = 0;
+  CANCEL_REASON_BARGE_IN      = 1;  // the 300 ms path
+  CANCEL_REASON_USER_ABORT    = 2;
+  CANCEL_REASON_TIMEOUT       = 3;
+  CANCEL_REASON_SHUTDOWN      = 4;
+  CANCEL_REASON_QUOTA         = 5;
+  CANCEL_REASON_POLICY_HALT   = 6;
+  CANCEL_REASON_DEVICE_LOST   = 7;  // audio device removed mid-utterance (G6a criterion)
+}
+
+// ---------------------------------------------------------------------------
+// Errors
+// ---------------------------------------------------------------------------
+
+// Mirrors contracts/mcp/v1/error-envelope.schema.json so a failure has the same shape on
+// both planes and the degradation logic (M5) does not need to know who failed.
+message StreamError {
+  string code       = 1;  // see ErrorCode enum in error-envelope.schema.json
+  string message    = 2;  // MUST NOT contain secrets, transcripts, or file contents
+  bool   retryable  = 3;
+  uint32 retry_after_ms = 4;
+  // M5: what the system did instead.  Present when the turn continued despite the failure.
+  // The system must always produce a response, even if it is an honest statement that a
+  // subsystem is down.
+  string degraded_behavior = 5;
+}
+
+// ---------------------------------------------------------------------------
+// Health
+// ---------------------------------------------------------------------------
+
+message HealthRequest {}
+
+// Shared health fields, EMBEDDED by each service's own response rather than used
+// directly.  Services keep typed, service-specific health facts (is the STT model
+// multilingual? is a Turkish voice loaded?) instead of stringly-typed map entries,
+// because those facts are gate criteria at G6b and G6c — they deserve a type.
+//
+// This message lives in common.proto rather than in stt.proto because a TTS service
+// must never depend on an STT service.  Sharing through `common` keeps the
+// dependency graph a tree.
+message HealthCore {
+  // Responds at all.
+  bool   live          = 1;
+  // Can accept work RIGHT NOW.  DISTINCT FROM live: a model still loading is alive and
+  // not ready, and routing work to it produces a timeout that looks like a broken
+  // assistant.  ADR-0009 applies the same distinction to brain providers.
+  bool   ready         = 2;
+  string state         = 3;  // ready | loading | warming | degraded | error
+  float  load_progress = 4;  // 0..1
+  string detail        = 5;
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/provider-request.schema.json",
+  "title": "ProviderRequest",
+  "description": "The provider-neutral input to a BrainProvider (ADR-0009). TurnExecutor builds one of these; each adapter translates it at the edge into Anthropic messages, an OpenAI-shaped payload, or an Ollama request. Nothing above the adapter ever constructs a vendor-shaped body.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0001", "ADR-0009", "ADR-0025"],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "brain",
+    "producer": ["turn_executor", "context_assembler"],
+    "consumers": ["brain_gateway", "anthropic_provider", "ollama_provider", "llamacpp_provider"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "`cancellation_token_id` is REQUIRED, not optional. ADR-0025 is explicit that optional cancellation is cancellation some call sites will omit, and those are exactly the ones that hang during barge-in. Adding a `role` value is MAJOR: adapters map roles onto vendor-specific message types and an unmapped role would be silently dropped, producing a request that looks fine and is missing context."
+    }
+  },
+
+  "type": "object",
+  "required": ["request_id", "turn_id", "messages", "cancellation_token_id"],
+  "properties": {
+    "request_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "system": { "type": ["string", "null"], "description": "System prompt. Assembled by ContextAssembler; adapters place it wherever their vendor expects." },
+    "messages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Message" } },
+    "tools": {
+      "type": "array",
+      "items": { "$ref": "https://lionel.local/contracts/events/v1/tool-spec.schema.json" },
+      "description": "ToolSpec IR. The adapter translates to native format. Tools the Policy Engine would deny for this turn's trust level SHOULD be filtered out here rather than offered and refused — offering a tool the model cannot use wastes tokens and invites a confusing refusal."
+    },
+    "tool_choice": { "type": "string", "enum": ["auto", "none", "required"], "default": "auto" },
+    "max_output_tokens": { "type": ["integer", "null"], "minimum": 1 },
+    "temperature": { "type": ["number", "null"], "minimum": 0, "maximum": 2 },
+    "stream": { "type": "boolean", "default": true },
+    "response_schema": {
+      "$ref": "https://lionel.local/contracts/events/v1/tool-spec.schema.json#/$defs/ParameterSchema",
+      "description": "Structured-output request. Adapters whose provider lacks native support fall back to prompt-based constraint plus validate-and-retry, and MUST report that via ProviderCapabilities rather than silently degrading."
+    },
+    "cancellation_token_id": { "type": "string", "description": "ADR-0025. Non-optional." },
+    "deadline_ms": { "type": ["integer", "null"], "minimum": 1 },
+    "language": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Language" },
+    "trust_level": {
+      "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel",
+      "description": "Effective turn trust, passed so the adapter can annotate untrusted spans in the prompt. Defence in depth only — the real control is the Policy Engine at dispatch, never the prompt."
+    }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "Message": {
+      "type": "object",
+      "required": ["role", "content"],
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "assistant", "tool_result"] },
+        "content": { "type": ["string", "array"], "items": { "$ref": "#/$defs/ContentBlock" } },
+        "call_id": { "type": ["string", "null"], "description": "Required when role is tool_result." }
+      },
+      "additionalProperties": false
+    },
+    "ContentBlock": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["text", "tool_use", "tool_result", "image_ref"] },
+        "text": { "type": "string" },
+        "call_id": { "type": "string" },
+        "name": { "type": "string" },
+        "input": { "type": "object", "additionalProperties": true },
+        "ref": { "type": "string", "description": "For image_ref: a URI or content-addressed handle. NEVER inline base64 — ADR-0006 keeps binary off this path, and a base64 image in a prompt log is a privacy problem as well as a size one." },
+        "trust": { "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel" }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "examples": [
+    {
+      "request_id": "01JQ4XK9M2N5P8Q1R4S7T0VWXY",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "system": "You are L.I.O.N.E.L, a local assistant. Answer in the language the user spoke.",
+      "messages": [{ "role": "user", "content": "C sürücümde ne kadar boş yer var?" }],
+      "tools": [],
+      "tool_choice": "auto",
+      "max_output_tokens": 1024,
+      "stream": true,
+      "cancellation_token_id": "01JQ4XB2M5N8P1QRST2VWX3YZA",
+      "deadline_ms": 15000,
+      "language": "tr",
+      "trust_level": "user_originated"
+    }
+  ]
+}

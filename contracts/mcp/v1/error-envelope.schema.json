@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/error-envelope.schema.json",
+  "title": "ErrorEnvelope",
+  "description": "The single normalized error shape across both planes. Every capability, provider, and service reports failures in this form so the ToolRouter and the degradation logic (M5) can decide what to do without knowing who failed.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0003",
+      "ADR-0025"
+    ],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "platform",
+    "producer": [
+      "all components"
+    ],
+    "consumers": [
+      "turn_executor",
+      "tool_router",
+      "session_coordinator",
+      "otel_collector"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Adding a `code` value is MINOR because consumers are required to treat unknown codes as `internal` with retryable=false — the conservative fallback. Changing the meaning of `retryable` would be MAJOR: it drives automatic retry, and combined with ADR-0026's side_effect it decides whether a write is repeated."
+    }
+  },
+  "type": "object",
+  "required": [
+    "code",
+    "message",
+    "retryable"
+  ],
+  "properties": {
+    "code": {
+      "$ref": "#/$defs/ErrorCode"
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable. MUST NOT contain secrets, raw file contents, or full transcripts. SecretStr redaction (ADR-0015) covers secrets; the rest is the author's responsibility."
+    },
+    "retryable": {
+      "type": "boolean",
+      "description": "Whether an automatic retry is permitted AT ALL. The ToolRouter additionally requires the tool to be idempotent or to carry an idempotency key before retrying a `write` (ADR-0026). Both conditions, never just this one."
+    },
+    "retry_after_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "detail": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Component or capability that raised it."
+    },
+    "turn_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "call_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "degraded_behavior": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "M5. What the system did INSTEAD. e.g. 'proceeded without memory recall and informed the user'. Present whenever the turn continued despite the failure — the system must always produce a response."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_arguments",
+        "not_found",
+        "permission_denied",
+        "policy_denied",
+        "trust_insufficient",
+        "rate_limited",
+        "quota_exceeded",
+        "confirmation_required",
+        "timeout",
+        "cancelled",
+        "unavailable",
+        "not_ready",
+        "contract_version_mismatch",
+        "capability_unavailable",
+        "internal"
+      ],
+      "description": "policy_denied and trust_insufficient are DELIBERATELY DISTINCT from permission_denied: the first two are Policy Engine decisions worth surfacing to the user and to the G9 red-team report, the third is an OS or API rejection. Collapsing them would hide exactly the signal that proves injection containment works.\n\n`cancelled` is a normal outcome under ADR-0025, not a fault. `not_ready` is the ADR-0009 readiness distinction — the provider is alive but still loading."
+    }
+  },
+  "examples": [
+    {
+      "code": "trust_insufficient",
+      "message": "This action needs to come from you directly. I read it from a file, so I won't act on it.",
+      "retryable": false,
+      "source": "policy_engine",
+      "turn_id": "01JQ4X9AAB3Q8WYP4SVZC7XDEF",
+      "call_id": "call_9b2c",
+      "detail": "tool github.create_commit requires operator; effective turn trust external_content"
+    },
+    {
+      "code": "unavailable",
+      "message": "Memory is unreachable, so I answered without recalling anything earlier.",
+      "retryable": true,
+      "retry_after_ms": 2000,
+      "source": "memory_service",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "degraded_behavior": "proceeded without memory recall and informed the user"
+    }
+  ]
+}

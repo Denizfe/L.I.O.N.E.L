@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/mcp/v1/capabilities-registry.schema.json",
+  "title": "CapabilitiesRegistry",
+  "description": "Schema for config/capabilities.registry.json — which capability servers exist, how to reach them, and what secrets they need. Renamed from v1.0's mcp.servers.json.",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0003",
+      "ADR-0015",
+      "ADR-0013",
+      "ADR-0011",
+      "ADR-0014"
+    ],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "platform",
+    "producer": [
+      "operator (config file)"
+    ],
+    "consumers": [
+      "tool_router",
+      "process_supervisor",
+      "config loader"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "THIS IS A CONFIG SCHEMA, so additionalProperties is FALSE at every level — per ADR-0015 an unknown key is an error, not a silent ignore. A typo'd key that is quietly dropped leaves the system running on a default the operator believes they overrode. Wire-payload schemas in this contract set take the opposite stance deliberately; see contracts/README.md."
+    }
+  },
+  "type": "object",
+  "required": [
+    "schema_version",
+    "capabilities"
+  ],
+  "properties": {
+    "$comment": {
+      "type": [
+        "string",
+        "array"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "capabilities": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/CapabilityEntry"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "CapabilityEntry": {
+      "type": "object",
+      "required": [
+        "transport",
+        "side_effect_default",
+        "trust_required"
+      ],
+      "properties": {
+        "transport": {
+          "type": "string",
+          "enum": [
+            "stdio",
+            "http",
+            "inproc"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "description": "stdio only. NOT A SHELL STRING — argv[0]. Arguments go in `args`, never interpolated into a command line. ADR-0011 forbids any path from free text to an interpreter."
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "http only."
+        },
+        "module": {
+          "type": "string",
+          "description": "inproc only. Import path of the service entrypoint."
+        },
+        "secrets": {
+          "type": "object",
+          "description": "Environment name -> secret:// URI. ADR-0015: URIs ONLY. The ${GITHUB_PAT} interpolation in v1.0 was broken (JSON does not expand variables) and the natural fix — interpolating in the loader — produces plain strings that leak into logs.",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^secret://(env|file|dpapi|k8s)/[A-Za-z0-9_./-]+$"
+          }
+        },
+        "scope": {
+          "type": "string",
+          "description": "Capability-specific constraint, e.g. project_root_only for the filesystem server."
+        },
+        "side_effect_default": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write",
+            "destructive"
+          ],
+          "description": "Floor for tools this server exposes. An individual ToolSpec may declare HIGHER, never lower."
+        },
+        "trust_required": {
+          "type": "string",
+          "enum": [
+            "any",
+            "user_originated",
+            "operator"
+          ]
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "host_only",
+            "cluster_preferred",
+            "either"
+          ],
+          "default": "either"
+        },
+        "requires_network": {
+          "type": "boolean",
+          "default": false
+        },
+        "supervised": {
+          "type": "boolean",
+          "default": true,
+          "description": "ADR-0014. stdio servers MUST be supervised — Windows has no process groups and an unsupervised child orphans grandchildren that hold ports."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "const": "stdio"
+              }
+            },
+            "required": [
+              "transport"
+            ]
+          },
+          "then": {
+            "required": [
+              "command",
+              "args"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "const": "http"
+              }
+            },
+            "required": [
+              "transport"
+            ]
+          },
+          "then": {
+            "required": [
+              "url"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transport": {
+                "const": "inproc"
+              }
+            },
+            "required": [
+              "transport"
+            ]
+          },
+          "then": {
+            "required": [
+              "module"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "examples": [
+    {
+      "schema_version": 1,
+      "capabilities": {
+        "filesystem": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "C:/Users/deniz/Desktop/L.I.O.N.E.L"
+          ],
+          "scope": "project_root_only",
+          "side_effect_default": "read",
+          "trust_required": "any",
+          "placement": "host_only",
+          "requires_network": false,
+          "supervised": true
+        },
+        "github": {
+          "transport": "stdio",
+          "command": "docker",
+          "args": [
+            "run",
+            "-i",
+            "--rm",
+            "-e",
+            "GITHUB_PERSONAL_ACCESS_TOKEN",
+            "ghcr.io/github/github-mcp-server@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          ],
+          "secrets": {
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "secret://env/GITHUB_PAT"
+          },
+          "side_effect_default": "write",
+          "trust_required": "user_originated",
+          "requires_network": true,
+          "supervised": true,
+          "note": "Digest is all-zero HERE ONLY because this is a schema example illustrating shape — it is not a lockfile entry and must never be copied into one. The real digest lives in artifacts.lock.yaml, currently UNRESOLVED. requires_network true excludes this capability at tier L0."
+        }
+      }
+    }
+  ]
+}

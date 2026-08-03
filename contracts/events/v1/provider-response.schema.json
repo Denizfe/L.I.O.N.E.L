@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/provider-response.schema.json",
+  "title": "ProviderResponse",
+  "description": "The completed, aggregated result of a ProviderRequest. StreamEvent carries the incremental view; this is the terminal one, produced after the stream closes. Both exist because TurnExecutor needs incremental deltas for low-latency TTS chunking AND a settled object for the transcript, replay tests, and cost accounting.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0009", "ADR-0001", "ADR-0021", "ADR-0025"],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "brain",
+    "producer": ["brain_gateway"],
+    "consumers": ["turn_executor", "session_coordinator", "eval_harness", "cost_accounting", "audit_log"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "The eval harness (ADR-0021) consumes this shape to compare providers, so changing it invalidates stored golden results and forces a re-baseline. That cost is why `provider` and `model` are recorded on every response rather than assumed from config — a result whose producing model is unknown is not comparable to anything. Adding a `stop_reason` value is MAJOR; consumers switch exhaustively."
+    }
+  },
+
+  "type": "object",
+  "required": ["request_id", "turn_id", "provider", "model", "stop_reason", "completed_at"],
+  "properties": {
+    "request_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "provider": { "type": "string", "enum": ["anthropic", "ollama", "llamacpp"], "description": "Telemetry and evaluation ONLY. No caller may branch on it — ADR-0009 requires branching on ProviderCapabilities, and a static check enforces that." },
+    "model": { "type": "string" },
+    "model_digest": { "type": ["string", "null"], "description": "Content hash where available, so an eval result pins to an exact artifact (ADR-0013). 'llama3:8b' is not a reproducible identifier." },
+    "text": { "type": "string", "default": "", "description": "Concatenated text deltas." },
+    "thinking": { "type": ["string", "null"], "description": "Extended-reasoning content where the provider emits it. May be discarded by consumers." },
+    "tool_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["call_id", "name", "arguments"],
+        "properties": {
+          "call_id": { "type": "string" },
+          "index": { "type": "integer", "minimum": 0 },
+          "name": { "type": "string" },
+          "arguments": { "type": "object", "additionalProperties": true, "description": "PARSED. Assembled from accumulated arguments_delta fragments and parsed only after the stream marked the call complete — parsing a partial fragment is the classic streaming tool-call bug." }
+        },
+        "additionalProperties": false
+      }
+    },
+    "structured_output": { "type": ["object", "null"], "additionalProperties": true },
+    "stop_reason": {
+      "type": "string",
+      "enum": ["end_turn", "tool_use", "max_tokens", "stop_sequence", "cancelled", "quota_exceeded", "provider_error"],
+      "description": "`cancelled` is a NORMAL outcome under ADR-0025, not a fault — barge-in produces it on every interrupted turn."
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "input_tokens": { "type": "integer", "minimum": 0 },
+        "output_tokens": { "type": "integer", "minimum": 0 },
+        "cached_input_tokens": { "type": "integer", "minimum": 0 },
+        "estimated_cost_usd": { "type": ["number", "null"], "minimum": 0, "description": "Null for local providers. Feeds the ADR-0009 ceiling." },
+        "token_counts_estimated": { "type": "boolean", "default": false, "description": "True when the provider lacks token_counting; the quota guard then applies a safety margin rather than trusting the number." }
+      },
+      "additionalProperties": false
+    },
+    "completed_at": { "type": "string", "format": "date-time" },
+    "first_token_ms": { "type": ["number", "null"], "minimum": 0, "description": "Maps to the LATENCY_BUDGET.md 1200 ms target." },
+    "total_ms": { "type": ["number", "null"], "minimum": 0 },
+    "error": { "$ref": "https://lionel.local/contracts/mcp/v1/error-envelope.schema.json" }
+  },
+  "additionalProperties": false,
+
+  "examples": [
+    {
+      "request_id": "01JQ4XK9M2N5P8Q1R4S7T0VWXY",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "provider": "ollama",
+      "model": "qwen2.5:14b-instruct-q4_K_M",
+      "model_digest": null,
+      "text": "",
+      "tool_calls": [{ "call_id": "call_7f3a", "index": 0, "name": "system.get_disk_usage", "arguments": { "volume": "C" } }],
+      "stop_reason": "tool_use",
+      "usage": { "input_tokens": 1420, "output_tokens": 88, "estimated_cost_usd": null, "token_counts_estimated": true },
+      "completed_at": "2026-08-02T09:14:05.080Z",
+      "first_token_ms": 940.2,
+      "total_ms": 1310.7
+    }
+  ]
+}

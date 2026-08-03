@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/workflow-event.schema.json",
+  "title": "WorkflowEvent",
+  "description": "Lifecycle of a multi-step workflow that spans more than one turn — a scheduled job, a long-running task, a consolidation run. A TURN IS NOT A WORKFLOW: a turn is one wake-to-speech exchange, a workflow can outlive a session and survive a restart. Conflating them is why a resumable task ends up entangled in conversation state.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0008", "ADR-0010", "ADR-0025", "ADR-0026"],
+    "stability": "provisional",
+    "plane": "internal",
+    "owner": "core-orchestration",
+    "producer": ["session_coordinator", "memory_service"],
+    "consumers": ["audit_log", "otel_collector", "session_coordinator"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "PROVISIONAL. Nothing produces workflows until memory consolidation lands in Phase 2, and the shape may need to change once there is a real workload. It is defined now anyway so the Event envelope has a second specialization to prove the base is not turn-specific — a base class with one subclass is just a base class with extra steps. Promote to stable at G2."
+    }
+  },
+
+  "type": "object",
+  "required": ["workflow_id", "workflow_type", "status", "emitted_at"],
+  "properties": {
+    "workflow_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "workflow_type": {
+      "type": "string",
+      "enum": ["memory_consolidation", "memory_reindex", "model_download", "eval_run", "backup", "custom"],
+      "description": "memory_reindex is the ADR-0010 embedding-model migration — long, resumable, and the one that must never be interrupted halfway without a recovery path."
+    },
+    "status": { "type": "string", "enum": ["queued", "running", "paused", "completed", "failed", "cancelled", "compensating"], "description": "`compensating` means undoing partial work after a failure. It exists because ADR-0026 forbids abandoning a `write` mid-flight — a failed multi-step workflow must unwind, not just stop." },
+    "step": { "type": ["integer", "null"], "minimum": 0 },
+    "total_steps": { "type": ["integer", "null"], "minimum": 0 },
+    "step_name": { "type": ["string", "null"] },
+    "emitted_at": { "type": "string", "format": "date-time" },
+    "started_at": { "type": ["string", "null"], "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "originating_turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "resumable": {
+      "type": "boolean",
+      "default": false,
+      "description": "True means the workflow can survive a process restart and continue from `checkpoint`. A long workflow that is NOT resumable must be small enough to redo from scratch — otherwise a restart loses work with no way to recover."
+    },
+    "checkpoint": { "type": ["object", "null"], "additionalProperties": true, "description": "Opaque resume state. Persisted by the owner, not by the event log." },
+    "side_effect": { "type": "string", "enum": ["read", "write", "destructive"], "description": "ADR-0026, applied at workflow granularity — governs whether a failure requires compensation." },
+    "progress": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "error": { "$ref": "https://lionel.local/contracts/mcp/v1/error-envelope.schema.json" },
+    "tier": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Tier" }
+  },
+  "additionalProperties": false,
+
+  "examples": [
+    {
+      "workflow_id": "01JQ4XQ7R0S3T6VWXYZ0123456",
+      "workflow_type": "memory_consolidation",
+      "status": "running",
+      "step": 3,
+      "total_steps": 8,
+      "step_name": "summarise_episodic_batch",
+      "emitted_at": "2026-08-03T03:00:12.000Z",
+      "started_at": "2026-08-03T03:00:00.000Z",
+      "completed_at": null,
+      "resumable": true,
+      "checkpoint": { "last_record_id": "01JQ4XD1QRS4T730V3W6X9Y2ZB" },
+      "side_effect": "write",
+      "progress": 0.375,
+      "tier": "l0"
+    },
+    {
+      "workflow_id": "01JQ4XR9S2T5VWXYZ012345678",
+      "workflow_type": "memory_reindex",
+      "status": "compensating",
+      "step": 2,
+      "total_steps": 5,
+      "step_name": "rollback_partial_reindex",
+      "emitted_at": "2026-08-03T04:10:44.000Z",
+      "started_at": "2026-08-03T04:00:00.000Z",
+      "resumable": true,
+      "side_effect": "destructive",
+      "progress": 0.4,
+      "error": {
+        "code": "unavailable",
+        "message": "Vector backend dropped mid-reindex; unwinding to the pre-migration index.",
+        "retryable": true,
+        "source": "memory_service",
+        "degraded_behavior": "rolled back to the previous embedding model; recall unaffected"
+      },
+      "tier": "l1"
+    }
+  ]
+}

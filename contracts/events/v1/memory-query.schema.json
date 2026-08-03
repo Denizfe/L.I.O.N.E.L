@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/memory-query.schema.json",
+  "title": "MemoryQuery and MemoryQueryResult",
+  "description": "Retrieval against the Memory Service (ADR-0010). Ranking is HYBRID — similarity, recency and importance — not raw cosine, and the weights are surfaced in the result so ranking stays debuggable rather than becoming a black box nobody can tune.",
+
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": ["ADR-0010", "ADR-0012", "ADR-0013"],
+    "stability": "stable",
+    "plane": "control",
+    "owner": "memory",
+    "producer": ["context_assembler", "tool_router"],
+    "consumers": ["memory_service"],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "`trust_floor` on the result is REQUIRED and is the field most likely to be dropped by someone simplifying this contract. Without it, recalling a memory that originated in a hostile document silently reintroduces that content at the turn's current trust level — laundering through memory. Adding a `kind` value is MAJOR: retention policy keys on kind and an unknown kind has no defined expiry, so it would live forever by accident."
+    }
+  },
+
+  "type": "object",
+  "required": ["query_id", "query"],
+  "properties": {
+    "query_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "turn_id": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Ulid" },
+    "query": { "type": "string", "minLength": 1, "maxLength": 2048 },
+    "kind": { "type": "string", "enum": ["durable", "episodic", "decision", "any"], "default": "any" },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 50, "default": 8 },
+    "min_score": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.3 },
+    "language": { "$ref": "https://lionel.local/contracts/core/v1/event.schema.json#/$defs/Language" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "max_trust_level": {
+      "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel",
+      "description": "Optional ceiling. Setting `user_originated` excludes memories ingested from external content — useful when the recall will feed a decision that could reach a write tool."
+    },
+    "include_redacted": { "type": "boolean", "default": false, "description": "Diagnostics only. Redacted records return with cleared text regardless; this only reveals that a tombstone exists." },
+    "explain": { "type": "boolean", "default": false, "description": "Populate score_components on each hit." }
+  },
+  "additionalProperties": false,
+
+  "$defs": {
+    "MemoryQueryResult": {
+      "type": "object",
+      "required": ["query_id", "results", "trust_floor"],
+      "properties": {
+        "query_id": { "type": "string" },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["record", "score"],
+            "properties": {
+              "record": { "$ref": "https://lionel.local/contracts/events/v1/memory-record.schema.json" },
+              "score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Hybrid rank, weighted per config/lionel.toml [memory.ranking]." },
+              "score_components": {
+                "type": "object",
+                "properties": {
+                  "similarity": { "type": "number" },
+                  "recency": { "type": "number" },
+                  "importance": { "type": "number" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "trust_floor": {
+          "$ref": "https://lionel.local/contracts/events/v1/trust-context.schema.json#/$defs/TrustLevel",
+          "description": "MINIMUM trust across returned records. The caller MUST fold this into the turn's TrustContext."
+        },
+        "embedding_model": { "type": "string", "description": "Which model produced the query vector. Recorded so a mid-migration result set is identifiable rather than mysteriously poor (ADR-0013)." },
+        "took_ms": { "type": "number", "minimum": 0, "description": "LATENCY_BUDGET.md target: 150 ms." },
+        "degraded": { "type": "boolean", "default": false, "description": "True when the Memory Service answered from a partial index or fell back. M5 requires the turn to continue and the user to be told." }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "examples": [
+    {
+      "query_id": "01JQ4XM1N4P7Q0R3S6T9VWXYZ0",
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "query": "how do we pick which LLM runs the agent?",
+      "kind": "decision",
+      "limit": 3,
+      "min_score": 0.3,
+      "language": "en",
+      "max_trust_level": "operator",
+      "include_redacted": false,
+      "explain": true
+    }
+  ]
+}

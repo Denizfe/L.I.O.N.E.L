@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lionel.local/contracts/events/v1/trust-context.schema.json",
+  "title": "TrustContext",
+  "description": "Trust level attached to every piece of content entering a turn. This is the mechanism that makes prompt injection structurally unable to escalate privilege, rather than filtered and hoped about (ADR-0012).",
+  "x-lionel": {
+    "version": "1.0.0",
+    "adr": [
+      "ADR-0012",
+      "ADR-0011"
+    ],
+    "stability": "stable",
+    "plane": "internal",
+    "owner": "core-orchestration",
+    "producer": [
+      "context_assembler",
+      "session_coordinator"
+    ],
+    "consumers": [
+      "policy_engine",
+      "tool_router",
+      "turn_executor",
+      "audit_log"
+    ],
+    "compatibility": {
+      "since": "1.0.0",
+      "breaking_changes": [],
+      "notes": "Adding a trust level is a MAJOR change. Levels are totally ordered and the ordering is load-bearing: policy compares them numerically. Inserting a level renumbers the ordinals and silently changes every policy decision. If a level must be added, it goes at an end and the ordinals are re-derived in a new major version."
+    }
+  },
+  "type": "object",
+  "required": [
+    "level",
+    "sources",
+    "turn_id"
+  ],
+  "properties": {
+    "turn_id": {
+      "$ref": "https://lionel.local/contracts/events/v1/turn-event.schema.json#/$defs/TurnId"
+    },
+    "level": {
+      "$ref": "#/$defs/TrustLevel",
+      "description": "The EFFECTIVE trust of the turn. Equals the MINIMUM level across all entries in `sources`. Never computed any other way."
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Every distinct origin of content that has entered this turn's context. Append-only within a turn.",
+      "items": {
+        "$ref": "#/$defs/TrustSource"
+      }
+    },
+    "degraded_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "When the effective level last decreased. Null if the turn has never degraded."
+    },
+    "degraded_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "source_id of the entry that caused the most recent degradation. Populated for audit and for explaining a refusal to the user."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "TrustLevel": {
+      "type": "string",
+      "enum": [
+        "operator",
+        "user_originated",
+        "tool_result",
+        "external_content"
+      ],
+      "description": "Totally ordered, most trusted first. ordinal: operator=3, user_originated=2, tool_result=1, external_content=0.\n\n- operator        Efe acting deliberately outside a conversation (config, an approved commit).\n- user_originated Content spoken or typed by Efe in this turn.\n- tool_result     Output of a tool L.I.O.N.E.L invoked. Trusted less than speech because a tool can return attacker-controlled bytes.\n- external_content A file, web page, email, or document. ASSUME HOSTILE."
+    },
+    "TrustSource": {
+      "type": "object",
+      "required": [
+        "source_id",
+        "level",
+        "origin",
+        "entered_at"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "level": {
+          "$ref": "#/$defs/TrustLevel"
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "speech",
+            "text_input",
+            "config",
+            "tool_result",
+            "file_read",
+            "web_fetch",
+            "memory_recall"
+          ],
+          "description": "memory_recall inherits the level stored on the MemoryRecord. A memory ingested from external_content stays external_content forever — laundering content through memory must not upgrade it."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Human-readable provenance for the audit log. Path, URL, or tool name."
+        },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "turn_id": "01JQ4X8ZK9P2M7VN3RTYB6WCDE",
+      "level": "user_originated",
+      "sources": [
+        {
+          "source_id": "src-001",
+          "level": "user_originated",
+          "origin": "speech",
+          "detail": "wake-word turn, microphone",
+          "entered_at": "2026-08-02T09:14:03.221Z"
+        }
+      ],
+      "degraded_at": null,
+      "degraded_by": null
+    },
+    {
+      "turn_id": "01JQ4X9AAB3Q8WYP4SVZC7XDEF",
+      "level": "external_content",
+      "sources": [
+        {
+          "source_id": "src-001",
+          "level": "user_originated",
+          "origin": "speech",
+          "detail": "\"summarise the README in this repo\"",
+          "entered_at": "2026-08-02T09:20:11.004Z"
+        },
+        {
+          "source_id": "src-002",
+          "level": "external_content",
+          "origin": "file_read",
+          "detail": "README.md",
+          "entered_at": "2026-08-02T09:20:11.663Z"
+        }
+      ],
+      "degraded_at": "2026-08-02T09:20:11.663Z",
+      "degraded_by": "src-002"
+    }
+  ]
+}
