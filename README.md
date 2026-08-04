@@ -1,3 +1,4 @@
+# L.I.O.N.E.L
 
 A local-first, voice-driven autonomous agent. Bilingual (English / Turkish), MCP-native,
 and designed to work with the network unplugged.
@@ -52,6 +53,3 @@ bash ci/self_test.sh          # prove the gates catch violations
 
 16 gates enforce 19 of 28 ADRs. `artifacts` is red by design until every artifact digest
 is pinned. An architectural rule with no test is a preference.
-=======
-# L.I.O.N.E.L
->>>>>>> 69d0234becd74812ef4803dc2ef0a8cf4a7e3eba
