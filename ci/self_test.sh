@@ -105,6 +105,30 @@ RESTORE+=("rm -f '$ROOT/docs/_selftest.md'")
 expect_violation markdown "MD-LINK" "a broken internal link"
 rm -f docs/_selftest.md
 
+# 9. L0 offline conformance — the keystone gate. Finding M1: it enforces 8 invariants
+#    and 18 rules and had no standing regression protection, so a change could silently
+#    disarm the autonomy guarantee (ADR-0007) and every run would stay green.
+#
+#    Unlike the tests above, this one mutates a file that is IN the architecture
+#    checksum set (config/**/*.toml). It is restored from a byte-exact backup and the
+#    restoration is verified below — a self-test that leaves this file altered would
+#    move the architecture checksum and read as an unexplained architecture change.
+L0_CFG="config/tiers/l0.toml"
+L0_BAK="$(mktemp)"
+cp "$L0_CFG" "$L0_BAK"
+# Guarded: the happy path restores and deletes the backup below, so by the time the
+# EXIT trap runs there is normally nothing left to do. This entry exists for the path
+# where the script dies mid-test with the violation still planted.
+RESTORE+=("[[ -f '$L0_BAK' ]] && cp '$L0_BAK' '$ROOT/$L0_CFG'; rm -f '$L0_BAK'")
+sed -i 's/^network_allowed = false/network_allowed = true/' "$L0_CFG"
+if ! grep -q '^network_allowed = true' "$L0_CFG"; then
+  printf '  \033[31mFAIL\033[0m  %-16s could not plant the violation (l0.toml changed shape?)\n' "l0-conformance"
+  ((fail++))
+else
+  expect_violation l0-conformance "L0-OFFLINE-002" "L0 declaring network_allowed = true"
+fi
+cp "$L0_BAK" "$L0_CFG"; rm -f "$L0_BAK"
+
 # Cleanup must be verified, not assumed. A self-test that leaves its planted
 # violations behind turns every subsequent run red for the wrong reason — and the
 # first person to see it will "fix" the gate rather than the litter.
@@ -114,6 +138,8 @@ for f in config/_selftest.toml config/_selftest.yaml src/lionel/_selftest.py \
   [[ -e "$f" ]] && { printf '  \033[31mFAIL\033[0m  self-test litter not removed: %s\n' "$f"; leftover=1; }
 done
 [[ -d src/lionel/capabilities/shell ]] && { echo "  FAIL  self-test litter: src/lionel/capabilities/shell"; leftover=1; }
+grep -q '^network_allowed = false' config/tiers/l0.toml || {
+  echo "  FAIL  config/tiers/l0.toml was not restored — L0 still reads network_allowed = true"; leftover=1; }
 (( leftover )) && { echo; echo "  Planted files survived cleanup. Remove them before re-running."; exit 1; }
 
 echo

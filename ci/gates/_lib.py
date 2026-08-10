@@ -28,6 +28,18 @@ from pathlib import Path
 
 PASS, VIOLATION, GATE_ERROR = 0, 1, 2
 
+# Every gate prints box-drawing characters and interpuncts. On Windows the console
+# encoding defaults to cp1252, which cannot encode them, and the gate dies with a
+# UnicodeEncodeError inside report_and_exit — after all its checks have passed. That
+# reads as "broken gate" (exit 2) on a repository with nothing wrong with it. This is
+# a Windows-first project (ADR-0002, ADR-0014), so the runner must not depend on the
+# operator having exported PYTHONIOENCODING first.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):  # already wrapped, or not reconfigurable
+        pass
+
 ROOT = Path(__file__).resolve().parents[2]
 
 _NO_COLOR = os.environ.get("NO_COLOR") or not sys.stdout.isatty()
