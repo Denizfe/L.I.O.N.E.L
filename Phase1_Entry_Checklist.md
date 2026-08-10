@@ -7,7 +7,7 @@
 | Gate | G0 → G1 |
 | Status | **UNBLOCKED** — item 1 closed 2026-08-10 |
 | Items | 9 |
-| Done | 6 |
+| Done | 8 |
 | Blocking | 0 |
 
 ---
@@ -44,23 +44,43 @@ commit** — §8.3 explains why.
 
 ## NON-BLOCKING — required during Phase 1, before G1
 
-### ☐ 2. Create `pyproject.toml`
+### ☑ 2. Create `pyproject.toml` — **DONE 2026-08-10, deliberately minimal**
 
-Dependencies are specified in MASTER_PLAN_v2 §3.1. Policy requires version bounds
-(`DEP-001`) and forbids `requests` (`DEP-002`, `httpx` is already declared).
+`bash ci/run_gates.sh dependencies` passes. Every dependency carries a bound (`DEP-001`);
+`requests` is absent (`DEP-002`) and `httpx` is declared.
 
-**Acceptance:** `bash ci/run_gates.sh dependencies` passes with the manifest present.
+**Read this before adding to it.** MASTER_PLAN_v2 has no §3.1 dependency list — the
+reference in the original checklist pointed at a section that does not exist, and the plan
+names *technologies* (Qdrant, Kokoro, Piper, faster-whisper, openWakeWord, Ollama) whose
+Python client libraries have never been chosen. Choosing them here would have been a
+technology decision, and `Architecture_Freeze.md` §4 requires an ADR and Efe's approval for
+any new dependency.
 
-### ☐ 3. Generate `uv.lock`
+So the manifest declares only what an Accepted ADR already decided, each entry naming its
+ADR:
+
+| Package | Decided by |
+|---|---|
+| `opentelemetry-{api,sdk,exporter-otlp-proto-grpc}` | ADR-0019 |
+| `structlog` | ADR-0019 |
+| `grpcio`, `protobuf` | ADR-0028, ADR-0006 |
+| `psutil` | ADR-0014 |
+| `httpx` | ADR-0015; named by `DEP-002` |
+| `pyyaml`, `jsonschema`, `grpcio-tools` | `[project.optional-dependencies].ci` — what the gates need |
+
+The memory and sensory clients arrive with the phases that build against them, G2 and G6,
+each with its ADR. **A package appearing here without an ADR is the failure mode `§4`
+exists to prevent.**
+
+### ☑ 3. Generate `uv.lock` — **DONE 2026-08-10**
 
 ```bash
-uv venv --python 3.11
-uv sync
+uv lock              # 27 packages resolved
+uv sync --extra ci   # reproduces the environment, including the gates' dependencies
 ```
 
-Policy declares `lockfile_required_at: G1`.
-
-**Acceptance:** `uv.lock` committed; `uv sync` reproduces the environment from a clean checkout.
+Verified: `bash ci/run_gates.sh` → 17/17 and `bash ci/self_test.sh` → 10/10 against the
+synced environment. Policy's `lockfile_required_at: G1` is satisfied.
 
 ### ☐ 4. Resolve the Piper voice licence
 
@@ -142,13 +162,24 @@ The three pushes before the freeze commit are red in the same history. That is t
 ## What remains
 
 ```
-2 → 3        dependency manifest and lock   ← G1
 4            Piper licence resolution       ← G6c, resolvable now
 ```
 
-Nothing blocks Phase 1. Items 2 and 3 are G1 deliverables and are deliberately **not**
-inside `architecture-1.0.0`: `Phase0_Final_Signoff.md` I1 records their absence as correct
-for Phase 0, and policy declares `lockfile_required_at: G1`.
+**Item 4 is the only one left, and it does not block Phase 1.** It is registered to
+`sensory` for G6c; the MODEL_CARD is readable today, so it can be closed early, but nothing
+in Phase 1 depends on it.
+
+Items 2 and 3 are landed but are deliberately **outside** `architecture-1.0.0`:
+`Phase0_Final_Signoff.md` I1 records their absence as correct for Phase 0, and policy
+declares `lockfile_required_at: G1`. Putting G1 deliverables inside the Phase 0 tag would
+blur what the tag certifies.
+
+### Carried into Phase 1, not on this checklist
+
+| | |
+|---|---|
+| Self-test covers 9 of 17 gates | Every gate should have to reject something |
+| ADR-0016 has no erratum provision, while practice has diverged three times | `Architecture_Freeze.md` §6 records the gap; closing it needs an ADR |
 
 ---
 

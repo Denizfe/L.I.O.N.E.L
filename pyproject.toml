@@ -1,0 +1,68 @@
+# L.I.O.N.E.L — dependency manifest.
+#
+# SCOPE OF THIS FILE
+#   Only dependencies that an ACCEPTED ADR already decided. Architecture_Freeze.md §4
+#   requires an ADR for "any new subsystem, technology, or dependency", so this manifest
+#   transcribes decisions rather than making them. Every entry below names the ADR that
+#   chose it. A package with no ADR does not belong here yet, however obvious it looks —
+#   the point of §4 is that obvious-looking choices are exactly the ones that get made
+#   without a record.
+#
+#   MASTER_PLAN_v2 names technologies (Qdrant, Kokoro, Piper, faster-whisper,
+#   openWakeWord, Ollama) whose PYTHON CLIENTS are not yet chosen. Those arrive with the
+#   phase that builds against them — G2 for memory, G6 for the sensory stack — each with
+#   its own ADR. Declaring them now would pin a client library nobody has evaluated and
+#   would make `uv sync` install a voice stack for a repository that has no runtime code.
+#
+# VERSION BOUNDS
+#   Policy requires a bound on every dependency (DEP-001, ADR-0013): an unbounded
+#   dependency means a rebuild months later resolves to a different tree and "it worked
+#   last week" becomes unanswerable. Bounds here are conservative lower bounds on the
+#   line already in use; `uv.lock` is what actually pins the build.
+#
+#   `requests` is forbidden (DEP-002) — httpx is the HTTP client.
+
+[project]
+name = "lionel"
+version = "0.1.0"
+description = "L.I.O.N.E.L — a local-first voice assistant with an offline autonomy guarantee"
+requires-python = ">=3.11,<3.12"
+license = { text = "Proprietary" }
+
+dependencies = [
+    # ADR-0019 — OpenTelemetry is the observability substrate; turn_id is the trace ID
+    # across both planes and both runtimes.
+    "opentelemetry-api>=1.24",
+    "opentelemetry-sdk>=1.24",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.24",
+    # ADR-0019 — structured JSON logs correlated by turn_id, with secret redaction at
+    # the formatter rather than at the call site, where it is eventually forgotten.
+    "structlog>=24.1",
+    # ADR-0028, ADR-0006 — gRPC carries the data plane; PCM never touches the control
+    # plane. contracts/grpc/v1/*.proto compile against these.
+    "grpcio>=1.60",
+    "protobuf>=4.25",
+    # ADR-0014 — ProcessSupervisor owns child-process lifetime. On Windows the real
+    # mechanism is a Job Object; psutil covers the portable inspection surface.
+    "psutil>=5.9",
+    # ADR-0015, and DEP-002 by name: the HTTP client. Two HTTP clients is drift, not
+    # choice.
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# Everything the policy gates need in order to run. Kept separate from runtime
+# dependencies because CI validates the repository — it does not build or run it, and a
+# gate must never need the product's own dependency tree to check the product.
+ci = [
+    "pyyaml>=6.0",
+    "jsonschema>=4.21",
+    "grpcio-tools>=1.60",
+]
+
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lionel"]
