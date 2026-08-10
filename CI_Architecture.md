@@ -214,11 +214,21 @@ self-test surfaced.
 ## 8. Current state
 
 ```
-15 pass · 1 fail by design · 0 broken
+20 pass · 0 fail · 0 broken          self-test 21/21 · gate coverage 20/20
 ```
 
-`artifacts` is red because one image digest is unresolved and ADR-0013 blocks G0 until
-it is zero. The gate is behaving correctly; the repository is not yet finished.
+Architecture 1.1.1. The `artifacts` gate was red by design through Phase 0 while one image
+digest was unresolved — ADR-0013 blocks G0 until that count is zero. It is now pinned and
+justified in [GHCR_Digest_Justification.md](GHCR_Digest_Justification.md).
 
 **A red build that is red for a known, documented, owned reason is a working pipeline.**
 The failure mode to fear is a green build that means nothing.
+
+The last three gates — `checksum`, `generated-docs`, `gate-coverage` — check this pipeline
+rather than the repository (ADR-0030, `Proposed`). They exist because every defect found
+verifying the 1.0.0 freeze had one shape: a rule stated in §7 of this very document, or in
+`Architecture_Freeze.md`, and enforced nowhere. **Step 6 above is now a gate.**
+
+> These counts are hand-maintained, and this document is not generated. That is the gap
+> ADR-0030 explicitly does not close — see its Costs. If the numbers above disagree with
+> `bash ci/run_gates.sh`, the command is right.

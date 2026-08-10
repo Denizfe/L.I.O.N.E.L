@@ -566,6 +566,12 @@ C:\Users\deniz\Desktop\L.I.O.N.E.L\
 
 `PRESERVED` = v1.0 decision unchanged · `AMENDED` = principle held, scope widened · `SUPERSEDED` = replaced
 
+> **This table is the v1.0 → v2 migration record, not a live index.** It lists the ADRs
+> that existed when this plan was written and what each did to a v1.0 decision. ADRs added
+> since carry no migration status and are not listed here. The live index is
+> [`docs/decisions/README.md`](docs/decisions/README.md), and `ARCH-016` enforces that it
+> is complete.
+
 | ADR | Title | Status | Phase |
 |---|---|---|---|
 | 0001 | Swappable `BrainProvider` | **PRESERVED**, amended by 0009 | 0 |

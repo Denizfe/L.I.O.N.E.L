@@ -13,14 +13,14 @@ not the product.
 
 | ID | Risk | L | I | Severity | Gate | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| **R-A01** | CI never executes; controls stay inert | **High** | **High** | **Critical** | G0 | platform | **OPEN — blocks G0** |
-| **R-A02** | Secret reaches the tree via `ci/` | Med | **High** | **Critical** | G0 | platform | **OPEN — blocks G0** |
-| **R-A03** | Self-declared gate criteria treated as negotiable | Med | **High** | **Major** | G0 | architecture | **OPEN — blocks G0** |
+| **R-A01** | CI never executes; controls stay inert | **High** | **High** | **Critical** | G0 | platform | **CLOSED 2026-08-10** — 23/23 jobs green |
+| **R-A02** | Secret reaches the tree via `ci/` | Med | **High** | **Critical** | G0 | platform | **CLOSED** — AUD-C02; `gate_secrets` has zero path exclusions |
+| **R-A03** | Self-declared gate criteria treated as negotiable | Med | **High** | **Major** | G0 | architecture | **CLOSED 2026-08-10** — ADR-0030 |
 | **R-A04** | Architecture gates pass syntactically while semantics drift | **High** | **High** | **Major** | G1 | core-orchestration | OPEN |
-| **R-A05** | Silent CI coverage loss (counter ≠ coverage) | Med | **High** | **Major** | G1 | platform | OPEN |
-| **R-A06** | Windows/Git Bash failure discovered late | **High** | Med | **Major** | G1 | platform | OPEN |
-| **R-A07** | L0 erodes despite ADR-0007 | Med | **High** | **Major** | every | architecture | MITIGATED, unverified |
-| **R-A08** | Untested gates fail silently when they matter | Med | Med | **Major** | G1 | platform | OPEN |
+| **R-A05** | Silent CI coverage loss (counter ≠ coverage) | Med | **High** | **Major** | G1 | platform | **CLOSED 2026-08-10** — `gate-coverage`. **This register called it first** |
+| **R-A06** | Windows/Git Bash failure discovered late | **High** | Med | **Major** | G1 | platform | **CLOSED 2026-08-10** — and it had already happened |
+| **R-A07** | L0 erodes despite ADR-0007 | Med | **High** | **Major** | every | architecture | **MITIGATED, now verified** — self-test plants `L0-OFFLINE-002` |
+| **R-A08** | Untested gates fail silently when they matter | Med | Med | **Major** | G1 | platform | **CLOSED 2026-08-10** — coverage 9/17 → 20/20 |
 | **R-A09** | Deferrals lack dates; "later" never arrives | **High** | Med | **Major** | G1 | architecture | OPEN |
 | **R-A10** | STT latency breaks the budget; tiering forced late | **High** | Med | **Major** | G6b | sensory | ACCEPTED, monitored |
 | **R-A11** | Local model tool-calling too weak for L0 | **High** | **High** | **Major** | G3 | brain | ACCEPTED, measured |
@@ -34,6 +34,40 @@ not the product.
 | **R-A19** | Eleven-phase plan outlasts motivation | Med | Med | **Informational** | — | Efe | **NEWLY RAISED** |
 
 \* ~~Likelihood Low **only while use stays personal**~~ — superseded 2026-08-10. The condition was not the artifact anyone was watching. See R-A15.
+
+---
+
+## 1a. Closure — 2026-08-10
+
+**Six rows above closed on one day, and the register deserves credit for two of them.**
+
+R-A05 — *"silent CI coverage loss (counter ≠ coverage)"* — and R-A08 — *"untested gates fail
+silently when they matter"* — were written on 2026-08-02 by an auditor reading a pipeline
+that reported **8/8** self-test passes. Both were correct, and both were still OPEN eight
+days later when a verification pass found the same thing empirically: the counter said 10/10
+while **8 of 17 gates had never rejected anything**, `l0-conformance` among them until
+Finding M1 closed it.
+
+The register named the failure before it was measured. Nothing acted on it for eight days,
+because a risk row is prose and prose does not fail a build. `gate-coverage` (ADR-0030,
+`Proposed`) now counts **gates rather than assertions** and blocks on the difference.
+
+| Row | Closed by |
+|---|---|
+| R-A01 | 23/23 jobs green — [run 31390306941](https://github.com/Denizfe/L.I.O.N.E.L/actions/runs/31390306941) |
+| R-A02 | `gate_secrets` scans its own source and policy; zero path exclusions (AUD-C02) |
+| R-A03 | ADR-0030 — self-declared criteria are now executable, so they cannot be negotiated |
+| R-A05 | `gate-coverage` — counts gates, not assertions |
+| R-A06 | `windows-policy-gates`, which failed on a real cp1252 crash the day it was added |
+| R-A08 | Self-test coverage 9/17 → 20/20, `coverage.exempt` empty |
+
+R-A06 is worth reading as a warning rather than a success: the risk was *"discovered late"*,
+and it **was** discovered late. Every gate had been dying with `UnicodeEncodeError` on the
+project's own host platform, after passing its checks, for as long as the gates had existed.
+The register predicted it in one line on day one. Nothing was watching, so it stayed true.
+
+**Still open:** R-A04, R-A09, R-A10 → R-A19 as scored, with R-A12 and R-A15 escalated —
+see §1 and the R-A15 entry below.
 
 ---
 

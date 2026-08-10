@@ -75,9 +75,11 @@ are governed by ADR-0013 and ADR-0021.
 
 ### Positive
 
-- The five defect classes are closed by mechanism rather than by vigilance. `checksum`
+- Three of the five defects now fail the build rather than waiting for an audit. `checksum`
   fails on any unaccompanied change to the architecture; `generated-docs` fails the commit
-  that skips regeneration; `gate-coverage` fails the gate added without a test.
+  that skips regeneration; `gate-coverage` fails the gate added without a test. (The other
+  two — the Windows crash and the unread MODEL_CARD — were closed by the `windows-latest`
+  job and by reading it. See the last item under Costs for what is **not** closed.)
 - `CI_Architecture.md` §7's seven-step procedure becomes checkable at step 6 — the step the
   document itself calls "the one that gets skipped and the one that matters."
 - Gate coverage went 9/17 → 20/20 in the course of implementing this, which is the evidence
@@ -98,6 +100,23 @@ are governed by ADR-0013 and ADR-0021.
 - Adding a gate is now genuinely more work — a plant is mandatory, not aspirational. This is
   the point, and it will be irritating exactly when someone is in a hurry, which is when the
   step was being skipped.
+
+- **The class is narrowed, not closed, and the ADR should not be read as claiming otherwise.**
+  `generated-docs` covers documents that HAVE a generator — currently two. Every hand-written
+  document that asserts a count about this repository is still unenforced prose:
+  `CI_Architecture.md` §8, `Phase0_Final_Signoff.md`, `Architecture_Risk_Register.md`, and
+  this freeze document itself. That is not hypothetical: within an hour of these gates going
+  green, four of those documents were found stale — including risk register rows **R-A05**
+  ("silent CI coverage loss: counter ≠ coverage") and **R-A08** ("untested gates fail
+  silently"), still marked OPEN while sitting next to the gates that close them, and three
+  rows still reading "blocks G0" after G0 was signed off.
+
+  Closing the rest is a larger question than this ADR answers. It means either generating
+  those documents too — which would cost the prose that makes them worth reading — or a
+  narrower check over count-shaped claims, which is a different decision needing its own
+  ADR. **What this ADR buys is that the invariants with a mechanical definition now have a
+  mechanism.** The rest still depends on someone noticing, which is exactly the property
+  that produced the five defects.
 
 ## Alternatives Rejected
 

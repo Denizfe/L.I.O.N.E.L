@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.1.0** |
+| Architecture version | **1.1.1** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.1.0`** |
+| Tag | **`architecture-1.1.1`** |
 | Status | **FROZEN** |
-| Previous version | **1.0.0** — `0066cb2`, tag `architecture-1.0.0`, unchanged and still valid |
+| Previous versions | **1.1.0**, **1.0.0** — both tagged, both unchanged and still valid |
 | Pending approval | ADR-0029, ADR-0030, ADR-0031 are **Proposed** — see §9 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -21,6 +21,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.1.1** — PATCH over 1.1.0: errata only. No decision changed, no ADR added. Four documents
+asserted counts that had stopped being true, and ADR-0030 claimed a class was closed when it
+was narrowed — see §9.5.
 
 **1.1.0** — MINOR over 1.0.0: three new ADRs, no decision already in force changed.
 
@@ -42,21 +46,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.1.0
-sha256:71c7c2fce1fccb2e0e263f98454d72ce85ce3220f3a17c5fea1e7ccaa1181687
+ARCHITECTURE CHECKSUM                                          architecture 1.1.1
+sha256:aed60f6faa836855f634fa1fd5a547c728e3ccabf2d209c2eb798e45cea60d24
 
-  ADRs         31 files   sha256:d1a2c53ab648267364f8d634e402aaa3…
+  ADRs         31 files   sha256:f837ac0df5d9965a60f311c2f2f1b3ba…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
   policy        8 files   sha256:f2e7a3ff07f21392edb56eb58abeda82…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
-  plan          1 file    sha256:79102470bfdc78dae412b6630c69c8dd…
+  plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
   72 files hashed
 ```
 
-Superseded value, kept so 1.0.0 stays verifiable:
+Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.1.0   sha256:71c7c2fce1fccb2e0e263f98454d72ce85ce3220f3a17c5fea1e7ccaa1181687
+                     72 files — ADRs 31 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.0.0   sha256:fab0610aa3167a2f26b0e812dbfe9563abbf7aa28ab18b9d773d945a5a84f233
                      69 files — ADRs 28 · contracts 31 · policy 8 · artifacts 1 · plan 1
 ```
@@ -112,7 +118,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 16 sections |
-| **CI gates** | **20 gates, 136 rules, 23 workflow jobs** — 17 checking the repository, 3 checking the pipeline (ADR-0030) |
+| **CI gates** | **20 gates, 136 rules, 23 workflow jobs** — 17 checking the repository, 3 checking the pipeline (ADR-0030). Self-test 21/21, gate coverage 20/20 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -315,6 +321,42 @@ now impossible rather than merely discouraged: `gate_checksum` fails.
 That is the shape of every change in 1.1.0. None of it is new policy. All of it is existing
 policy that had no mechanism.
 
+### 9.5 Version 1.1.1 — the gates' first real finding
+
+Within an hour of 1.1.0 being tagged, a review found four documents asserting things that
+had stopped being true. **None of them is generated, and none is in the checksum set, so no
+gate could see any of it.**
+
+| Document | Said | Actually |
+|---|---|---|
+| `Architecture_Risk_Register.md` | R-A01, R-A03 **"OPEN — blocks G0"**; R-A05, R-A06, R-A08 OPEN | G0 signed off; all six closed by work landed that day |
+| `Phase0_Final_Signoff.md` §15 | coverage 9/17 "tracked for Phase 1"; three prerequisites open; 127 rules | 20/20; zero open; 136 rules |
+| `CI_Architecture.md` §8 | `15 pass · 1 fail by design` | `20 pass · 0 fail` |
+| `MASTER_PLAN_v2.md` §9 | an ADR table stopping at 0028 | 31 ADRs exist |
+| `ADR-0030` | "The five defect classes are **closed** by mechanism" | Three are. The class is **narrowed** |
+
+**R-A05 and R-A08 are the sharpest of these.** An auditor wrote them on 2026-08-02 —
+*"silent CI coverage loss (counter ≠ coverage)"* and *"untested gates fail silently when
+they matter"* — reading a pipeline that reported 8/8. Both were right. Both sat OPEN for
+eight days while the counter climbed to 10/10 and eight gates still had never rejected
+anything. **The register named the root cause before it was measured, and nothing acted on
+it, because a risk row is prose and prose does not fail a build.** That is ADR-0030's thesis,
+written down by someone else, a week early, and ignored — which is the strongest argument
+for it in this document.
+
+The corrections are errata: text brought into line with decisions already in force. Per §1
+that is a PATCH. Two of them touch the checksum set — `ADR-0030` and `MASTER_PLAN_v2.md` —
+so the checksum moved and had to be re-recorded and re-tagged for a set of typo-class fixes.
+
+**That cost is the mechanism working.** `gate_checksum` went red on the first edit and
+stayed red until §2 was updated. Before 1.1.0 the same edits would have silently invalidated
+the recorded checksum, which is precisely how the CRLF defect survived eight days.
+
+**What is still not enforced:** every hand-written document that asserts a count about this
+repository — including this one. `generated-docs` covers documents that have a generator,
+currently two. ADR-0030's Costs now record this rather than claiming the class is closed.
+Closing it needs a different decision and its own ADR.
+
 ### 9.4 If the Proposed ADRs are rejected
 
 They are additive and nothing depends on them.
@@ -329,4 +371,4 @@ Any of those is a MINOR bump of its own, not a revert of 1.1.0.
 
 ---
 
-*Prepared 2026-08-03. Executed and in force 2026-08-10 at 1.0.0; extended to 1.1.0 the same day.*
+*Prepared 2026-08-03. In force 2026-08-10: 1.0.0, extended to 1.1.0, corrected to 1.1.1 — all the same day.*

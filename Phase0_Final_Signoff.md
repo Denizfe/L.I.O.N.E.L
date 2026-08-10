@@ -438,3 +438,68 @@ and fixed in the process, two of them load-bearing for the freeze's own claims.
 licence — are G1 items, not G0 blockers, and are tracked in `Phase1_Entry_Checklist.md`.
 
 *Remediation verified 2026-08-10 against a clean clone of `architecture-1.0.0`.*
+
+
+---
+
+## 16. Second remediation — 2026-08-10, later the same day
+
+**§15 is left unedited, as §15 left §2.2 unedited.** It was accurate when written and is
+now partly stale, which is worth showing rather than hiding: the gap between "we fixed it"
+and "the document still says otherwise" is the subject of this section.
+
+### 16.1 What §15 said that is no longer true
+
+| §15 | Then | Now |
+|---|---|---|
+| §15.4 — self-test covers 9 of 17 gates, "Open, tracked for Phase 1" | 9/17 | **20/20.** Closed the same day, not tracked forward |
+| §15.5 — remaining prerequisites: `pyproject.toml`, `uv.lock`, the Piper licence | 3 open | **0 open.** All nine checklist items closed |
+| §15.3 C — 127 rules | 127 | **136** — three meta-gates added |
+
+### 16.2 What was done
+
+Architecture **1.1.1**, tagged. The full record is `Architecture_Freeze.md` §9; in brief:
+
+- **Three meta-gates** — `checksum`, `generated-docs`, `gate-coverage` (ADR-0030,
+  `Proposed`). Each enforces something this repository already asserted about itself and
+  checked nowhere.
+- **Self-test 10 → 21 assertions, coverage 9/17 → 20/20**, `coverage.exempt` empty. The
+  suite also now asserts it left the architecture checksum byte-identical.
+- **Item 4 closed with a finding, not a tick.** The Turkish voice is **CC-BY-NC-SA-4.0**:
+  personal use unaffected, distribution blocked, no alternative voice exists. R-A15 escalated
+  Minor → Major. ADR-0031 (`Proposed`) adds the register that lets a reviewed licence be
+  recorded rather than suppressed.
+- **ADR-0029** (`Proposed`) closes the ADR-0016 errata gap this audit did not reach.
+- **Six risk-register rows closed**, three of which still read *"blocks G0"* after G0 was
+  signed off.
+
+### 16.3 The finding this section exists to record
+
+§10's MINOR findings N1 and N2 were scored as documentation drift — *"Neither affects
+implementation safety."* That was true of the two instances and wrong about the class.
+
+The same shape produced every defect found on 2026-08-10, including one Critical: the
+architecture checksum did not reproduce from a clone, so §13's thirteenth criterion was met
+in form and not in fact. **Documentation drift is not a cosmetic category in a repository
+whose controls are documents.** A stale count is harmless; a stale *invariant* is a control
+that has stopped working while still being cited.
+
+This audit could not have found it. It compared gate results, and no gate read the checksum,
+the generated documents, or the coverage figure. Three now do.
+
+### 16.4 What is still not enforced
+
+`generated-docs` covers documents that have a generator — two. This document does not, and
+neither does `Architecture_Risk_Register.md` or `CI_Architecture.md`. All three asserted
+stale counts within an hour of the gates going green, which is how §16.1 came to exist.
+
+Recorded as an open limitation in ADR-0030's Costs rather than presented as closed.
+
+### 16.5 Verdict — unchanged
+
+# PASS
+
+C1 and M1 remain closed. Nothing found on 2026-08-10 reopens them. Phase 1 may begin; three
+`Proposed` ADRs await Efe under Architecture_Freeze.md §5 step 4, and none of them blocks it.
+
+*Second remediation verified 2026-08-10 against a clean clone of `architecture-1.1.1`.*
