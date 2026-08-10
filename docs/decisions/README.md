@@ -10,8 +10,11 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
    Summary in the response instead.
 2. **Query before you decide.** Before proposing a change to a module, search existing ADRs
    (and, once Phase 2 lands, the Memory Service). Settled decisions are not relitigated silently.
-3. **ADRs are immutable once Accepted.** To change one, write a new ADR that supersedes it.
-   Never edit the original except to update its `Status` line and add the superseding link.
+3. **ADRs are immutable once Accepted.** The *Decision* never changes and the body is never
+   edited in place. [ADR-0029](ADR-0029-adr-errata-provision.md) defines the three
+   append-only operations — **Supersede**, **Amend**, **Erratum** — and `ADR-009` checks
+   their shape. An Erratum quotes verbatim what it corrects; that quote is what separates a
+   correction from a rewrite.
 4. **Every ADR names its verification.** A decision with no way to check it is a preference.
 
 ## Statuses
@@ -55,11 +58,10 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0026](ADR-0026-side-effect-classification.md) | Side-effect classification on tools | Accepted | 0 |
 | [0027](ADR-0027-testing-strategy.md) | Five-layer testing strategy | Accepted | 0 |
 | [0028](ADR-0028-data-plane-transport.md) | Data-plane transport selection | Accepted | 6 |
-| [0029](ADR-0029-adr-errata-provision.md) | Errata, Amendments and Corrections to Accepted ADRs | **Proposed** | 0 |
-| [0030](ADR-0030-self-enforcing-ci.md) | The pipeline enforces its own invariants | **Proposed** | 0 |
-| [0031](ADR-0031-reviewed-licence-register.md) | A licence that needs review must have somewhere to be reviewed | **Proposed** | 0 |
+| [0029](ADR-0029-adr-errata-provision.md) | Errata, Amendments and Corrections to Accepted ADRs | Accepted | 0 |
+| [0030](ADR-0030-self-enforcing-ci.md) | The pipeline enforces its own invariants | Accepted | 0 |
+| [0031](ADR-0031-reviewed-licence-register.md) | A licence that needs review must have somewhere to be reviewed | Accepted | 0 |
 
-**Three Proposed ADRs await Efe's approval** (Architecture_Freeze.md §5 step 4). ADR-0030's
-and ADR-0031's gates are implemented so the decisions can be judged against something real;
-ADR-0029's `ADR-009` rule is deliberately not implemented, because a gate enforcing an
-unapproved decision is the error ADR-0030 is about.
+**0029–0031 accepted 2026-08-11.** All three carry a dated `## Erratum` recording the status
+change, because each asserted its own `Proposed` status in its body and the body is
+append-only — the first use of the mechanism ADR-0029 introduced, on ADR-0029 itself.

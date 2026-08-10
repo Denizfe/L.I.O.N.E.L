@@ -172,6 +172,27 @@ RESTORE+=("rm -f '$ROOT/docs/decisions/ADR-9999-selftest.md'")
 expect_violation adr "ADR-001" "an ADR count that no longer matches policy"
 rm -f docs/decisions/ADR-9999-selftest.md
 
+# 10b. ADR-0029: an undated correction cannot be ordered against what it corrects.
+cat > docs/decisions/ADR-9999-selftest.md <<'ADRX'
+# ADR-9999: self-test plant
+
+| | |
+|---|---|
+| Status | **Accepted** |
+
+## Context
+## Decision
+## Consequences
+## Alternatives Rejected
+## Verification
+
+## Erratum
+
+No date in the heading. ADR-009 must reject this.
+ADRX
+expect_violation adr "ADR-009" "an Erratum with no ISO date"
+rm -f docs/decisions/ADR-9999-selftest.md
+
 # 11. Contract metadata. Every schema declares who owns it and what plane it is on;
 #     without that a contract has no reviewer and no blast radius.
 cat > contracts/core/v1/_selftest.schema.json <<'SCHEMA'

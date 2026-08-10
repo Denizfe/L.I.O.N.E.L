@@ -79,8 +79,9 @@ ADR_ENFORCED = [
     ("0026", "Side-effect classification", "`architecture` ARCH-005"),
     ("0027", "Testing strategy", "`jsonschema`, `gate-coverage`"),
     ("0028", "Data-plane transport", "`protobuf`"),
-    ("0030", "Self-enforcing CI *(Proposed)*", "`checksum`, `generated-docs`, `gate-coverage`"),
-    ("0031", "Reviewed-licence register *(Proposed)*", "`licenses` LIC-006"),
+    ("0029", "Errata / Amendment / Supersede", "`adr` ADR-009"),
+    ("0030", "Self-enforcing CI", "`checksum`, `generated-docs`, `gate-coverage`"),
+    ("0031", "Reviewed-licence register", "`licenses` LIC-006"),
 ]
 
 ADR_DEFERRED = [
@@ -91,13 +92,14 @@ ADR_DEFERRED = [
     ("0019", "Telemetry needs emitting code", "G5"),
     ("0021", "Eval harness needs a model to evaluate", "G8"),
     ("0024", "Robotics — provisional, uncommitted", "G10"),
-    ("0029", "Errata provision *(Proposed)* — needs the `adr` gate extended", "G1"),
 ]
 
 EXEMPTIONS = [
     ("TODO", "`l0-conformance` stubs in `ci.yml`", "platform", "G6"),
     ("Licence — reviewed", "`models.piper_tr_dfki` + config — **CC-BY-NC-SA-4.0, personal use only**",
      "sensory", "G6c — revisit (ADR-0031)"),
+    ("ADR-009 rule 2", "`ADR-0017` Correction (2026-08-02) — predates ADR-0029, body is unfixable",
+     "architecture", "never — grandfathered, reported on every run"),
     ("Licence — unresolved", "`models.wake_bootstrap` (NC ambiguity)", "sensory",
      "G6a — self-liquidating"),
     ("Markdown", "`MASTER_PLAN_v1.md`", "architecture", "never — frozen record"),

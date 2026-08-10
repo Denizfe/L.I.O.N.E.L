@@ -1,10 +1,64 @@
 #!/usr/bin/env python3
-"""GATE: ADR validation.  ADR-0016."""
+"""GATE: ADR validation.  ADR-0016, ADR-0029."""
 import re
 from _lib import Gate, load_policy, ROOT, rel, read_text
 
+# ADR-0029. An Accepted ADR's Decision is immutable; three append-only operations may modify
+# the document. `## Erratum — 2026-08-02: optional trailing title`, and the parenthesised
+# form ADR-0003 used before the convention settled.
+_ERRATA_HEADING = re.compile(
+    r"^##\s+(?P<kind>Erratum|Correction|Amendment)\b(?P<rest>.*)$", re.M)
+_ISO_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
+
+
+def check_errata(g, cfg, num, txt, r):
+    """ADR-009 — shape of Erratum / Correction / Amendment sections.
+
+    Shape only, and deliberately so. ADR-0029 rule 3 — an Erratum may not change what is
+    permitted — is the rule that actually matters and the one no gate can evaluate. Checking
+    the date and the verbatim quote catches the mechanical half; a reviewer still has to
+    judge whether a correction is a correction. A gate that implied otherwise would give
+    false assurance about exactly the operation ADR-0029 calls most open to abuse.
+    """
+    kinds = set(cfg.get("errata_sections", []))
+    quote_from = str(cfg.get("errata_quote_required_from", "9999-12-31"))
+
+    matches = list(_ERRATA_HEADING.finditer(txt))
+    for i, m in enumerate(matches):
+        kind = m.group("kind")
+        if kind not in kinds:
+            continue
+        g.check()
+        date = _ISO_DATE.search(m.group("rest"))
+        if not date:
+            g.fail("ADR-009", f"`## {kind}` in ADR-{num} carries no ISO date",
+                "ADR-0029 rule 4: an undated correction cannot be ordered against the decision "
+                "it corrects, so a reader cannot tell whether it applied when the thing they "
+                "are investigating happened.",
+                f"Write `## {kind} — YYYY-MM-DD: short title`.", r)
+            continue
+
+        # Rule 2 applies only to corrections — an Amendment adds scope and has no original
+        # wording to quote.
+        if kind == "Amendment" or date.group(0) < quote_from:
+            if kind != "Amendment" and date.group(0) < quote_from:
+                g.note(f"ADR-{num} `{kind} — {date.group(0)}` predates ADR-0029 "
+                       f"({quote_from}); rule 2's verbatim quote is not enforced against it "
+                       "and cannot be added — rule 1 forbids editing the body")
+            continue
+
+        body = txt[m.end(): matches[i + 1].start() if i + 1 < len(matches) else len(txt)]
+        g.check()
+        if not re.search(r"^\s*>", body, re.M):
+            g.fail("ADR-009", f"`## {kind} — {date.group(0)}` in ADR-{num} quotes nothing",
+                "ADR-0029 rule 2: an Erratum must quote verbatim the wording it corrects. The "
+                "quote is what separates 'the text was wrong' from 'the decision changed' — "
+                "without it, a reader cannot tell a correction from a rewrite, and the "
+                "distinction is the whole mechanism.",
+                "Add a blockquote of the original wording before giving the correction.", r)
+
 def main():
-    p = load_policy(); g = Gate("adr", "ADR validation", ["ADR-0016"])
+    p = load_policy(); g = Gate("adr", "ADR validation", ["ADR-0016", "ADR-0029"])
     cfg = p["adr"]
     d = ROOT / cfg["dir"]
     if not d.is_dir():
@@ -62,6 +116,8 @@ def main():
                     "ADR-0016: a superseded ADR is kept for its rationale. Without a forward link "
                     "the reader has no way to find what replaced it.",
                     "Write `Superseded by [ADR-NNNN](ADR-NNNN-....md)`.", r)
+
+        check_errata(g, cfg, num, txt, r)
 
         if num in exempt:
             g.note(f"ADR-{num} shape-exempt: {exempt[num]['why']}")

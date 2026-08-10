@@ -2,25 +2,29 @@
 
 | | |
 |---|---|
-| Architecture version | **1.1.1** |
+| Architecture version | **1.2.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.1.1`** |
+| Tag | **`architecture-1.2.0`** |
 | Status | **FROZEN** |
-| Previous versions | **1.1.0**, **1.0.0** — both tagged, both unchanged and still valid |
-| Pending approval | ADR-0029, ADR-0030, ADR-0031 are **Proposed** — see §9 |
+| Previous versions | **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** 0029–0031 accepted 2026-08-11 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **Three of 1.1.0's ADRs are `Proposed`.** Their gates are implemented and green so the
-> decisions can be judged against something real, but under §5 step 4 they are not in force
-> until Efe accepts them. §9 records what happens if he does not.
+> **All 31 ADRs are in force.** ADR-0029, ADR-0030 and ADR-0031 were accepted 2026-08-11;
+> `ADR-009`, which ADR-0029 deliberately left unimplemented while it was `Proposed`, landed
+> with the acceptance. §9.6 records what that surfaced.
 
 ---
 
 ## 1. Architecture version
+
+**1.2.0** — MINOR over 1.1.1: ADR-0029, ADR-0030 and ADR-0031 accepted and in force, and
+`ADR-009` implemented. No decision already in force changed; three that were pending now
+bind.
 
 **1.1.1** — PATCH over 1.1.0: errata only. No decision changed, no ADR added. Four documents
 asserted counts that had stopped being true, and ADR-0030 claimed a class was closed when it
@@ -46,12 +50,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.1.1
-sha256:aed60f6faa836855f634fa1fd5a547c728e3ccabf2d209c2eb798e45cea60d24
+ARCHITECTURE CHECKSUM                                          architecture 1.2.0
+sha256:77e6f37244a7ffa6248a3c1607b42f23145493ecebcd0cb1ce1f8b1425479ec7
 
-  ADRs         31 files   sha256:f837ac0df5d9965a60f311c2f2f1b3ba…
+  ADRs         31 files   sha256:3357194b9ad1033cfd821236bf47afa0…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:f2e7a3ff07f21392edb56eb58abeda82…
+  policy        8 files   sha256:9287daaa0512b98a2ad9f13943e42373…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -61,6 +65,8 @@ sha256:aed60f6faa836855f634fa1fd5a547c728e3ccabf2d209c2eb798e45cea60d24
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.1.1   sha256:aed60f6faa836855f634fa1fd5a547c728e3ccabf2d209c2eb798e45cea60d24
+                     72 files — ADRs 31 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.1.0   sha256:71c7c2fce1fccb2e0e263f98454d72ce85ce3220f3a17c5fea1e7ccaa1181687
                      72 files — ADRs 31 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.0.0   sha256:fab0610aa3167a2f26b0e812dbfe9563abbf7aa28ab18b9d773d945a5a84f233
@@ -110,7 +116,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **31 ADRs, 0001–0031** — 0029/0030/0031 `Proposed` |
+| **Architecture decisions** | **31 ADRs, 0001–0031** — all Accepted or Superseded; none pending |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -118,7 +124,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 16 sections |
-| **CI gates** | **20 gates, 136 rules, 23 workflow jobs** — 17 checking the repository, 3 checking the pipeline (ADR-0030). Self-test 21/21, gate coverage 20/20 |
+| **CI gates** | **20 gates, 137 rules, 23 workflow jobs** — 17 checking the repository, 3 checking the pipeline (ADR-0030). Self-test 21/21, gate coverage 20/20 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -181,9 +187,11 @@ Requiring an ADR:
 Forbidden: editing an Accepted ADR's Decision in place without an Erratum; deleting an ADR;
 renumbering.
 
-> **Open governance gap, recorded not fixed:** ADR-0016 has no erratum provision, while
-> practice has diverged from it three times. Closing it requires an ADR and is a Phase 1
-> item.
+> **~~Open governance gap, recorded not fixed:~~ CLOSED 2026-08-11.** The gap — ADR-0016
+> having no erratum provision while practice had diverged from it three times — is closed by
+> **[ADR-0029](docs/decisions/ADR-0029-adr-errata-provision.md)**, accepted 2026-08-11 and
+> enforced by **`ADR-009`**. ADR-0016 carries a dated Amendment pointing to it. The table
+> above is no longer a description of practice; it is the rule.
 
 ---
 
@@ -357,7 +365,46 @@ repository — including this one. `generated-docs` covers documents that have a
 currently two. ADR-0030's Costs now record this rather than claiming the class is closed.
 Closing it needs a different decision and its own ADR.
 
-### 9.4 If the Proposed ADRs are rejected
+### 9.6 Version 1.2.0 — the ADRs accepted, and what enforcing one taught
+
+Efe accepted ADR-0029, ADR-0030 and ADR-0031 on 2026-08-11. Three consequences.
+
+**The acceptance was itself the first test of ADR-0029.** Each ADR asserted its own
+`Proposed` status *in its body*, and ADR-0029 rule 1 makes the body append-only — so the
+status could not simply be edited out. Each carries a dated `## Erratum — 2026-08-11`
+quoting the superseded sentence verbatim. ADR-0016 carries a dated `## Amendment` pointing
+to ADR-0029, which under the old rule would have been forbidden and under the new one is the
+correct instrument. **The mechanism's first use was on the document that introduced it.**
+
+**`ADR-009` landed, having been deliberately withheld.** ADR-0029's Verification said the
+rule would not be implemented until acceptance, "a gate enforcing an unapproved decision
+would be the same category error this ADR is about." That condition was met in that order.
+
+**Implementing it surfaced a problem the ADR had not anticipated,** and this is the part
+worth reading. ADR-0029 rule 2 requires an Erratum to quote verbatim what it corrects.
+**ADR-0017's `## Correction — 2026-08-02` paraphrases instead.** It is a faithful correction,
+written nine days before the rule existed.
+
+Enforcing rule 2 retroactively would have failed `ADR-009` on ADR-0017 **permanently, with
+no permitted fix** — adding the missing quote means editing the body of an Accepted ADR,
+which rule 1 forbids. The gate would have had no reachable green state: precisely the failure
+ADR-0031 was written about, reproduced by the ADR meant to prevent that class, on its first
+day.
+
+Resolved by an Amendment to ADR-0029 rather than by quietly weakening the gate:
+`errata_quote_required_from: "2026-08-11"` in policy, so the boundary is a reviewable value.
+Rule 4 (the date) binds everything; rule 2 binds forward. `gate_adr` **reports the two
+grandfathered sections as notes on every run** rather than passing silently — a
+grandfathered violation that stops being visible is just a violation.
+
+> A rule cannot bind documents written before it existed. The cheap move was to drop rule 2;
+> the honest one was to bound it, say where the boundary is, and keep saying what sits on the
+> far side of it.
+
+### 9.4 If the Proposed ADRs are rejected — *historical, superseded by §9.6*
+
+All three were accepted on 2026-08-11, so this section no longer describes a live
+option. Kept because it was the basis on which they were put forward.
 
 They are additive and nothing depends on them.
 

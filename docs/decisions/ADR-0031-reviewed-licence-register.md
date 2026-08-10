@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Status | **Proposed** — awaiting Efe's approval (Architecture_Freeze.md §5 step 4) |
-| Date | 2026-08-10 |
+| Status | **Accepted** |
+| Date | 2026-08-10 · **Accepted 2026-08-11** |
 | Phase | 0 |
 | Related | [ADR-0013](ADR-0013-artifact-pinning.md), [ADR-0017](ADR-0017-dual-tts.md), [ADR-0023](ADR-0023-turkish-locale-correctness.md) |
 
@@ -143,8 +143,28 @@ exercises the same classification path.
 **Standing criterion:** `review_accepted` holds two entries — the Turkish voice and its
 config — both `revisit_at: G6c`. A third entry is a signal, not a routine event.
 
-**This ADR is `Proposed`.** Per Architecture_Freeze.md §5 step 4 it is not in force until
+**This ADR was `Proposed` when written — see the Erratum below.** Per Architecture_Freeze.md §5 step 4 it is not in force until
 Efe accepts it. The mechanism is implemented so the decision can be evaluated against
 something real; if it is rejected, `review_accepted` is removed and `licenses` returns to
 failing `LIC-002` on the Turkish voice, which is a true statement about an unresolved
 question.
+
+## Erratum — 2026-08-11
+
+**Nature of change: ERRATUM.** No policy changed. The closing paragraph described this
+document's own status, and that status changed when Efe accepted it. The original wording
+is preserved below rather than overwritten, per rule 1 of the Decision above.
+
+### What the closing paragraph originally said
+
+> **This ADR is `Proposed`.** Per Architecture_Freeze.md §5 step 4 it is not in force until Efe accepts it. The mechanism is implemented so the decision can be evaluated against something real; if it is rejected, `review_accepted` is removed and `licenses` returns to failing `LIC-002` on the Turkish voice, which is a true statement about an unresolved question.
+
+### The correction
+
+This ADR was **Accepted on 2026-08-11**. The `Status` row records it; ADR-0016 has always
+permitted the Status line to be edited in place, and this erratum exists because the *body*
+also asserted the status and the body is append-only.
+
+`licenses.review_accepted` is in force. The standing criterion in the Verification section
+is unchanged: two entries, both `revisit_at: G6c`. **A third entry is a signal, not a
+routine event.**

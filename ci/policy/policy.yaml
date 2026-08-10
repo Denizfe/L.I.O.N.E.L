@@ -55,6 +55,19 @@ adr:
   expected_count: 31
   required_sections: ["## Context", "## Decision", "## Consequences", "## Alternatives Rejected", "## Verification"]
   valid_statuses: ["Accepted", "Provisional", "Superseded", "Proposed", "Deprecated"]
+  # ── ADR-0029: Errata / Amendments / Corrections ──────────────────────────
+  # An Accepted ADR's Decision is immutable; three append-only operations may modify the
+  # document. ADR-009 checks the SHAPE of those sections. It cannot check the substance —
+  # whether a correction is really a correction is a human judgement, and a gate claiming
+  # otherwise would be worse than no gate.
+  errata_sections: ["Erratum", "Correction", "Amendment"]
+  # ADR-0029 rule 2: an Erratum quotes verbatim what it corrects. Enforced only from the
+  # date ADR-0029 was Accepted. ADR-0017's Correction (2026-08-02) paraphrases rather than
+  # quotes, and the fix — adding the quote — would mean editing the body of an Accepted
+  # ADR, which rule 1 forbids. Enforcing it backwards would leave ADR-009 permanently red
+  # with no permitted fix. See ADR-0029's Amendment of 2026-08-11.
+  errata_quote_required_from: "2026-08-11"
+
   # ADR-0004 is a superseded record and intentionally has a different shape.
   shape_exempt:
     - id: "0004"

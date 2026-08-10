@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Status | **Proposed** — awaiting Efe's approval (Architecture_Freeze.md §5 step 4) |
-| Date | 2026-08-10 |
+| Status | **Accepted** |
+| Date | 2026-08-10 · **Accepted 2026-08-11** |
 | Phase | 0 |
 | Related | [ADR-0016](ADR-0016-adr-driven-decisions.md), [ADR-0013](ADR-0013-artifact-pinning.md), [ADR-0017](ADR-0017-dual-tts.md) |
 
@@ -120,6 +120,63 @@ Gate **`adr`**, extended with:
 
 `ci/self_test.sh` plants an Erratum with no date and asserts `ADR-009`.
 
-**This ADR is `Proposed`.** Per Architecture_Freeze.md §5 step 4 it is not in force until
+**This ADR was `Proposed` when written — see the Erratum below.** Per Architecture_Freeze.md §5 step 4 it is not in force until
 Efe accepts it, and `ADR-009` is not implemented until then — a gate enforcing an unapproved
 decision would be the same category error this ADR is about.
+
+## Erratum — 2026-08-11
+
+**Nature of change: ERRATUM.** No policy changed. The closing paragraph described this
+document's own status, and that status changed when Efe accepted it. The original wording
+is preserved below rather than overwritten, per rule 1 of the Decision above.
+
+### What the closing paragraph originally said
+
+> **This ADR is `Proposed`.** Per Architecture_Freeze.md §5 step 4 it is not in force until Efe accepts it, and `ADR-009` is not implemented until then — a gate enforcing an unapproved decision would be the same category error this ADR is about.
+
+### The correction
+
+This ADR was **Accepted on 2026-08-11**. The `Status` row records it; ADR-0016 has always
+permitted the Status line to be edited in place, and this erratum exists because the *body*
+also asserted the status and the body is append-only.
+
+`ADR-009` is implemented as of the same date. The condition the original paragraph set —
+acceptance first, gate second — was met in that order.
+
+## Amendment — 2026-08-11: `ADR-009` applies rule 2 forward, not backward
+
+**Nature of change: AMENDMENT.** It adds scope — a transition rule the Decision did not
+state — and contradicts nothing in it. It is not an Erratum, because it changes what
+`ADR-009` permits, and rule 3 forbids an Erratum from doing that.
+
+Implementing `ADR-009` surfaced a problem the Decision did not anticipate.
+
+Rule 2 requires an Erratum to quote verbatim what it corrects. **ADR-0017's `## Correction —
+2026-08-02` does not.** It paraphrases:
+
+> "This ADR originally named `tr_TR-fettah-medium` as the primary Turkish voice with
+> `tr_TR-dfki-medium` as an alternate, and deferred the choice to a G6c listening test."
+
+That is a faithful, useful correction. It is also not a quote, and it was written nine days
+before the rule requiring one existed.
+
+Enforcing rule 2 retroactively would fail `ADR-009` on ADR-0017 permanently, with **no
+permitted fix**: adding the missing quote means editing the body of an Accepted ADR, which
+rule 1 forbids. The gate would have no reachable green state — the exact failure ADR-0031
+was written about, reproduced here by the ADR that is supposed to prevent that class.
+
+**Therefore:**
+
+1. **Rule 4 (ISO date) applies to every Erratum, Correction and Amendment, whenever
+   written.** All six existing sections already satisfy it.
+2. **Rule 2 (verbatim quote) is enforced by `ADR-009` only for sections dated on or after
+   2026-08-11**, the date this ADR was Accepted. Configured as
+   `adr.errata_quote_required_from` in `ci/policy/policy.yaml`, so the boundary is a
+   reviewable value rather than a constant buried in gate code.
+3. **Rule 2 still applies to ADR-0017 as a rule.** It is simply unenforced there and
+   unfixable there. `gate_adr` says so on every run rather than passing silently — a
+   grandfathered violation that stops being visible is just a violation.
+
+A rule cannot bind documents written before it existed. Saying so here is cheaper than a
+gate that is permanently and correctly red.
+

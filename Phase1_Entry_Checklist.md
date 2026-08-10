@@ -177,8 +177,8 @@ The three pushes before the freeze commit are red in the same history. That is t
 | ✅ Capability registry — 5 capabilities, all governance fields, consistent with ADR-0007 |
 | ✅ Artifact lock — 13/13 resolved, tiers declared, digest matches registry |
 | ✅ Trust model — vocabularies identical across contracts and registry |
-| ✅ **20 gates, 136 rules, 23 workflow jobs**, 0 stubs |
-| ✅ **Gate coverage 20/20** — every gate has rejected a planted violation |
+| ✅ **20 gates, 137 rules, 23 workflow jobs**, 0 stubs |
+| ✅ **Gate coverage 20/20**, 22 assertions — every gate has rejected a planted violation |
 | ✅ **The pipeline enforces its own invariants** — checksum, generated docs, gate coverage |
 | ✅ Repository hygiene — 0 CRLF, 0 runtime `.py`, ignore rules exercised |
 | ✅ Security assumptions documented — ADR-0011, 0012, 0015, 0022 |
@@ -200,8 +200,8 @@ blur what the tag certifies.
 
 | | |
 |---|---|
-| **ADR-0029, ADR-0030, ADR-0031 are `Proposed`** | §5 step 4 requires explicit approval before any ADR is Accepted. Their gates are implemented and green so the decisions can be judged against something real. `Architecture_Freeze.md` §9.4 records what unwinding each would cost — all three are additive |
-| **Replacing the Turkish voice** | A technology decision needing an ADR amending ADR-0017. Blocks distribution, not Phase 1. R-A15 |
+| ~~ADR-0029/0030/0031 pending~~ | **Accepted 2026-08-11.** `ADR-009` landed with the acceptance, having been deliberately withheld while they were `Proposed`. `Architecture_Freeze.md` §9.6 records what enforcing ADR-0029 taught — including a rule that could not be applied retroactively without leaving a gate permanently red |
+| **Replacing the Turkish voice** | Still open. A technology decision needing an ADR amending ADR-0017. Blocks distribution, not Phase 1. **R-A15** |
 
 ---
 

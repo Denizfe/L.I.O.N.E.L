@@ -66,3 +66,30 @@ with no record of what was already settled.
 
 Gate **G0**. Every ADR has all six sections. Gate **G2**: ADRs are indexed into the Memory
 Service and retrievable by semantic query.
+
+## Amendment — 2026-08-11: modification procedure is governed by ADR-0029
+
+**Nature of change: AMENDMENT.** It adds the procedure this ADR left implicit. The
+immutability principle below is unchanged; what changes is that "immutable" now has a
+written definition instead of one inferred from a single sentence.
+
+The Decision above says:
+
+> ADRs are **immutable once Accepted**. To change one, write a superseding ADR. Only the
+> `Status` line of the original may be edited.
+
+**[ADR-0029](ADR-0029-adr-errata-provision.md) now governs how an Accepted ADR may be
+modified.** It keeps the principle — the *Decision* is immutable, and the body is never
+edited in place — and names three append-only operations: **Supersede**, **Amend**,
+**Erratum**.
+
+This is a widening, not a reversal. The sentence above was written as though supersede were
+the only instrument, and practice had already diverged from it three times — ADR-0013 twice,
+ADR-0017 once — every time correctly. ADR-0029 §Context sets out why.
+
+**This section is itself the first use of the mechanism it points to.** Adding it under the
+old rule would have been forbidden; adding it any other way would have meant editing the
+Decision above. That it can be written at all is the evidence for ADR-0029.
+
+Shape is enforced by **`ADR-009`**.
+

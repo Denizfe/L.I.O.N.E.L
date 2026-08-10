@@ -9,7 +9,7 @@ Every rule below is enforced by a gate that runs on every push and every pull re
 
 | | |
 |---|---|
-| Rules | **136** |
+| Rules | **137** |
 | Gates | **20** |
 | Severity | **All rules are blocking.** There is no warnings-only tier |
 | Exit codes | `0` pass · `1` violation · `2` gate itself broken |
@@ -37,7 +37,7 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 
 ## `adr` — ADR validation
 
-**Enforces:** ADR-0016
+**Enforces:** ADR-0016, ADR-0029
 
 **Run:** `python3 ci/gates/gate_adr.py`
 
@@ -51,8 +51,9 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 | `ADR-006` | unrecognised status `{val[:60]}` |
 | `ADR-007` | superseded without naming the successor |
 | `ADR-008` | dangling reference to ADR-{m.group(1)} |
+| `ADR-009` | `## {kind}` in ADR-{num} carries no ISO date |
 
-**8 rules.**
+**9 rules.**
 
 ## `contracts` — Contract metadata
 
@@ -400,6 +401,7 @@ Three mechanisms. One rule: **an owner and a route to removal, or it is not an e
 |---|---|---|
 | `l0-conformance` stubs in `ci.yml` | platform | G6 |
 | `models.piper_tr_dfki` + config — **CC-BY-NC-SA-4.0, personal use only** | sensory | G6c — revisit (ADR-0031) |
+| `ADR-0017` Correction (2026-08-02) — predates ADR-0029, body is unfixable | architecture | never — grandfathered, reported on every run |
 | `models.wake_bootstrap` (NC ambiguity) | sensory | G6a — self-liquidating |
 | `MASTER_PLAN_v1.md` | architecture | never — frozen record |
 | `ADR-0004` | architecture | never — superseded record |
@@ -422,7 +424,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 20 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 21 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -437,6 +439,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a broken internal link | `markdown` | MD-LINK |
 | L0 declaring network_allowed = true | `l0-conformance` | L0-OFFLINE-002 |
 | an ADR count that no longer matches policy | `adr` | ADR-001 |
+| an Erratum with no ISO date | `adr` | ADR-009 |
 | a contract with no x-lionel block | `contracts` | CONTRACT-001 |
 | an example that fails its own schema | `jsonschema` | JSON-004 |
 | a .proto that does not compile | `protobuf` | PROTO-001 |
@@ -447,7 +450,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a change to the architecture checksum set | `checksum` | CHECKSUM-001 |
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 
-**20/20 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**21/21 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

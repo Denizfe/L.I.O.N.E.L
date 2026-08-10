@@ -8,11 +8,11 @@
 | | |
 |---|---|
 | Gates | **20** |
-| Rules | **136** |
+| Rules | **137** |
 | Workflow jobs | **23** |
 | Current state | **all gates pass · 0 broken** |
 | Runner | `bash ci/run_gates.sh [gate]` |
-| Self-test | `bash ci/self_test.sh` — 20/20 planted violations caught |
+| Self-test | `bash ci/self_test.sh` — 21/21 planted violations caught |
 | Runtime code | **0 files** — Phase 0 discipline machine-checked |
 
 ---
@@ -24,7 +24,7 @@ Every gate is a standalone script. None depends on another, so a failure never c
 | # | Gate | Enforces | Rules |
 |---|---|---|---|
 | 1 | [`structure`](ci/gates/gate_structure.py) | ADR-0011, MASTER_PLAN_v2 §8 | 4 |
-| 2 | [`adr`](ci/gates/gate_adr.py) | ADR-0016 | 8 |
+| 2 | [`adr`](ci/gates/gate_adr.py) | ADR-0016, ADR-0029 | 9 |
 | 3 | [`contracts`](ci/gates/gate_contracts.py) | ADR-0003, ADR-0009 | 10 |
 | 4 | [`jsonschema`](ci/gates/gate_jsonschema.py) | ADR-0027 | 6 |
 | 5 | [`protobuf`](ci/gates/gate_protobuf.py) | ADR-0028, ADR-0006 | 4 |
@@ -74,8 +74,9 @@ Which decisions have an executable test, and which do not.
 | 0026 | Side-effect classification | `architecture` ARCH-005 |
 | 0027 | Testing strategy | `jsonschema`, `gate-coverage` |
 | 0028 | Data-plane transport | `protobuf` |
-| 0030 | Self-enforcing CI *(Proposed)* | `checksum`, `generated-docs`, `gate-coverage` |
-| 0031 | Reviewed-licence register *(Proposed)* | `licenses` LIC-006 |
+| 0029 | Errata / Amendment / Supersede | `adr` ADR-009 |
+| 0030 | Self-enforcing CI | `checksum`, `generated-docs`, `gate-coverage` |
+| 0031 | Reviewed-licence register | `licenses` LIC-006 |
 
 **Not yet enforced, and honest about it:**
 
@@ -88,9 +89,8 @@ Which decisions have an executable test, and which do not.
 | 0019 | Telemetry needs emitting code | G5 |
 | 0021 | Eval harness needs a model to evaluate | G8 |
 | 0024 | Robotics — provisional, uncommitted | G10 |
-| 0029 | Errata provision *(Proposed)* — needs the `adr` gate extended | G1 |
 
-22 of 30 ADRs have an executable test today. The rest need running code, and each names the gate that will cover it — a decision with no test is a preference, and this table is where that would otherwise hide.
+23 of 30 ADRs have an executable test today. The rest need running code, and each names the gate that will cover it — a decision with no test is a preference, and this table is where that would otherwise hide.
 
 ---
 
@@ -101,7 +101,7 @@ Which decisions have an executable test, and which do not.
 | Job | Type | Notes |
 |---|---|---|
 | 20 policy gates | one per gate | **No `needs:` between them.** Independent by design |
-| `gate-self-test` | meta | Plants 20 known violations, asserts each is caught |
+| `gate-self-test` | meta | Plants 21 known violations, asserts each is caught |
 | `l0-conformance` | blocking | `needs: [structure, contracts, architecture]`. ADR-0007 |
 | `checksum` · `generated-docs` · `gate-coverage` | **meta** | Check the pipeline, not the repository. ADR-0030 |
 | `windows-policy-gates` | platform | `windows-latest` under Git Bash. ADR-0002, ADR-0014 |
@@ -136,6 +136,7 @@ A gate that passes a clean repository but would miss a real violation is decorat
 | a broken internal link | `markdown` | MD-LINK |
 | L0 declaring network_allowed = true | `l0-conformance` | L0-OFFLINE-002 |
 | an ADR count that no longer matches policy | `adr` | ADR-001 |
+| an Erratum with no ISO date | `adr` | ADR-009 |
 | a contract with no x-lionel block | `contracts` | CONTRACT-001 |
 | an example that fails its own schema | `jsonschema` | JSON-004 |
 | a .proto that does not compile | `protobuf` | PROTO-001 |
@@ -146,7 +147,7 @@ A gate that passes a clean repository but would miss a real violation is decorat
 | a change to the architecture checksum set | `checksum` | CHECKSUM-001 |
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 
-**20/20 caught.**
+**21/21 caught.**
 
 ---
 
@@ -195,6 +196,7 @@ Every exemption carries an owner and the gate that removes it. An exemption with
 |---|---|---|---|
 | TODO | `l0-conformance` stubs in `ci.yml` | platform | G6 |
 | Licence — reviewed | `models.piper_tr_dfki` + config — **CC-BY-NC-SA-4.0, personal use only** | sensory | G6c — revisit (ADR-0031) |
+| ADR-009 rule 2 | `ADR-0017` Correction (2026-08-02) — predates ADR-0029, body is unfixable | architecture | never — grandfathered, reported on every run |
 | Licence — unresolved | `models.wake_bootstrap` (NC ambiguity) | sensory | G6a — self-liquidating |
 | Markdown | `MASTER_PLAN_v1.md` | architecture | never — frozen record |
 | ADR shape | `ADR-0004` | architecture | never — superseded record |

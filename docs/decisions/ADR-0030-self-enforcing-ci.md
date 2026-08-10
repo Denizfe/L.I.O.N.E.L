@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| Status | **Proposed** — awaiting Efe's approval (Architecture_Freeze.md §5 step 4) |
-| Date | 2026-08-10 |
+| Status | **Accepted** |
+| Date | 2026-08-10 · **Accepted 2026-08-11** |
 | Phase | 0 |
 | Related | [ADR-0016](ADR-0016-adr-driven-decisions.md), [ADR-0013](ADR-0013-artifact-pinning.md), [ADR-0027](ADR-0027-testing-strategy.md) |
 
@@ -149,7 +149,26 @@ All three assertions are in `ci/self_test.sh` and run on every push, on `ubuntu-
 non-empty exemption list is a gate that has never proven it can reject anything, and it
 carries an owner and the gate that removes it.
 
-**This ADR is `Proposed`.** The gates are implemented and green, but under
+**This ADR was `Proposed` when written — see the Erratum below.** The gates are implemented and green, but under
 Architecture_Freeze.md §5 step 4 the decision is not in force until Efe accepts it. If it is
 rejected, the three gates come out of `ORDER` — they are additive and nothing depends on
 them.
+
+## Erratum — 2026-08-11
+
+**Nature of change: ERRATUM.** No policy changed. The closing paragraph described this
+document's own status, and that status changed when Efe accepted it. The original wording
+is preserved below rather than overwritten, per rule 1 of the Decision above.
+
+### What the closing paragraph originally said
+
+> **This ADR is `Proposed`.** The gates are implemented and green, but under Architecture_Freeze.md §5 step 4 the decision is not in force until Efe accepts it. If it is rejected, the three gates come out of `ORDER` — they are additive and nothing depends on them.
+
+### The correction
+
+This ADR was **Accepted on 2026-08-11**. The `Status` row records it; ADR-0016 has always
+permitted the Status line to be edited in place, and this erratum exists because the *body*
+also asserted the status and the body is append-only.
+
+The rejection path described above is now moot. `checksum`, `generated-docs` and
+`gate-coverage` are in force.
