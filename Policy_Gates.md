@@ -9,8 +9,8 @@ Every rule below is enforced by a gate that runs on every push and every pull re
 
 | | |
 |---|---|
-| Rules | **127** |
-| Gates | **17** |
+| Rules | **136** |
+| Gates | **20** |
 | Severity | **All rules are blocking.** There is no warnings-only tier |
 | Exit codes | `0` pass · `1` violation · `2` gate itself broken |
 
@@ -230,8 +230,9 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 | `LIC-003` | `{sec}.{name}` licence is unresolved: “{lic[:80]}” |
 | `LIC-004` | `{sec}.{name}` licence `{lic}` is not on the allowlist |
 | `LIC-005` | licence registry entry `{e.get('artifact')}` has no owner or resolve_by |
+| `LIC-006` | accepted-review entry `{e.get('artifact')}` has no `{field}` |
 
-**5 rules.**
+**6 rules.**
 
 ## `markdown` — Markdown lint
 
@@ -338,6 +339,47 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 
 **24 rules.**
 
+## `checksum` — Architecture checksum
+
+**Enforces:** ADR-0030, ADR-0013
+
+**Run:** `python3 ci/gates/gate_checksum.py`
+
+| Rule | Triggers when |
+|---|---|
+| `CHECKSUM-001` | architecture checksum drift: recorded `{recorded[:16]}…`, computed `{actual[:16]}…` |
+| `CHECKSUM-002` | no `sha256:` value recorded in `{FREEZE_DOC}` §2 |
+| `CHECKSUM-003` | architecture group `{name}` {verb} files: {count} on disk, §2 records {want} |
+
+**3 rules.**
+
+## `generated-docs` — Generated documents are current
+
+**Enforces:** ADR-0030, ADR-0016
+
+**Run:** `python3 ci/gates/gate_generated_docs.py`
+
+| Rule | Triggers when |
+|---|---|
+| `GEN-001` | stale generated document(s): {', '.join(f'`{p}`' for p in stale)} |
+| `GEN-002` | generator `{script}` is missing |
+
+**2 rules.**
+
+## `gate-coverage` — Every gate has rejected something
+
+**Enforces:** ADR-0030, ADR-0016
+
+**Run:** `python3 ci/gates/gate_gate_coverage.py`
+
+| Rule | Triggers when |
+|---|---|
+| `COV-001` | gate `{name}` has no planted violation in {SUITE} |
+| `COV-002` | coverage exemption `{name}` has no `{field}` |
+| `COV-003` | `coverage.exempt` names `{name}`, which is not a gate |
+
+**3 rules.**
+
 ---
 
 ## Exemptions
@@ -357,11 +399,12 @@ Three mechanisms. One rule: **an owner and a route to removal, or it is not an e
 | Item | Owner | Removed at |
 |---|---|---|
 | `l0-conformance` stubs in `ci.yml` | platform | G6 |
-| `models.piper_tr_dfki` + config | sensory | G6c |
+| `models.piper_tr_dfki` + config — **CC-BY-NC-SA-4.0, personal use only** | sensory | G6c — revisit (ADR-0031) |
 | `models.wake_bootstrap` (NC ambiguity) | sensory | G6a — self-liquidating |
 | `MASTER_PLAN_v1.md` | architecture | never — frozen record |
 | `ADR-0004` | architecture | never — superseded record |
 | `run_gates.sh`, `verify_artifacts.sh`, `self_test.sh` | platform | never — must survive non-zero exits |
+| **none** — every gate plants a violation | platform | n/a |
 
 ---
 
@@ -379,7 +422,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 10 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 20 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -393,8 +436,18 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a script without strict mode | `shell` | SH-STRICT |
 | a broken internal link | `markdown` | MD-LINK |
 | L0 declaring network_allowed = true | `l0-conformance` | L0-OFFLINE-002 |
+| an ADR count that no longer matches policy | `adr` | ADR-001 |
+| a contract with no x-lionel block | `contracts` | CONTRACT-001 |
+| an example that fails its own schema | `jsonschema` | JSON-004 |
+| a .proto that does not compile | `protobuf` | PROTO-001 |
+| an unresolved artifact in the lockfile | `artifacts` | ART-000 |
+| a tagged image with no digest | `docker-digests` | DOCKER-006 |
+| a licence that is on no allowlist | `licenses` | LIC-004 |
+| a dependency with no version bound | `dependencies` | DEP-001 |
+| a change to the architecture checksum set | `checksum` | CHECKSUM-001 |
+| a hand-edited generated document | `generated-docs` | GEN-001 |
 
-**10/10 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**20/20 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

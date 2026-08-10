@@ -5,9 +5,9 @@
 | | |
 |---|---|
 | Gate | G0 → G1 |
-| Status | **UNBLOCKED** — item 1 closed 2026-08-10 |
+| Status | **COMPLETE** — architecture 1.1.0 |
 | Items | 9 |
-| Done | 8 |
+| Done | **9 of 9** |
 | Blocking | 0 |
 
 ---
@@ -82,12 +82,37 @@ uv sync --extra ci   # reproduces the environment, including the gates' dependen
 Verified: `bash ci/run_gates.sh` → 17/17 and `bash ci/self_test.sh` → 10/10 against the
 synced environment. Policy's `lockfile_required_at: G1` is satisfied.
 
-### ☐ 4. Resolve the Piper voice licence
+### ☑ 4. Resolve the Piper voice licence — **DONE 2026-08-10. Read this one.**
 
-`artifacts.lock.yaml` → `models.piper_tr_dfki.license` reads *"verify per MODEL_CARD before
-release"*. Registered to `sensory` for G6c, but the MODEL_CARD is readable now.
+The MODEL_CARD says **CC-BY-NC-SA-4.0**. Non-commercial **and** share-alike.
 
-**Acceptance:** an SPDX identifier replaces the deferral, or the artifact is replaced.
+```
+models.piper_tr_dfki   tr_TR-dfki-medium
+  rhasspy/piper-voices repo licence   MIT
+  this voice's MODEL_CARD             CC-BY-NC-SA-4.0   ← governs. DFKI-OT training data
+```
+
+The acceptance criterion is met — an SPDX identifier replaces the deferral, recorded with
+the MODEL_CARD URL and retrieval date. **But the finding is not clerical.**
+
+- ADR-0023 makes Turkish first-class; MASTER_PLAN_v2 G6c's DoD requires the Turkish voice
+  loop to pass.
+- Per ADR-0017's 2026-08-02 correction this is **the only** Turkish voice in the repo.
+- So the project cannot be distributed without either dropping half its language surface or
+  replacing the voice. **Personal use — the entire current scope — is unaffected.**
+
+Reviewed and accepted for personal use in `ci/policy/policy.yaml` → `licenses.review_accepted`
+(owner `sensory`, revisit at G6c, ADR-0031). The `licenses` gate now restates the scope on
+every run instead of asking an unanswerable question. Escalated to **Major** as **R-A15** in
+`Architecture_Risk_Register.md`.
+
+**Choosing a replacement is a technology decision** and needs an ADR amending ADR-0017.
+Efe's call — it is not on this checklist.
+
+> Why it hid for eight days: the lockfile said *"verify per MODEL_CARD before release"* and
+> the gate accepted that as a registered deferral. Honest, owned, dated — and never
+> executed, because nothing forced it to be. Same root cause as everything else found that
+> day. **A deferral with an owner and a date is still a deferral.**
 
 ### ☑ 5. Add `l0-conformance` to `ci/self_test.sh` — **DONE 2026-08-10**
 
@@ -97,8 +122,9 @@ Self-test **10/10**. Closes Finding M1.
 `config/tiers/l0.toml` is inside the architecture checksum set, so the test restores it from
 a byte-exact backup and verifies the restoration rather than assuming it.
 
-**Still open, tracked into Phase 1:** the self-test covers 9 of 17 gates. Every gate should
-eventually have to reject something.
+**Closed the same day, not deferred:** coverage went **9/17 → 20/20**, and `gate-coverage`
+now fails the build if a gate has never rejected anything (ADR-0030). 21 assertions across
+20 gates, `coverage.exempt` empty.
 
 ### ☑ 6. Regenerate the drifted generated documents — **DONE 2026-08-10**
 
@@ -151,7 +177,9 @@ The three pushes before the freeze commit are red in the same history. That is t
 | ✅ Capability registry — 5 capabilities, all governance fields, consistent with ADR-0007 |
 | ✅ Artifact lock — 13/13 resolved, tiers declared, digest matches registry |
 | ✅ Trust model — vocabularies identical across contracts and registry |
-| ✅ 17 gates, 127 rules, 20 workflow jobs, 0 stubs |
+| ✅ **20 gates, 136 rules, 23 workflow jobs**, 0 stubs |
+| ✅ **Gate coverage 20/20** — every gate has rejected a planted violation |
+| ✅ **The pipeline enforces its own invariants** — checksum, generated docs, gate coverage |
 | ✅ Repository hygiene — 0 CRLF, 0 runtime `.py`, ignore rules exercised |
 | ✅ Security assumptions documented — ADR-0011, 0012, 0015, 0022 |
 | ✅ Ownership defined for every contract and capability |
@@ -161,25 +189,19 @@ The three pushes before the freeze commit are red in the same history. That is t
 
 ## What remains
 
-```
-4            Piper licence resolution       ← G6c, resolvable now
-```
+**Nothing on this checklist.** All nine items are closed.
 
-**Item 4 is the only one left, and it does not block Phase 1.** It is registered to
-`sensory` for G6c; the MODEL_CARD is readable today, so it can be closed early, but nothing
-in Phase 1 depends on it.
-
-Items 2 and 3 are landed but are deliberately **outside** `architecture-1.0.0`:
+Items 2 and 3 are landed but deliberately **outside** `architecture-1.0.0`:
 `Phase0_Final_Signoff.md` I1 records their absence as correct for Phase 0, and policy
 declares `lockfile_required_at: G1`. Putting G1 deliverables inside the Phase 0 tag would
 blur what the tag certifies.
 
-### Carried into Phase 1, not on this checklist
+### Needs Efe, not Phase 1
 
 | | |
 |---|---|
-| Self-test covers 9 of 17 gates | Every gate should have to reject something |
-| ADR-0016 has no erratum provision, while practice has diverged three times | `Architecture_Freeze.md` §6 records the gap; closing it needs an ADR |
+| **ADR-0029, ADR-0030, ADR-0031 are `Proposed`** | §5 step 4 requires explicit approval before any ADR is Accepted. Their gates are implemented and green so the decisions can be judged against something real. `Architecture_Freeze.md` §9.4 records what unwinding each would cost — all three are additive |
+| **Replacing the Turkish voice** | A technology decision needing an ADR amending ADR-0017. Blocks distribution, not Phase 1. R-A15 |
 
 ---
 

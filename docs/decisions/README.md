@@ -55,3 +55,11 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0026](ADR-0026-side-effect-classification.md) | Side-effect classification on tools | Accepted | 0 |
 | [0027](ADR-0027-testing-strategy.md) | Five-layer testing strategy | Accepted | 0 |
 | [0028](ADR-0028-data-plane-transport.md) | Data-plane transport selection | Accepted | 6 |
+| [0029](ADR-0029-adr-errata-provision.md) | Errata, Amendments and Corrections to Accepted ADRs | **Proposed** | 0 |
+| [0030](ADR-0030-self-enforcing-ci.md) | The pipeline enforces its own invariants | **Proposed** | 0 |
+| [0031](ADR-0031-reviewed-licence-register.md) | A licence that needs review must have somewhere to be reviewed | **Proposed** | 0 |
+
+**Three Proposed ADRs await Efe's approval** (Architecture_Freeze.md §5 step 4). ADR-0030's
+and ADR-0031's gates are implemented so the decisions can be judged against something real;
+ADR-0029's `ADR-009` rule is deliberately not implemented, because a gate enforcing an
+unapproved decision is the error ADR-0030 is about.

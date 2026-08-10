@@ -24,16 +24,16 @@ not the product.
 | **R-A09** | Deferrals lack dates; "later" never arrives | **High** | Med | **Major** | G1 | architecture | OPEN |
 | **R-A10** | STT latency breaks the budget; tiering forced late | **High** | Med | **Major** | G6b | sensory | ACCEPTED, monitored |
 | **R-A11** | Local model tool-calling too weak for L0 | **High** | **High** | **Major** | G3 | brain | ACCEPTED, measured |
-| **R-A12** | Turkish TTS quality unacceptable, no fallback | Med | **High** | **Major** | G6c | sensory | **NEWLY RAISED** |
+| **R-A12** | Turkish TTS quality unacceptable, no fallback | Med | **High** | **Major** | G6c | sensory | OPEN — **and now licence-blocked, see R-A15** |
 | **R-A13** | Provisional contracts become permanent | Med | Med | Minor | G2 | architecture | OPEN |
 | **R-A14** | Tier-D artifact outlives its replacement plan | Low | Med | Minor | G6a | sensory | REGISTERED |
-| **R-A15** | NC licence blocks distribution | Low* | **High** | Minor* | G6a | sensory | REGISTERED |
+| **R-A15** | NC licence blocks distribution | **High** | **High** | **Major** | G6a · **G6c** | sensory | **ESCALATED 2026-08-10** |
 | **R-A16** | Fabricated hash undetected until Phase 6 | Low | **High** | Minor | G6 | platform | ACCEPTED |
 | **R-A17** | Embedding model changed; vectors silently invalid | Low | **High** | Minor | G2 | memory | MITIGATED |
 | **R-A18** | Cancellation incomplete at L2; orphaned cluster work | Med | Med | Minor | G7 | core-orchestration | DESIGNED |
 | **R-A19** | Eleven-phase plan outlasts motivation | Med | Med | **Informational** | — | Efe | **NEWLY RAISED** |
 
-\* Likelihood Low **only while use stays personal**. See R-A15.
+\* ~~Likelihood Low **only while use stays personal**~~ — superseded 2026-08-10. The condition was not the artifact anyone was watching. See R-A15.
 
 ---
 
@@ -157,6 +157,53 @@ Turkish is not a nice-to-have here; it is half the product.
 `tr_TR-dfki-medium` samples, done **now**, converts a G6c surprise into a Phase 0 decision.
 The samples are published in the same HF repo already pinned.
 
+### R-A15 — NC licence blocks distribution · **Major** *(escalated 2026-08-10)*
+
+**Raised Minor on the wrong artifact.** The register scored this against
+`models.wake_bootstrap`, whose openWakeWord licence is ambiguous (NC vs Apache) and which
+ADR-0023 **replaces at G6a** — self-liquidating, hence Minor, hence Low likelihood "only
+while use stays personal".
+
+Reading the MODEL_CARD that `artifacts.lock.yaml` had been deferring since 2026-08-02 shows
+the same licence on a completely different artifact, with none of the properties that made
+it Minor:
+
+```
+models.piper_tr_dfki   tr_TR-dfki-medium
+  repo licence          MIT          (rhasspy/piper-voices)
+  MODEL_CARD licence    CC-BY-NC-SA-4.0   ← governs; DFKI-OT training data
+```
+
+| | `wake_bootstrap` | `piper_tr_dfki` |
+|---|---|---|
+| Replaced by a named ADR | ✅ ADR-0023, at G6a | ❌ nothing planned |
+| Alternatives exist | ✅ several | ❌ **it is the only Turkish voice** (R-A12) |
+| Self-liquidating | ✅ | ❌ **permanent until someone decides otherwise** |
+| Share-alike obligation | — | ✅ **also SA**, not merely NC |
+
+**Impact.** Personal use — the entire scope of L.I.O.N.E.L today — is unaffected. But ADR-0023
+makes Turkish first-class and MASTER_PLAN_v2 G6c's DoD requires the Turkish voice loop to
+pass, so the product cannot be distributed without either dropping half its language surface
+or replacing the voice. **The blocker is not at G6c. It is at whatever gate first considers
+distribution**, and no such gate exists.
+
+*Status:* recorded as an SPDX identifier in `artifacts.lock.yaml`, reviewed and accepted for
+personal use in `ci/policy/policy.yaml` → `licenses.review_accepted` (owner `sensory`,
+revisit at G6c, ADR-0031). The `licenses` gate now restates the scope on every run rather
+than asking the same unanswered question.
+
+*Mitigation, unchanged from R-A12 and now more urgent:* the replacement search and the
+quality judgement are the same piece of work. Doing it at G6c means discovering at the last
+sensory gate that both the quality **and** the licence force a rebuild. Doing it now costs
+an afternoon. Either way it needs an ADR amending ADR-0017 — a technology decision, Efe's
+call.
+
+*How it was missed for eight days:* the lockfile said *"verify per MODEL_CARD before
+release"* and the gate accepted that as a registered deferral. The deferral was honest and
+correctly owned. It was simply never executed, because nothing forced it to be — the same
+root cause behind every other finding of 2026-08-10. **A deferral with an owner and a date
+is still a deferral; only reading the MODEL_CARD reads the MODEL_CARD.**
+
 ### R-A19 — Plan length versus sustained motivation · **Informational**
 
 Eleven phases with hard gates, for a project with one developer. The discipline is
@@ -184,7 +231,7 @@ Recorded so remediation does not disturb them.
 | R-A07 | L0 erodes | ADR-0007 makes it a permanent blocking gate rather than a principle. The correct mechanism — pending only the CI run that proves it (R-A01) |
 | R-A11 | Local tool-calling too weak | ADR-0001's swappable provider defers an irreversible bet and makes the gap measurable at G3 rather than assumed |
 | R-A14 | Tier-D artifact | Self-liquidating by design; `max_tier_d: 1` stops it becoming a pattern |
-| R-A15 | NC licence | Correctly identified, registered with an owner, mitigated by ADR-0023's replacement model |
+| ~~R-A15~~ | ~~NC licence~~ | **Withdrawn 2026-08-10.** The mitigation was sound for the artifact it was assessed against (`wake_bootstrap`, replaced at G6a). It does not extend to `piper_tr_dfki`, which has no replacement and no alternative. Moved to §2-adjacent as an escalated Major — see R-A15 |
 | R-A16 | Fabricated hash | Explicitly acknowledged as discipline-enforced rather than machine-enforced. Honest labelling beats false assurance |
 | R-A17 | Embedding model as hidden schema | Named as a hidden schema, pinned, with a documented re-index path. Most projects discover this in production |
 | R-A18 | Cancellation at L2 | ADR-0025 specifies fan-out order and cross-boundary propagation before any code exists — unusually foresighted |

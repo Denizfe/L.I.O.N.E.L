@@ -16,9 +16,13 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GATES="$HERE/gates"
 export PYTHONPATH="$GATES:${PYTHONPATH:-}"
 
+# The last three are meta-gates (ADR-0030): they check the pipeline rather than the
+# repository. They run last because a finding there is about the checks above it, and
+# reading it first invites fixing the wrong thing.
 ORDER=(structure adr contracts jsonschema protobuf artifacts docker-digests
        no-latest no-pending no-todo secrets licenses markdown dependencies
-       shell architecture l0-conformance)
+       shell architecture l0-conformance
+       checksum generated-docs gate-coverage)
 
 name_to_file() { echo "$GATES/gate_$(echo "$1" | tr '-' '_').py"; }
 

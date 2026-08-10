@@ -20,6 +20,21 @@ def main():
                 "means it is not deferred, it is dropped.",
                 "Add `owner` and `resolve_by` in ci/policy/policy.yaml.")
 
+    # ADR-0031. A review_required licence that has been ruled on. Policed the same way the
+    # unresolved registry is: the escape hatch needs an owner and a route to removal, or it
+    # becomes the loophole. `scope` is mandatory because the ruling is about a USE, not about
+    # the artifact — "reviewed" with no stated scope is indistinguishable from "waved through".
+    accepted = {e["artifact"]: e for e in cfg.get("review_accepted", [])}
+    for e in accepted.values():
+        for field in ("license", "owner", "scope", "revisit_at"):
+            g.check()
+            if not e.get(field):
+                g.fail("LIC-006", f"accepted-review entry `{e.get('artifact')}` has no `{field}`",
+                    "A reviewed licence records who ruled, what the ruling permits, and when it "
+                    "must be re-made. Missing any of those turns the register into a way to "
+                    "silence the gate rather than a way to answer it.",
+                    "Add `license`, `owner`, `scope` and `revisit_at` in ci/policy/policy.yaml.")
+
     lock = ROOT / "artifacts.lock.yaml"
     if not lock.exists():
         from _lib import gate_error
@@ -44,10 +59,18 @@ def main():
             if any(a_ in n for a_ in allow):
                 continue
             hit = next((v for k, v in review.items() if k in n), None)
-            if hit:
+            acc = accepted.get(f"{sec}.{name}")
+            if hit and acc and norm(acc.get("license", "")) == n:
+                # Reviewed and ruled on. The constraint does not disappear — it is restated
+                # on every run, because a bounded permission that stops being visible is
+                # indistinguishable from no constraint at all.
+                g.note(f"{sec}.{name}: {lic} — REVIEWED, {acc['scope']} "
+                       f"(owner `{acc['owner']}`, revisit at {acc['revisit_at']})")
+            elif hit:
                 g.fail("LIC-002", f"`{sec}.{name}` licence needs review: {lic}", hit["why"],
-                    "Confirm the intended use is permitted, or replace the artifact. For "
-                    "L.I.O.N.E.L this is fine for personal use and blocks distribution.",
+                    "Confirm the intended use is permitted, or replace the artifact. If the use "
+                    "is permitted, record it in `licenses.review_accepted` with an owner, the "
+                    "scope it permits and a revisit gate (ADR-0031).",
                     "artifacts.lock.yaml")
             elif f"{sec}.{name}" in registry:
                 e = registry[f"{sec}.{name}"]

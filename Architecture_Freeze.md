@@ -2,21 +2,27 @@
 
 | | |
 |---|---|
-| Architecture version | **1.0.0** |
+| Architecture version | **1.1.0** |
 | Freeze date | **2026-08-10** |
-| Architecture commit | **`0066cb23c0447070714ab11df270c2c955ac35c1`** |
-| Tag | **`architecture-1.0.0`** — `git rev-parse architecture-1.0.0` names the exact commit |
+| Tag | **`architecture-1.1.0`** |
 | Status | **FROZEN** |
-| Blocking finding | `Phase0_Final_Signoff.md` → **C1 — CLOSED 2026-08-10** |
+| Previous version | **1.0.0** — `0066cb2`, tag `architecture-1.0.0`, unchanged and still valid |
+| Pending approval | ADR-0029, ADR-0030, ADR-0031 are **Proposed** — see §9 |
 
-> **In force.** Commit `0066cb2` is the commit that first contains the architecture; it is
-> what §2's checksum is computed over and what the audit certified. The tag sits two
-> commits later, on the freeze record itself, because a clone of `0066cb2` alone does not
-> reproduce the checksum on Windows — see §8.3. **Clone the tag, not the commit.**
+> **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
+> decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
+> what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
+> matters here.
+>
+> **Three of 1.1.0's ADRs are `Proposed`.** Their gates are implemented and green so the
+> decisions can be judged against something real, but under §5 step 4 they are not in force
+> until Efe accepts them. §9 records what happens if he does not.
 
 ---
 
 ## 1. Architecture version
+
+**1.1.0** — MINOR over 1.0.0: three new ADRs, no decision already in force changed.
 
 **1.0.0** — the first frozen architecture of L.I.O.N.E.L.
 
@@ -36,17 +42,28 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM
-sha256:fab0610aa3167a2f26b0e812dbfe9563abbf7aa28ab18b9d773d945a5a84f233
+ARCHITECTURE CHECKSUM                                          architecture 1.1.0
+sha256:71c7c2fce1fccb2e0e263f98454d72ce85ce3220f3a17c5fea1e7ccaa1181687
 
-  ADRs         28 files   sha256:595055620fed54d8baebc3931c060186…
+  ADRs         31 files   sha256:d1a2c53ab648267364f8d634e402aaa3…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:b6d4fd05923eb16b324fe0a29a2041e7…
-  artifacts     1 file    sha256:30fb895846a50b7da3e783a63504aa74…
+  policy        8 files   sha256:f2e7a3ff07f21392edb56eb58abeda82…
+  artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:79102470bfdc78dae412b6630c69c8dd…
 
-  69 files hashed
+  72 files hashed
 ```
+
+Superseded value, kept so 1.0.0 stays verifiable:
+
+```
+architecture 1.0.0   sha256:fab0610aa3167a2f26b0e812dbfe9563abbf7aa28ab18b9d773d945a5a84f233
+                     69 files — ADRs 28 · contracts 31 · policy 8 · artifacts 1 · plan 1
+```
+
+**This value is now enforced.** `gate_checksum` recomputes it on every push and fails
+`CHECKSUM-001` on drift, `CHECKSUM-003` if a group changes shape (ADR-0030). Between 1.0.0
+and 1.1.0 it was recorded and checked by nothing — which is how it came to be wrong.
 
 **Verified against a clean clone on 2026-08-10.** Reproduce it with:
 
@@ -87,7 +104,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | 28 ADRs, 0001–0028 |
+| **Architecture decisions** | **31 ADRs, 0001–0031** — 0029/0030/0031 `Proposed` |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -95,7 +112,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 16 sections |
-| **CI gates** | 17 gates, **127 rules**, 20 workflow jobs |
+| **CI gates** | **20 gates, 136 rules, 23 workflow jobs** — 17 checking the repository, 3 checking the pipeline (ADR-0030) |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -251,4 +268,65 @@ change; the count was wrong. Recorded here rather than silently corrected, per �
 
 ---
 
-*Prepared 2026-08-03. Executed and in force 2026-08-10.*
+## 9. Version 1.1.0 — what changed and why
+
+1.1.0 landed the same day as 1.0.0. That is not a sign the freeze was premature; it is what
+the freeze was for. Verifying 1.0.0 end to end produced five findings, and they turned out
+to be one finding five times.
+
+### 9.1 The root cause
+
+| The repository stated | Enforced by | What was true |
+|---|---|---|
+| "Regenerate rather than hand-edit" — both generated documents | nothing | 16 gates claimed vs 17; 88 rules vs 127; `l0-conformance` **absent from the rule catalogue** |
+| "Deterministic checksum" — §2 of this document | nothing | not reproducible from a clone for 8 days |
+| "A gate that has never rejected anything is unproven" — `CI_Architecture.md` §7 | nothing | 8 of 17 gates had never rejected anything |
+| Windows + Git Bash is the host runtime — ADR-0002, ADR-0014 | nothing | every gate crashed on a cp1252 console |
+| "verify per MODEL_CARD before release" — `artifacts.lock.yaml` | a registered deferral | the card said CC-BY-NC-SA-4.0, on the only Turkish voice |
+
+Five rules the project wrote down, believed, cited elsewhere — and never gave a test. Its
+own doctrine names the failure: *a decision with no test is a preference.* The doctrine had
+never been applied to itself. Seventeen gates enforced invariants about the repository; none
+enforced invariants about the gates, the documents describing them, or this freeze.
+
+### 9.2 What 1.1.0 adds
+
+| | |
+|---|---|
+| **ADR-0029** `Proposed` | Errata / Amendment / Supersede. Closes the §6 gap: ADR-0016 forbids what correct practice has done three times |
+| **ADR-0030** `Proposed` | The pipeline enforces its own invariants — the three meta-gates |
+| **ADR-0031** `Proposed` | A `review_required` licence must have somewhere to be reviewed |
+| **`checksum`** gate | Recomputes §2 on every push. Would have caught the CRLF defect on the first Linux run |
+| **`generated-docs`** gate | Every generated document matches its generator. Would have caught N1 and N2 the day they appeared |
+| **`gate-coverage`** gate | Every gate has rejected a planted violation. Counts **gates**, not assertions |
+| **Self-test 10 → 21 assertions** | Gate coverage **9/17 → 20/20**, with `coverage.exempt` empty |
+| **R-A15 escalated** | Minor → Major. The Turkish voice is CC-BY-NC-SA-4.0: personal use unaffected, distribution blocked |
+
+Nothing in force at 1.0.0 changed. §1's MINOR definition — "a new ADR that adds a decision
+without contradicting an existing one" — is met three times over.
+
+### 9.3 Why the version had to move
+
+`docs/decisions/ADR-*.md` and `ci/policy/policy.yaml` are both inside the checksum set, so
+adding three ADRs and a policy section changed the checksum whether or not anyone recorded
+it. §5 step 7 requires the recomputation and the bump. What is new is that skipping it is
+now impossible rather than merely discouraged: `gate_checksum` fails.
+
+That is the shape of every change in 1.1.0. None of it is new policy. All of it is existing
+policy that had no mechanism.
+
+### 9.4 If the Proposed ADRs are rejected
+
+They are additive and nothing depends on them.
+
+| Rejected | Effect |
+|---|---|
+| ADR-0029 | Nothing to unwind — `ADR-009` was deliberately **not** implemented. A gate enforcing an unapproved decision is the error ADR-0030 is about |
+| ADR-0030 | Remove `checksum`, `generated-docs`, `gate-coverage` from `ORDER` and from `ci.yml`. The 21 self-test assertions stay — §4 item 3 permits them without an ADR |
+| ADR-0031 | Remove `licenses.review_accepted`. `licenses` returns to failing `LIC-002` on the Turkish voice, which is a true statement about an unresolved question |
+
+Any of those is a MINOR bump of its own, not a revert of 1.1.0.
+
+---
+
+*Prepared 2026-08-03. Executed and in force 2026-08-10 at 1.0.0; extended to 1.1.0 the same day.*

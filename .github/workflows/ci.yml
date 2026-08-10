@@ -253,6 +253,55 @@ jobs:
       - name: L0 offline conformance
         run: python3 ci/gates/gate_l0_conformance.py
 
+  # ── Meta-gates: the pipeline checking itself (ADR-0030) ────────────────────
+  #
+  # Every gate above checks the repository. These three check the CHECKS.
+  #
+  # They exist because the 1.0.0 freeze audit found five defects with one shape: a rule
+  # the repository states in prose and enforces nowhere. Documentation that says
+  # "regenerate rather than hand-edit" with no generator. A checksum described as
+  # deterministic that nothing recomputed. A rule that every gate must have rejected
+  # something, with eight gates that never had. The project's own doctrine — "a decision
+  # with no test is a preference" — had itself never been given a test.
+
+  checksum:
+    name: "checksum · architecture checksum reproduces"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # Runs on Linux while the freeze value was first computed on Windows. That is the
+      # point, not an oversight: the checksum's whole claim is that it is a property of
+      # the commit rather than of the machine, and the one time that was false, it was
+      # false across exactly this boundary (*.proto unpinned → CRLF on checkout).
+      - run: python3 ci/gates/gate_checksum.py
+
+  generated-docs:
+    name: "generated-docs · CI_Inventory + Policy_Gates are current"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # --check never writes. CI that repairs the evidence instead of failing on it is
+      # not a check.
+      - run: python3 ci/gates/gate_generated_docs.py
+
+  gate-coverage:
+    name: "gate-coverage · every gate has rejected something"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # Counts GATES, not assertions. "18/18 planted violations caught" can rise while a
+      # gate that has never rejected anything sits untouched.
+      - run: python3 ci/gates/gate_gate_coverage.py
+
   # ── Platform coverage ──────────────────────────────────────────────────────
   #
   # These two jobs run the full suite rather than a single gate. Everything above

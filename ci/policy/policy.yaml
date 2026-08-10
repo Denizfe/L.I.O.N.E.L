@@ -52,7 +52,7 @@ repository:
 
 adr:
   dir: docs/decisions
-  expected_count: 28
+  expected_count: 31
   required_sections: ["## Context", "## Decision", "## Consequences", "## Alternatives Rejected", "## Verification"]
   valid_statuses: ["Accepted", "Provisional", "Superseded", "Proposed", "Deprecated"]
   # ADR-0004 is a superseded record and intentionally has a different shape.
@@ -222,14 +222,6 @@ licenses:
   # Licences genuinely unresolved upstream. Same contract as todo.registry: an owner and
   # the gate that closes it. Deferred is acceptable; forgotten is not.
   unresolved_registry:
-    - artifact: models.piper_tr_dfki
-      owner: sensory
-      resolve_by: "G6c"
-      why: "Piper voice licences vary per MODEL_CARD; must be read before release."
-    - artifact: models.piper_tr_dfki_config
-      owner: sensory
-      resolve_by: "G6c"
-      why: "Inherits the voice licence; resolves with it."
     - artifact: models.wake_bootstrap
       owner: sensory
       resolve_by: "G6a"
@@ -241,6 +233,47 @@ licenses:
       why: "Strong copyleft. Would impose obligations on the whole project."
     - id: AGPL-3.0
       why: "Network copyleft. Incompatible with shipping a service without source release."
+  # A review_required licence that HAS been reviewed. ADR-0031.
+  #
+  # Without this, `review_required` has no exit: the gate asks the same question on every
+  # run and the only ways to silence it are to delete the licence identifier or to widen
+  # `allow`. Both destroy the information. This records the ruling instead — who made it,
+  # what it permits, and when it must be re-made — so the constraint travels with the
+  # artifact rather than living in someone's memory.
+  #
+  # `scope` is the operative field. It is NOT an approval of the artifact; it is an
+  # approval of a specific USE of it. LIC-006 polices these entries, exactly as LIC-005
+  # polices the unresolved registry: an owner and a route to removal, or it is not an
+  # exemption.
+  review_accepted:
+    - artifact: models.piper_tr_dfki
+      license: CC-BY-NC-SA-4.0
+      owner: sensory
+      scope: "personal use only — NOT distributable, NOT commercial"
+      revisit_at: "G6c"
+      why: >-
+        The ONLY Turkish voice in rhasspy/piper-voices (ADR-0017 correction, 2026-08-02);
+        the repo is MIT but this voice's MODEL_CARD is CC-BY-NC-SA-4.0 via the DFKI-OT
+        dataset. ADR-0023 makes Turkish first-class and G6c's DoD requires the Turkish
+        voice loop to pass, so removing it is not free. Personal use is unaffected;
+        distribution is blocked until the voice is replaced. Tracked in
+        Architecture_Risk_Register.md.
+    - artifact: models.piper_tr_dfki_config
+      license: CC-BY-NC-SA-4.0
+      owner: sensory
+      scope: "personal use only — NOT distributable, NOT commercial"
+      revisit_at: "G6c"
+      why: "Inherits the voice licence and resolves with it."
+
+# ── gate self-test coverage ────────────────────────────────────────────────────
+# CI_Architecture.md §7 step 6: "a gate that has never rejected anything is unproven."
+# gate-coverage enforces it. Same contract as todo.registry and licenses.unresolved_registry:
+# an owner and the gate that closes it, or it is not an exemption.
+#
+# EMPTY IS THE CORRECT STATE. Every gate in ORDER plants a violation in ci/self_test.sh.
+# An entry here is a gate that has never proven it can reject anything.
+coverage:
+  exempt: []
 
 dependencies:
   manifest: pyproject.toml

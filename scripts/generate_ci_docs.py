@@ -77,8 +77,10 @@ ADR_ENFORCED = [
     ("0023", "Turkish locale", "**tr_TR.UTF-8 job** — shell-level only until G6c"),
     ("0025", "Cancellation & backpressure", "`architecture` ARCH-008, `l0-conformance` L0-ARCH-004"),
     ("0026", "Side-effect classification", "`architecture` ARCH-005"),
-    ("0027", "Testing strategy", "`jsonschema`"),
+    ("0027", "Testing strategy", "`jsonschema`, `gate-coverage`"),
     ("0028", "Data-plane transport", "`protobuf`"),
+    ("0030", "Self-enforcing CI *(Proposed)*", "`checksum`, `generated-docs`, `gate-coverage`"),
+    ("0031", "Reviewed-licence register *(Proposed)*", "`licenses` LIC-006"),
 ]
 
 ADR_DEFERRED = [
@@ -89,16 +91,20 @@ ADR_DEFERRED = [
     ("0019", "Telemetry needs emitting code", "G5"),
     ("0021", "Eval harness needs a model to evaluate", "G8"),
     ("0024", "Robotics — provisional, uncommitted", "G10"),
+    ("0029", "Errata provision *(Proposed)* — needs the `adr` gate extended", "G1"),
 ]
 
 EXEMPTIONS = [
     ("TODO", "`l0-conformance` stubs in `ci.yml`", "platform", "G6"),
-    ("Licence", "`models.piper_tr_dfki` + config", "sensory", "G6c"),
-    ("Licence", "`models.wake_bootstrap` (NC ambiguity)", "sensory", "G6a — self-liquidating"),
+    ("Licence — reviewed", "`models.piper_tr_dfki` + config — **CC-BY-NC-SA-4.0, personal use only**",
+     "sensory", "G6c — revisit (ADR-0031)"),
+    ("Licence — unresolved", "`models.wake_bootstrap` (NC ambiguity)", "sensory",
+     "G6a — self-liquidating"),
     ("Markdown", "`MASTER_PLAN_v1.md`", "architecture", "never — frozen record"),
     ("ADR shape", "`ADR-0004`", "architecture", "never — superseded record"),
     ("Shell strict", "`run_gates.sh`, `verify_artifacts.sh`, `self_test.sh`", "platform",
      "never — must survive non-zero exits"),
+    ("Gate coverage", "**none** — every gate plants a violation", "platform", "n/a"),
 ]
 
 # Rules whose ID is assembled at runtime. Each entry says where the IDs come from, so a
@@ -117,7 +123,8 @@ def gate_order() -> list[str]:
     m = ORDER_RE.search(text)
     if not m:
         raise SystemExit("could not read ORDER from ci/run_gates.sh")
-    return m.group(1).split()
+    # bash permits comments inside an array literal; strip them rather than emit "#" as a gate.
+    return [w for w in re.sub(r"#.*", " ", m.group(1)).split() if w]
 
 
 def gate_file(name: str) -> Path:
@@ -360,8 +367,14 @@ def render_inventory(gates: list[dict], total_rules: int, jobs: list[str]) -> st
         f"| {len(gates)} policy gates | one per gate | **No `needs:` between them.** Independent by design |",
         f"| `gate-self-test` | meta | Plants {len(cases)} known violations, asserts each is caught |",
         "| `l0-conformance` | blocking | `needs: [structure, contracts, architecture]`. ADR-0007 |",
+        "| `checksum` · `generated-docs` · `gate-coverage` | **meta** | Check the pipeline, not the repository. ADR-0030 |",
         "| `windows-policy-gates` | platform | `windows-latest` under Git Bash. ADR-0002, ADR-0014 |",
         "| `turkish-locale` | platform | `tr_TR.UTF-8`, whole suite. ADR-0023 |", "",
+        "### The meta-gates", "",
+        "Every defect found at the 1.0.0 freeze had the same shape: a rule the repository "
+        "states in prose and enforces nowhere. `checksum`, `generated-docs` and "
+        "`gate-coverage` close that class — they enforce what this pipeline claims about "
+        "itself. ADR-0030.", "",
         "### Why no `needs:` between gates", "",
         "A dependency chain means one early failure marks every other job \"skipped\" and you "
         "learn one thing per push. Independent jobs give the whole picture in a single run. The "
