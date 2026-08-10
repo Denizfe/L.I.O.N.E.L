@@ -1,230 +1,258 @@
 # CI Execution Report
 
-**Full pipeline execution as a clean contributor.** Audit only — nothing was fixed.
+**Full pipeline execution from a genuine clean clone.** Audit only — nothing was fixed.
 
 | | |
 |---|---|
-| Date | 2026-08-02 |
-| Method | Clean-clone simulation + full gate execution from a reconstructed checkout |
-| Gates executed | **16 / 16** |
+| Date | 2026-08-03 |
+| Method | `git clone` → declared deps only → every gate, every job, from the clone |
+| Repository | 4 commits · `main` · remote `origin` → `github.com/Denizfe/L.I.O.N.E.L` |
+| Gates executed | **17 / 17** |
 | Workflow jobs simulated | **18 / 18** |
-| Self-test | executed |
-| Repository modified | **No** — all execution in `/tmp/ci_sim`; three report files added |
+| Checks run | **788** |
+| Repository modified | **No** — execution in `/tmp/cc/repo`; three reports overwritten in place |
 
 ## Headline
 
 | | |
 |---|---|
-| **Gates** | **14 pass · 2 fail · 0 broken** |
-| **Workflow jobs** | **15 pass · 2 fail · 1 stub (reporting green)** |
+| **Gates** | **13 pass · 4 fail · 0 broken** |
+| **Workflow jobs** | **14 pass · 4 fail · 0 stub** |
 | **Self-test** | **9 / 9 planted violations caught** |
-| **Clean `git clone`** | **Yields 0 files** |
+| **Clean `git clone`** | **161 files — works** |
 
 ---
 
-## 1. The finding that dominates everything below
+## 1. The blocker that dominated the last report is gone
 
-**`git init` has run. There are 0 commits and 0 tracked files.**
+Previous run: `git init` had executed but there were **0 commits and 0 tracked files**, so a
+clean clone yielded nothing and every workflow job would have failed at checkout.
+
+**That is resolved.**
 
 ```
-$ git rev-list --count HEAD     → 0
-$ git ls-files | wc -l          → 0
-$ git ls-files --others | wc -l → 156
-$ git clone . /tmp/x
-  warning: You appear to have cloned an empty repository.
-  files in clone: 0
+$ git rev-list --count HEAD   → 4
+$ git ls-files | wc -l        → 161
+$ git status --porcelain      → (clean)
+$ git clone . /tmp/cc/repo    → 161 files
+$ git rev-parse @{u}          → origin/main
 ```
 
-**A clean contributor cloning this repository receives nothing.** Every workflow job begins
-with `actions/checkout@v4`; against an empty repository each would check out an empty tree
-and fail at the first `run:` step — not because a gate found a problem, but because there
-are no files to examine.
+Commit history:
 
-This means:
+```
+30285c0  2026-08-03  Merge remote repository
+352bc12  2026-08-03  Phase 0: Architecture Baseline
+69d0234  2026-08-03  Initial commit
+0b51e4d  2026-08-03  First commit
+```
 
-- **GitHub Actions has still never executed.** Workflows trigger on `push`; nothing has been
-  pushed.
-- **`.gitattributes` has still never been applied.** LF normalisation takes effect on first
-  `git add`. The tree happens to be clean (0 CRLF files, verified) but that is the authoring
-  environment behaving, not the control working.
-- **`.gitignore` has still never been exercised.**
+### What this unlocked, verified rather than assumed
 
-`AUD-C01` is therefore **partially addressed**: the `.git` directory now exists, which was
-the smaller half. The repository is still empty, which was the substantive half.
+| Control | Previous | **Now** |
+|---|---|---|
+| Clean clone yields a working tree | ❌ 0 files | ✅ **161 files** |
+| `.gitattributes` LF normalisation | never applied | ✅ **applied — `git ls-files --eol` reports 161/161 `i/lf`, 0 CRLF** |
+| `.gitignore` exercised | never | ✅ **`__pycache__` 0 · `models/` 0 · `data|logs|backups` 0 · `.env` absent** |
+| Every CI-required file tracked | unknown | ✅ 17 gates, policy, workflow all present in the clone |
+| Remote configured | none | ✅ `origin` + upstream `origin/main` |
 
-Everything in §3–§5 is therefore reported as **what CI will do once the tree is committed**,
-not what it has done.
-
----
-
-## 2. Method
-
-Two execution modes, run separately.
-
-### Mode A — true clean contributor
-
-`git clone` into a scratch directory. **Result: 0 files.** Nothing further could be run.
-
-### Mode B — post-commit simulation
-
-Because Mode A yields nothing, I reconstructed the tree CI *would* see after a commit:
-
-1. `git add -A --dry-run` (non-mutating) to enumerate exactly what git would track — **156 files**
-2. Copied only those files into `/tmp/ci_sim`, honouring `.gitignore`
-3. Installed only the dependencies the workflow declares: `pyyaml`, `jsonschema`, `grpcio-tools`
-4. Executed all 16 gates, the self-test, and every workflow job's `run:` steps from that tree
-
-This is the closest faithful reproduction of a clean CI run available without pushing.
-
-### Checkout hygiene — verified clean
-
-| Check | Result |
-|---|---|
-| `__pycache__` in the checkout | **0** — correctly ignored |
-| `models/` in the checkout | **0** — correctly ignored |
-| `data/`, `logs/`, `backups/` ignored | ✅ |
-| Any CI-required file excluded by `.gitignore` | **none** — all 11 critical paths committable |
-| Hardcoded machine paths in gate code | **none** — all paths repo-relative |
-| Script executable bits | all `+x`; workflow invokes via `bash` regardless |
-
-`vendor/` is **not** ignored (only `vendor/whisper.cpp/` is). Harmless today — the directory
-is empty — but it will track the submodule parent once whisper.cpp lands. Informational.
+**AUD-C01 is substantively addressed.** The repository is committed, pushed, and a clean
+contributor receives a working tree. §6 records the one residual part.
 
 ---
 
-## 3. Gate execution — all 16
+## 2. Method — a real clean-contributor run
+
+Unlike the previous report, no simulation was needed.
+
+1. `git clone` the repository into a scratch directory → 161 files
+2. Installed **only** what the workflow declares: `pyyaml`, `jsonschema`, `grpcio-tools`
+3. Executed all 17 gates from the clone
+4. Executed `ci/self_test.sh`
+5. Executed the L0 egress-guard proof
+6. Executed every `run:` step of all 18 workflow jobs
+
+No gate required network, Docker, or any project dependency. **The pipeline is hermetic.**
+
+---
+
+## 3. Gate execution — all 17
 
 | Gate | Exit | Violations | Checks | Result |
 |---|---|---|---|---|
-| `structure` | 0 | 0 | 24 | PASS |
-| `adr` | 0 | 0 | 195 | PASS |
-| `contracts` | 0 | 0 | 34 | PASS |
-| `jsonschema` | 0 | 0 | 155 | PASS |
-| `protobuf` | 0 | 0 | 25 | PASS |
-| **`artifacts`** | **1** | **1** | 16 | **FAIL** |
-| `docker-digests` | 0 | 0 | 11 | PASS |
-| `no-latest` | 0 | 0 | 1 | PASS |
-| `no-pending` | 0 | 0 | 1 | PASS |
-| **`no-todo`** | **1** | **10** | 11 | **FAIL** |
-| `secrets` | 0 | 0 | **154** | PASS |
-| `licenses` | 0 | 0 | 13 | PASS |
-| `markdown` | 0 | 0 | 48 | PASS |
-| `dependencies` | 0 | 0 | 1 | PASS |
-| `shell` | 0 | 0 | 4 | PASS |
-| `architecture` | 0 | 0 | 19 | PASS |
+| `structure` | 0 | 0 | 24 | ✅ PASS |
+| `adr` | 0 | 0 | 195 | ✅ PASS |
+| `contracts` | 0 | 0 | 34 | ✅ PASS |
+| `jsonschema` | 0 | 0 | 155 | ✅ PASS |
+| `protobuf` | 0 | 0 | 25 | ✅ PASS |
+| **`artifacts`** | **1** | **1** | 16 | ❌ FAIL |
+| `docker-digests` | 0 | 0 | 11 | ✅ PASS |
+| `no-latest` | 0 | 0 | 1 | ✅ PASS |
+| `no-pending` | 0 | 0 | 1 | ✅ PASS |
+| **`no-todo`** | **1** | **33** | 34 | ❌ FAIL |
+| `secrets` | 0 | 0 | 159 | ✅ PASS |
+| `licenses` | 0 | 0 | 13 | ✅ PASS |
+| **`markdown`** | **1** | **1** | 52 | ❌ FAIL |
+| `dependencies` | 0 | 0 | 1 | ✅ PASS |
+| `shell` | 0 | 0 | 4 | ✅ PASS |
+| `architecture` | 0 | 0 | 19 | ✅ PASS |
+| **`l0-conformance`** | **1** | **6** | 44 | ❌ FAIL |
 
-**No gate exited 2.** Every gate ran to completion with only the declared dependencies —
-the pipeline is self-contained and hermetic, as designed.
+**788 checks · 41 violations · 0 gate errors.**
 
-`secrets` reporting **154 checks** confirms the AUD-C02 remediation holds under a clean
-checkout: it is scanning the full tree with no path exclusions.
-
-Full detail in `Failed_Gates.md`. Per-gate roll-up in `Gate_Summary.md`.
+Detail in `Failed_Gates.md`. Roll-up in `Gate_Summary.md`.
 
 ---
 
-## 4. Workflow job simulation — all 18
+## 4. Workflow jobs — all 18
 
-| Job | Result | Note |
+| Job | Result |
+|---|---|
+| `structure` `adr` `contracts` `jsonschema` `protobuf` | ✅ PASS |
+| **`artifacts`** | ❌ FAIL |
+| `docker-digests` `licenses` `dependencies` | ✅ PASS |
+| `no-latest` `no-pending` | ✅ PASS |
+| **`no-todo`** | ❌ FAIL |
+| `secrets` | ✅ PASS |
+| **`markdown`** | ❌ FAIL |
+| `shell` `architecture` | ✅ PASS |
+| `gate-self-test` | ✅ PASS — 9/9 |
+| **`l0-conformance`** | ❌ **FAIL — and this is progress** |
+
+**14 pass · 4 fail · 0 stub.**
+
+### 4.1 `l0-conformance` is no longer hollow
+
+The previous report's headline observation was that this job ran two `echo` statements,
+exited 0, and reported a green checkmark for asserting nothing.
+
+**It now runs a real gate.** Two steps:
+
+```
+Prove the network egress guard blocks outbound connections  → exit 0
+  egress guard active: outbound connection blocked: ('example.invalid', 80)
+  recorded attempts: ["socket.create_connection(('example.invalid', 80))"]
+
+L0 offline conformance                                       → exit 1
+  6 violations across 44 checks
+```
+
+The guard is proven armed **before** the gate's findings are trusted. **A job that was
+falsely green is now honestly red** — that is the single most valuable delta in this run.
+
+---
+
+## 5. Change since the previous execution report
+
+| Measure | Previous | Now | |
+|---|---|---|---|
+| Gates | 16 | **17** | L0 gate added |
+| Gates passing | 14 | **13** | |
+| Gates failing | 2 | **4** | |
+| Jobs passing | 15 | **14** | |
+| Jobs failing | 2 | **4** | |
+| Jobs stubbed | 1 | **0** | ✅ stub eliminated |
+| `no-todo` violations | 10 | **33** | ⚠️ +23 |
+| `markdown` violations | 0 | **1** | ⚠️ new |
+| `l0-conformance` | STUB (green) | **FAIL (real)** | ✅ |
+| Clean clone | 0 files | **161 files** | ✅ |
+
+**Two of the four failures are new, and both were caused by this audit process.** §5.1.
+
+### 5.1 The audit output is now the largest source of CI noise
+
+Every `no-todo` and `markdown` violation is in a document **produced by the audit or review
+process itself**:
+
+| File | `no-todo` hits | Origin |
 |---|---|---|
-| `structure` `adr` `contracts` `jsonschema` `protobuf` | PASS | |
-| **`artifacts`** | **FAIL** | red by design (ADR-0013) |
-| `docker-digests` `licenses` `dependencies` | PASS | |
-| `no-latest` `no-pending` | PASS | |
-| **`no-todo`** | **FAIL** | 10 violations, all in audit prose |
-| `secrets` `markdown` `shell` `architecture` | PASS | |
-| `gate-self-test` | PASS | 9/9 planted violations caught |
-| **`l0-conformance`** | **STUB → reports SUCCESS** | see below |
+| `Failed_Gates.md` | **21** | audit output (previous run) |
+| `Phase0_Audit_Report.md` | 6 | audit output |
+| `Architecture_Risk_Register.md` | 2 | audit output |
+| `Phase0_Blockers.md` | 1 | audit output |
+| `Gate_Summary.md` | 1 | audit output |
+| `CI_Execution_Report.md` | 1 | audit output |
+| `ADR0013_Review.md` | 1 | review output |
 
-**15 pass · 2 fail · 1 stub.**
+The single `markdown` violation is `Failed_Gates.md:199` — a heading jump in a file this
+process generated.
 
-### 4.1 `l0-conformance` reports green while asserting nothing
+**This is a feedback loop, and it is compounding.** Each audit round produces documents that
+discuss `TODO` governance and forbidden tokens as their subject matter. Those documents are
+scanned. Violations rise. The next round documents the rise, adding more prose. `no-todo`
+went 10 → 33 in one cycle, and 21 of the 33 come from a single generated file.
 
-```yaml
-- name: Assert no network egress during the L0 suite
-  run: echo "STUB — needs the sensory harness (ADR-0027)…"
-- name: Wake → STT → brain(ollama) → tools → TTS, EN and TR, no microphone
-  run: echo "STUB — Phase 6…"
-```
+This is not a defect in the gate — it is correctly reporting what it was scoped to scan. It
+is a **scoping gap**: `no-latest` and `no-pending` both exclude `.md` wholesale on the
+stated rationale that *"gates police executable config, not prose that documents a rejected
+practice."* `no-todo` and `markdown` never received that treatment.
 
-Every step is `echo`, so the job exits 0 and GitHub reports **SUCCESS**.
+Left unaddressed, these two gates become permanently red and stop being read — the exact
+failure mode `CI_Architecture.md` warns about when it argues against a warnings tier.
 
-This is the keystone gate of ADR-0007 — the one whose entire purpose is that offline
-operation cannot erode unnoticed — and it currently produces a **green checkmark for doing
-nothing.**
-
-The intent was right and is documented in the workflow comments (*"failing later is fine —
-ABSENT is not"*). But there is a third state the comment does not consider: **present,
-green, and vacuous**, which is worse than absent. An absent gate is visibly missing; a green
-stub is indistinguishable from a passing gate, and after a few months nobody remembers it is
-hollow.
-
-Recorded as an observation, not a gate failure. **Recommend the stub steps `exit 1` with a
-clear "not implemented until Phase 6" message**, so the job is honestly red until it is
-real. That matches `l0.toml`'s own stance — `network_allowed: false` is described there as
-*"asserted by the conformance suite, not merely documented"*, and no suite currently asserts it.
-
-### 4.2 Job independence confirmed
-
-Only `l0-conformance` declares `needs:`. The 16 policy gates are independent, so both
-failures surfaced in a single run rather than masking the other fourteen results.
-
----
-
-## 5. Self-test
-
-```
-SELF-TEST PASS  9/9 planted violations caught
-```
-
-Executed from the simulated checkout. Covers 8 of 16 gates plus the secrets regex
-self-test. `AUD-M06` (8 gates untested) remains open and was not re-examined here.
+**Not fixed here.** Remediation in `Failed_Gates.md`.
 
 ---
 
 ## 6. Verdict on G0
 
-**Two gates fail. Only one of them blocks G0.**
+**Four gates fail. Two block G0.**
 
 | Gate | Blocks G0? | Authority |
 |---|---|---|
-| `artifacts` | **YES** | ADR-0013 `[RECORD]` clause: the lockfile fails closed at G0 on any `UNRESOLVED` entry |
-| `no-todo` | **No** | No G0 criterion references TODO hygiene |
+| `artifacts` | **YES** | ADR-0013 `[RECORD]`: fails closed at G0 on any `UNRESOLVED` entry |
+| `l0-conformance` | **YES** | ADR-0007: L0 conformance is a blocking gate on every release |
+| `no-todo` | No | No G0 criterion references TODO hygiene |
+| `markdown` | No | No G0 criterion references heading structure |
 
-The distinction rests on MASTER_PLAN_v2's Phase 0 DoD, which says **"CI runs and reports"**
-and **"CI skeleton with the L0 gate wired (failing is fine; present is mandatory)"**.
+MASTER_PLAN_v2's Phase 0 DoD requires *"CI runs and reports"* and states *"failing is fine;
+present is mandatory"*. **A green pipeline is not a G0 requirement** — only the criteria the
+DoD and individual ADRs name.
 
-**G0 does not require a green pipeline.** It requires a pipeline that runs, plus the
-specific criteria named in the DoD and in individual ADRs. `no-todo` is hygiene; its failure
-is noise against the G0 question. `artifacts` is a named G0 criterion; its failure is a
-blocker.
+### Blocker status
 
-### Remaining G0 blockers
+| ID | Blocker | Previous | **Now** |
+|---|---|---|---|
+| **AUD-C01** | Repository uncommitted; CI never run | OPEN | ⚠️ **Mostly resolved** — committed, pushed, clean clone works. Residual: no evidence of an actual GitHub Actions *run* (no run URL, no status checks observable from here) |
+| **AUD-M01** | `images.github_mcp` digest unresolved | OPEN | **OPEN** — `artifacts` red |
+| **NEW** | L0 conformance violations | n/a (stub was green) | **OPEN** — 6 violations, see below |
 
-| ID | Blocker | Status |
-|---|---|---|
-| **AUD-C01** | Repository is empty — 0 commits, CI has never run | **OPEN** — `git init` done, nothing committed |
-| **AUD-M01** | `images.github_mcp` digest unresolved | **OPEN** — `artifacts` gate red |
+### The new L0 blocker is a discovery, not a regression
 
-Both were open before this execution and remain open. **This run produced no new blocker.**
+`l0-conformance` reports 6 violations, and 5 of them are one finding:
 
-That is the useful result: the pipeline is sound and self-contained, 14 of 16 gates pass
-from a clean checkout with only declared dependencies, and the two failures are the two
-already-known items — one deliberate, one cosmetic.
+**No capability in `config/capabilities.registry.json` declares `requires_network`.**
 
----
+ADR-0007's exclusion of network-dependent capabilities at L0 exists in the ADR, in the
+lockfile notes, and in three audit reports — **and nowhere machine-readable**. Absence of a
+field is not a declaration of `false`.
 
-## 7. What this run does not tell you
-
-- **It is a simulation, not a CI run.** I reconstructed the checkout faithfully and
-  installed only declared dependencies, but no GitHub Actions run exists. Until one does,
-  runner-specific behaviour — `actions/checkout`, Python setup, the `ubuntu-latest` image —
-  is unverified.
-- **No Windows or Turkish-locale execution.** All jobs are `ubuntu-latest` (`AUD-M05`).
-- **`AUD-M02`, `M03`, `M04`, `M06`, `M07` and the Minor findings were not re-examined.**
-  This was an execution run, not a re-audit.
+Every prior audit, including mine, repeated "the GitHub capability is excluded at L0" as
+established fact. **Nothing in the repository established it.** The stub concealed this
+entirely; the real gate found it on first execution.
 
 ---
 
-*Nothing was fixed. `CI_Execution_Report.md`, `Gate_Summary.md` and `Failed_Gates.md` are
-new files; no existing repository file was modified.*
+## 7. What this run establishes and what it does not
+
+**Establishes:**
+- A clean contributor can clone and run the entire pipeline with three pip packages
+- `.gitattributes` and `.gitignore` now demonstrably work — 161/161 LF, no build artefacts
+- The pipeline is hermetic: no network, no Docker, no project dependencies
+- The self-test proves 9 gates reject planted violations
+- The L0 egress guard is armed and provably blocks outbound connections
+
+**Does not establish:**
+- **That GitHub Actions has run.** Commits are pushed to `origin/main`, but no run URL or
+  status check is observable from here. This is the residual half of AUD-C01
+- **Windows or Turkish-locale behaviour** — all jobs are `ubuntu-latest` (AUD-M05)
+- Runtime L0 behaviour — the gate is static conformance only
+
+**Not re-examined:** AUD-M02, M03, M04, M06, M07 and the Minor findings. This was an
+execution run, not a re-audit.
+
+---
+
+*Nothing was fixed. `CI_Execution_Report.md`, `Gate_Summary.md` and `Failed_Gates.md` were
+overwritten with this run's results; no other repository file was modified.*

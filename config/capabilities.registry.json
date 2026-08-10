@@ -4,47 +4,91 @@
     "Secrets are secret:// URIs (ADR-0015). The ${GITHUB_PAT} interpolation from v1.0 was",
     "broken — JSON does not expand variables and no component was named as the expander.",
     "Container images are pinned by digest via artifacts.lock.toml (ADR-0013).",
-    "ADR-0011: there is no shell capability. Its absence is a decision, not an omission."
+    "ADR-0011: there is no shell capability. Its absence is a decision, not an omission.",
+    "2026-08-03 — Every capability now declares requires_network, offline_allowed, owner, phase and trust_level. Required by capabilities-registry.schema.json v1.1.0 and enforced by L0-NETDEP-004. ADR-0007's L0 exclusion was previously expressed only in prose; it is now a machine-readable fact."
   ],
   "schema_version": 1,
   "capabilities": {
     "filesystem": {
       "transport": "stdio",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:/Users/deniz/Desktop/L.I.O.N.E.L"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:/Users/deniz/Desktop/L.I.O.N.E.L"
+      ],
       "scope": "project_root_only",
       "side_effect_default": "read",
       "trust_required": "any",
-      "supervised": true
+      "supervised": true,
+      "requires_network": false,
+      "offline_allowed": true,
+      "owner": "capabilities",
+      "phase": "G1",
+      "trust_level": "external_content",
+      "governance_note": "Reads files on the host. ADR-0012 classes file contents as untrusted, so output is external_content even though the capability itself is local."
     },
     "github": {
       "transport": "stdio",
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server@sha256:UNRESOLVED-see-artifacts.lock.yaml"],
-      "secrets": { "GITHUB_PERSONAL_ACCESS_TOKEN": "secret://env/GITHUB_PAT" },
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server@sha256:30197479d8036c7811892bc07e06f9a05c9ef3cdd79bc59f256d50647f95788c"
+      ],
+      "secrets": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "secret://env/GITHUB_PAT"
+      },
       "side_effect_default": "write",
       "trust_required": "user_originated",
       "supervised": true,
-      "note": "ADR-0012 trust gate: content read from a file or web page can never trigger a push. Image digest is UNRESOLVED — GHCR needs a bearer token the fetch tooling cannot supply. Resolve with: docker buildx imagetools inspect ghcr.io/github/github-mcp-server:<tag>. See Artifact_Verification_Report.md section 5 for four alternatives. requires_network=true means this capability is excluded at L0, so it does not block offline conformance."
+      "note": "ADR-0012 trust gate: content read from a file or web page can never trigger a push. Image pinned by OCI index digest (v1.1.2), obtained via docker buildx imagetools inspect on 2026-08-03. requires_network=true means ADR-0007 excludes this capability at tier L0 — see offline_allowed.",
+      "requires_network": true,
+      "offline_allowed": false,
+      "owner": "capabilities",
+      "phase": "G1",
+      "trust_level": "external_content",
+      "governance_note": "Calls the GitHub API. ADR-0007 therefore excludes it at L0 — this is the declaration that was previously only prose (L0-NETDEP-004)."
     },
     "memory": {
       "transport": "inproc",
       "module": "lionel.services.memory_service",
       "side_effect_default": "write",
       "trust_required": "any",
-      "note": "ADR-0010. Direct qdrant-store / qdrant-find are NOT exposed."
+      "note": "ADR-0010. Direct qdrant-store / qdrant-find are NOT exposed.",
+      "requires_network": false,
+      "offline_allowed": true,
+      "owner": "memory",
+      "phase": "G2",
+      "trust_level": "tool_result",
+      "governance_note": "In-process; Qdrant is local. Output is tool_result, BUT recall inherits each record's stored trust via MemoryQueryResult.trust_floor — a memory ingested from external_content stays external_content."
     },
     "system": {
       "transport": "inproc",
       "module": "lionel.capabilities.system",
       "side_effect_default": "read",
-      "trust_required": "any"
+      "trust_required": "any",
+      "requires_network": false,
+      "offline_allowed": true,
+      "owner": "capabilities",
+      "phase": "G4",
+      "trust_level": "tool_result",
+      "governance_note": "Local telemetry (CPU, disk, battery). Not attacker-controlled, so tool_result rather than external_content."
     },
     "media": {
       "transport": "inproc",
       "module": "lionel.capabilities.media",
       "side_effect_default": "write",
-      "trust_required": "user_originated"
+      "trust_required": "user_originated",
+      "requires_network": false,
+      "offline_allowed": true,
+      "owner": "capabilities",
+      "phase": "G4",
+      "trust_level": "tool_result",
+      "governance_note": "Local audio device enumeration and playback control. No external input."
     }
   }
 }

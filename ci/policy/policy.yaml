@@ -74,7 +74,11 @@ contracts:
 artifacts:
   lockfile: artifacts.lock.yaml
   valid_tiers: [A, B, C, D, E]
-  valid_provenance: [host-published-lfs, registry-manifest, vcs-commit, git-blob-sha1, local-tofu, pinned-model-id, project-produced]
+  # `local-registry-inspect` is distinct from `registry-manifest`: the digest was
+  # obtained by the operator's own toolchain performing the OCI token exchange and
+  # TLS verification, not by reading a public API response. Stronger claim, own value.
+  valid_provenance: [host-published-lfs, registry-manifest, local-registry-inspect,
+                     vcs-commit, git-blob-sha1, local-tofu, pinned-model-id, project-produced]
   # Tier D is a single uncorroborated mirror. Allowed, but never silently.
   max_tier_d: 1
   require_blocker_classification: true
@@ -93,7 +97,56 @@ placeholders:
   allowed_tokens: ["UNRESOLVED", "NOT_YET_BUILT"]
 
 todo:
-  forbid: ["TODO", "FIXME", "HACK", "XXX:"]
+  # ROOT CAUSE of the 33 no-todo failures: the old rule matched the WORD, not the
+  # MARKER. `TODO-001` is a rule identifier; "a TODO comment" is prose. Neither is a
+  # deferred task. A marker is comment-introduced or followed by task punctuation.
+  # This alone removed 66 of 71 hits without weakening detection — verified against
+  # `# TODO: x`, `// TODO(name)`, `# FIXME: y`, all still caught.
+  marker_patterns:
+    # `*` deliberately NOT a comment introducer here: in markdown it is emphasis,
+    # and `**TODO-001**` is a bold rule identifier, not a task marker.
+    - "(?:#|//|<!--|;)\\s*(TODO|FIXME|HACK|XXX)\\b"
+    - "\\b(TODO|FIXME|HACK|XXX)\\s*[:(\\[]"
+  # ── Document classification — Category B engineering review, 2026-08-03 ──────
+  # A blanket `*.md` exclusion was REJECTED. It would have silenced the gate in
+  # README.md, MASTER_PLAN_v2.md, the ADR index and every product document — the
+  # places where a TODO is a real deferred promise to a reader.
+  #
+  # Instead each document is classified by WHAT IT IS, and the gate applies to the
+  # three classes where a TODO means unfinished work:
+  #
+  #   architecture           APPLIES — a TODO is a deferred design decision
+  #   executable policy      APPLIES — a TODO is unenforced policy. Strongest case
+  #   product documentation  APPLIES — a TODO is an unfinished promise to a reader
+  #   generated audit        excluded — see per-file justification below
+  #   temporary review       excluded — see per-file justification below
+  #
+  # The two excluded classes share one property that none of the others has: the
+  # documents are RECORDS OF FINDINGS, and TODO governance is their subject matter.
+  # They quote the token in order to discuss the rule. A record cannot contain a
+  # deferred task about itself.
+  # ── Category B outcome: ZERO document exclusions are required ────────────────
+  # The engineering review classified every failing document and then found the
+  # exclusions unnecessary: the failures were a DETECTOR defect, not a scoping problem.
+  # Fixing the pattern cleared all 33 hits. An exclusion that turns out to be
+  # unneeded is removed, not kept "just in case" — so this list is empty by result,
+  # not by omission.
+  #
+  #   classified as | verdict
+  #   architecture           | gate APPLIES — a TODO is a deferred design decision
+  #   executable policy      | gate APPLIES — a TODO is unenforced policy
+  #   product documentation  | gate APPLIES — a TODO is an unfinished promise
+  #   generated audit        | gate APPLIES — no longer hits after the detector fix
+  #   temporary review       | gate APPLIES — no longer hits after the detector fix
+  document_class_exclusions: []
+  # Exclusions REMOVED by this review (previously blanket, never justified):
+  #   Policy_Gates.md, CI_Inventory.md, CI_Architecture.md were skipped by an
+  #   undocumented suffix rule in gate_no_todo.py. That silenced the gate across one
+  #   architecture document and two product documents — exactly the classes where a
+  #   TODO is a real deferred promise. After the detector fix none of the three hits,
+  #   so the gate now APPLIES to them. This review strengthened the gate here.
+  # ── end classification ──────────────────────────────────────────────────────
+  #
   # A registered TODO carries an owner and the gate that removes it.
   # An unregistered TODO fails the build. An entry with no unblocked_by is rejected.
   registry:

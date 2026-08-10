@@ -199,14 +199,19 @@ def main() -> None:
             if c.get("requires_network"):
                 net_caps.append(name)
                 g.check()
-                if c.get("enabled", True) is not False:
+                # Checked against `offline_allowed`, NOT `enabled`. The registry is
+                # tier-agnostic: `enabled: false` would disable the capability at L1/L2/L3
+                # too, which is not what ADR-0007 asks for. `offline_allowed` is the
+                # tier-aware declaration, and the L0 host filters on it.
+                if c.get("offline_allowed") is not False:
                     g.fail("L0-NETDEP-003",
-                        f"capability `{name}` declares requires_network and is not disabled",
-                        "ADR-0007 excludes requires_network capabilities at L0. Leaving one "
-                        "enabled means the L0 host would try to start it and either fail or "
-                        "reach the network — both break the guarantee.",
-                        f"Set `\"enabled\": false` on `{name}`, or resolve it into an "
-                        "L0-safe form.", rel(reg))
+                        f"capability `{name}` requires the network but does not set "
+                        "`offline_allowed: false`",
+                        "ADR-0007 excludes requires_network capabilities at L0. The two "
+                        "fields are logical inverses; a capability claiming to need the "
+                        "network while remaining offline-loadable is a contradiction the "
+                        "L0 host cannot resolve at startup.",
+                        f"Set `\"offline_allowed\": false` on `{name}`.", rel(reg))
         if net_caps:
             g.note(f"declared network-dependent, excluded from L0: {', '.join(net_caps)}")
         if undeclared:

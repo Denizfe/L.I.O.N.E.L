@@ -1,23 +1,24 @@
 # Gate Summary
 
-**Execution date:** 2026-08-02 · **Source:** clean-checkout simulation (`/tmp/ci_sim`, 156 tracked files)
+**Execution:** 2026-08-03 · genuine `git clone` (161 files, 4 commits, `origin/main`)
 **Dependencies:** `pyyaml`, `jsonschema`, `grpcio-tools` — exactly as the workflow declares
 
 ## Result
 
 ```
-16 gates   ·   14 PASS   ·   2 FAIL   ·   0 BROKEN
-18 jobs    ·   15 PASS   ·   2 FAIL   ·   1 STUB (reports green)
+17 gates   ·   13 PASS   ·   4 FAIL   ·   0 BROKEN
+18 jobs    ·   14 PASS   ·   4 FAIL   ·   0 STUB
+788 checks ·   41 violations
 self-test  ·   9/9 planted violations caught
 ```
 
-**Only one of the two failures blocks G0.**
+**Two of the four failures block G0.**
 
 ---
 
 ## Per-gate results
 
-| # | Gate | Exit | Checks | Violations | Enforces | Result |
+| # | Gate | Exit | Checks | Viol. | Enforces | Result |
 |---|---|---|---|---|---|---|
 | 1 | `structure` | 0 | 24 | 0 | ADR-0011, MASTER_PLAN §8 | ✅ PASS |
 | 2 | `adr` | 0 | 195 | 0 | ADR-0016 | ✅ PASS |
@@ -28,15 +29,14 @@ self-test  ·   9/9 planted violations caught
 | 7 | `docker-digests` | 0 | 11 | 0 | ADR-0013, ADR-0020 | ✅ PASS |
 | 8 | `no-latest` | 0 | 1 | 0 | ADR-0013 | ✅ PASS |
 | 9 | `no-pending` | 0 | 1 | 0 | ADR-0013 | ✅ PASS |
-| 10 | **`no-todo`** | **1** | 11 | **10** | MASTER_PLAN §12 | ❌ **FAIL** |
-| 11 | `secrets` | 0 | **154** | 0 | ADR-0015, ADR-0022 | ✅ PASS |
+| 10 | **`no-todo`** | **1** | 34 | **33** | MASTER_PLAN §12 | ❌ **FAIL** |
+| 11 | `secrets` | 0 | **159** | 0 | ADR-0015, ADR-0022 | ✅ PASS |
 | 12 | `licenses` | 0 | 13 | 0 | ADR-0013 | ✅ PASS |
-| 13 | `markdown` | 0 | 48 | 0 | — | ✅ PASS |
+| 13 | **`markdown`** | **1** | 52 | **1** | — | ❌ **FAIL** |
 | 14 | `dependencies` | 0 | 1 | 0 | ADR-0013 | ✅ PASS |
 | 15 | `shell` | 0 | 4 | 0 | ADR-0011, ADR-0014 | ✅ PASS |
 | 16 | `architecture` | 0 | 19 | 0 | 11 ADRs | ✅ PASS |
-
-**Totals:** 552 checks · 11 violations · 0 gate errors
+| 17 | **`l0-conformance`** | **1** | **44** | **6** | ADR-0007 +4 | ❌ **FAIL** |
 
 ---
 
@@ -45,13 +45,17 @@ self-test  ·   9/9 planted violations caught
 | Job | Result |
 |---|---|
 | `structure` `adr` `contracts` `jsonschema` `protobuf` | ✅ PASS |
-| `artifacts` | ❌ **FAIL** |
+| `artifacts` | ❌ FAIL |
 | `docker-digests` `licenses` `dependencies` | ✅ PASS |
 | `no-latest` `no-pending` | ✅ PASS |
-| `no-todo` | ❌ **FAIL** |
-| `secrets` `markdown` `shell` `architecture` | ✅ PASS |
+| `no-todo` | ❌ FAIL |
+| `secrets` | ✅ PASS |
+| `markdown` | ❌ FAIL |
+| `shell` `architecture` | ✅ PASS |
 | `gate-self-test` | ✅ PASS — 9/9 |
-| `l0-conformance` | ⚠️ **STUB — exits 0, reports SUCCESS, asserts nothing** |
+| `l0-conformance` | ❌ FAIL — **real gate, no longer a stub** |
+
+**0 stubs remain.** The previous run's hollow green job is gone.
 
 ---
 
@@ -59,34 +63,55 @@ self-test  ·   9/9 planted violations caught
 
 | Gate | Blocks G0? | Authority |
 |---|---|---|
-| `artifacts` | **YES** | ADR-0013 `[RECORD]`: fails closed at G0 on any `UNRESOLVED` entry |
-| `no-todo` | **No** | No G0 criterion references TODO hygiene |
+| `artifacts` | **YES** | ADR-0013 `[RECORD]` — fails closed at G0 on any `UNRESOLVED` entry |
+| `l0-conformance` | **YES** | ADR-0007 — L0 conformance blocks every release |
+| `no-todo` | No | No G0 criterion covers TODO hygiene |
+| `markdown` | No | No G0 criterion covers heading structure |
 
-MASTER_PLAN_v2's Phase 0 DoD requires **"CI runs and reports"** and states *"failing is
-fine; present is mandatory"*. **A green pipeline is not a G0 requirement.** Only the
-criteria named in the DoD and in individual ADRs are.
+Phase 0's DoD requires *"CI runs and reports"* and states *"failing is fine; present is
+mandatory."* **A green pipeline is not a G0 requirement.**
+
+---
+
+## Change since the previous run
+
+| Measure | Before | Now | |
+|---|---|---|---|
+| Clean clone | **0 files** | **161 files** | ✅ repository committed and pushed |
+| CRLF in index | never checked | **0 / 161** | ✅ `.gitattributes` now applied |
+| Gates | 16 | 17 | L0 gate added |
+| Jobs stubbed | 1 | **0** | ✅ hollow green job eliminated |
+| `l0-conformance` | STUB → green | **real → red** | ✅ honestly failing |
+| `no-todo` violations | 10 | **33** | ⚠️ +23 |
+| `markdown` violations | 0 | **1** | ⚠️ new |
+| Gates failing | 2 | 4 | |
 
 ---
 
 ## Notable observations
 
-**`secrets` scanned 154 checks.** Under a clean checkout with no path exclusions, confirming
-the AUD-C02 remediation holds. Before that fix the gate reported 7.
+**Checkout hygiene is clean.** `__pycache__` 0 · `models/` 0 · `data|logs|backups` 0 ·
+`.env` absent · 161/161 files `i/lf`. `.gitignore` and `.gitattributes` are now
+demonstrably working rather than aspirational.
 
-**No gate exited 2.** Every gate ran to completion using only `pyyaml`, `jsonschema` and
-`grpcio-tools`. The pipeline is hermetic — no network, no Docker, no project dependencies.
+**The pipeline is hermetic.** No gate exited 2. All 17 ran with only `pyyaml`,
+`jsonschema` and `grpcio-tools` — no network, no Docker, no project dependencies.
 
-**Job independence works.** Only `l0-conformance` declares `needs:`. Both failures surfaced
-in one run rather than masking the other fourteen.
+**`secrets` scanned 159 checks** with no path exclusions, confirming the AUD-C02
+remediation holds under a real clone.
 
-**Four gates report ≤ 1 check** — `no-latest`, `no-pending`, `dependencies`, and `no-todo`
-when clean. This is `AUD-M02`: the counter increments on violations, not files examined, so
-a gate that scanned nothing is indistinguishable from one that scanned everything cleanly.
-`secrets` is the exception — its counter was corrected during the AUD-C02 work, which is why
-it reports 154.
+**`l0-conformance` runs 44 checks and its egress guard is proven armed** before its findings
+are trusted — the workflow runs `--prove-egress-guard` as a separate step.
 
-**`l0-conformance` is green and hollow.** See `CI_Execution_Report.md` §4.1.
+**Both new failures were generated by the audit process itself.** All 33 `no-todo` hits and
+the single `markdown` hit are in documents this audit/review process produced; 21 come from
+`Failed_Gates.md` alone. See `CI_Execution_Report.md` §5.1 — this is a compounding feedback
+loop, not a code defect.
+
+**Four gates still report ≤ 1 check** — `no-latest`, `no-pending`, `dependencies`, and
+`shell` at 4. This is `AUD-M02`: the counter increments on violations, not files examined.
+`secrets` (159) and `l0-conformance` (44) are the exceptions; both count real work.
 
 ---
 
-*Detail on both failures: `Failed_Gates.md`. Full execution narrative: `CI_Execution_Report.md`.*
+*Failure detail: `Failed_Gates.md`. Full narrative: `CI_Execution_Report.md`.*

@@ -1,25 +1,27 @@
 # Failed Gates
 
-**2 of 16 gates failed.** One blocks G0; one does not.
-Executed 2026-08-02 from a clean-checkout simulation. **Nothing was fixed.**
+**4 of 17 gates failed.** Two block G0; two do not.
+Executed 2026-08-03 from a genuine `git clone`. **Nothing was fixed.**
 
 | Gate | Violations | Blocks G0 |
 |---|---|---|
 | [`artifacts`](#gate-1--artifacts) | 1 | **YES** |
-| [`no-todo`](#gate-2--no-todo) | 10 | No |
+| [`l0-conformance`](#gate-2--l0-conformance) | 6 | **YES** |
+| [`no-todo`](#gate-3--no-todo) | 33 | No |
+| [`markdown`](#gate-4--markdown) | 1 | No |
 
 ---
 
 ## Gate 1 — `artifacts`
 
 ### Gate name
-`artifacts` · `ci/gates/gate_artifacts.py` · workflow job **"artifacts · lockfile integrity"**
+`artifacts` · `ci/gates/gate_artifacts.py` · job **"artifacts · lockfile integrity"**
 
 ### Failure reason
-Rule **ART-000** — one artifact in `artifacts.lock.yaml` has `status: UNRESOLVED`.
-ADR-0013's `[RECORD]` clause requires every artifact to carry an immutable pin **by G0**.
+Rule **ART-000** — one artifact carries `status: UNRESOLVED`. ADR-0013's `[RECORD]` duty
+requires every artifact to hold an immutable pin **by G0**.
 
-**This gate is red by design.** It is behaving exactly as specified.
+**Red by design.** Unchanged from the previous run.
 
 ### Evidence
 
@@ -27,216 +29,244 @@ ADR-0013's `[RECORD]` clause requires every artifact to carry an immutable pin *
   ✗ ART-000  1 artifact(s) unresolved
       at    artifacts.lock.yaml
       why   ADR-0013: G0 cannot be signed off while any artifact is unpinned.
-            This gate is RED on purpose until the lockfile reaches zero unresolved.
-      fix   Follow the alternatives in Artifact_Verification_Report.md §5, then
-            update the lockfile entry and meta counts.
+      fix   Follow the alternatives in Artifact_Verification_Report.md §5.
 
   FAIL  1 violation(s) across 16 checks
 ```
 
-The artifact:
-
-```yaml
-images:
-  github_mcp:
-    status: UNRESOLVED
-    ref: ghcr.io/github/github-mcp-server
-    digest: null
-    verification: { tier: E }
-    blocker:
-      classification: TEMPORARY
-      what: >-
-        GHCR requires an Authorization: Bearer header on the manifest endpoint…
-    alternatives: 4 (all reproducible)
-```
-
-Corroborating state: `meta.unresolved: 1` · `meta.gate: "G0 blocks while unresolved > 0"`
-· 12 of 13 artifacts RESOLVED (tiers A×7, B×2, C×2, D×1).
+`images.github_mcp` · tier E · `digest: null` · blocker classified TEMPORARY · 4 reproducible
+alternatives · `meta.unresolved: 1` · 12 of 13 artifacts RESOLVED.
 
 ### Exact remediation
-
-Two valid paths. Both are approved options; neither has been taken.
-
-**Path A — resolve the digest (~5 minutes, recommended)**
 
 ```bash
 docker buildx imagetools inspect ghcr.io/github/github-mcp-server:<version-tag>
 ```
 
-Then in `artifacts.lock.yaml` under `images.github_mcp`:
+Then in `artifacts.lock.yaml` under `images.github_mcp`: set `status: RESOLVED` ·
+`digest: sha256:<64 hex>` · `verification.tier: A` · `provenance: registry-manifest` ·
+`method:` (≥ 40 chars, ART-008) · `retrieved:` today · `meta.resolved: 13` ·
+`meta.unresolved: 0` · delete `blocker` and `alternatives`.
 
-| Field | Set to |
-|---|---|
-| `status` | `RESOLVED` |
-| `digest` | `sha256:<64 lowercase hex>` from the inspect output |
-| `verification.tier` | `A` |
-| `verification.provenance` | `registry-manifest` |
-| `verification.method` | how it was obtained (≥ 40 chars — ART-008 enforces this) |
-| `verification.retrieved` | today's date |
-| `meta.resolved` | `13` |
-| `meta.unresolved` | `0` |
-| `blocker`, `alternatives` | delete |
+Also update `config/capabilities.registry.json:23`, which holds
+`@sha256:UNRESOLVED-see-artifacts.lock.yaml` — an invalid image reference (AUD-M03).
 
-Also update `config/capabilities.registry.json:23`, which currently holds
-`@sha256:UNRESOLVED-see-artifacts.lock.yaml` — a syntactically invalid image reference
-(`AUD-M03`).
-
-> Use an explicit version tag. `:latest` is mutable, and pinning a mutable tag defeats the
-> purpose — `no-latest` (DOCKER-002) would reject it anyway.
-
-**Path B — adopt an approved ADR amendment**
-
-`ADR0013_Review.md` proposes ADR-0029 (per-artifact gating by first use). Note that
-`ADR0013_Contradiction_Resolution.md` §7 records that this proposal was **weakened** —
-part of its evidence rested on a misreading since corrected. It should be re-argued on its
-practical merits rather than adopted to clear this gate.
-
-**Not acceptable:** pasting a plausible 64-hex string. `ART-007` validates format only;
-a fabricated digest would pass every gate and be caught at first pull in Phase 6.
-ADR-0013: *"a fabricated checksum is strictly worse than an absent one, because it looks
-verified."*
+> Use an explicit version tag. `:latest` is mutable and `no-latest` would reject it.
+> **Never paste a plausible 64-hex string** — ART-007 validates format only, so a
+> fabricated digest passes every gate and fails at first pull in Phase 6.
 
 ### Blocks G0
-**YES.**
-
-ADR-0013 `[RECORD]`: *"`artifacts.lock.yaml` fails closed … on any `UNRESOLVED` entry"* at
-Gate G0. `artifacts.lock.yaml` header: *"G0 cannot be signed off until this file contains
-zero of them."* This is a named G0 criterion and it is unmet.
-
-Tracked as **AUD-M01**.
+**YES.** ADR-0013 `[RECORD]`, a named G0 criterion. Tracked as **AUD-M01**.
 
 ---
 
-## Gate 2 — `no-todo`
+## Gate 2 — `l0-conformance`
 
 ### Gate name
-`no-todo` · `ci/gates/gate_no_todo.py` · workflow job **"no-todo · unregistered markers"**
+`l0-conformance` · `ci/gates/gate_l0_conformance.py` · job **"l0-conformance · offline invariants (BLOCKING — ADR-0007)"**
 
 ### Failure reason
-Rule **TODO-001** — 10 unregistered `TODO` occurrences.
+**6 violations across 44 checks**, and 5 of them are a single finding:
 
-**All 10 are in audit and review documents that discuss TODO governance as their subject
-matter.** None is a deferred task.
+**No capability in the registry declares `requires_network`.**
+
+> This gate replaced two `echo` statements that exited 0 and reported green. Its first
+> real execution found a gap every prior audit had asserted away.
 
 ### Evidence
 
 ```
-  ✗ TODO-001  unregistered `TODO`   at ADR0013_Review.md:249
-  ✗ TODO-001  unregistered `TODO`   at Architecture_Risk_Register.md:127
-  ✗ TODO-001  unregistered `TODO`   at Architecture_Risk_Register.md:133
-  ✗ TODO-001  unregistered `TODO`   at Phase0_Audit_Report.md:56
-  ✗ TODO-001  unregistered `TODO`   at Phase0_Audit_Report.md:436
-  ✗ TODO-001  unregistered `TODO`   at Phase0_Audit_Report.md:451
-  ✗ TODO-001  unregistered `TODO`   at Phase0_Audit_Report.md:547
-  ✗ TODO-001  unregistered `TODO`   at Phase0_Audit_Report.md:552
-  ✗ TODO-001  unregistered `TODO`   at Phase0_Audit_Report.md:554
-  ✗ TODO-001  unregistered `TODO`   at Phase0_Blockers.md:172
+  ✗ L0-NETDEP-004  capability `filesystem` does not declare `requires_network`
+  ✗ L0-NETDEP-004  capability `github`     does not declare `requires_network`
+  ✗ L0-NETDEP-004  capability `memory`     does not declare `requires_network`
+  ✗ L0-NETDEP-004  capability `system`     does not declare `requires_network`
+  ✗ L0-NETDEP-004  capability `media`      does not declare `requires_network`
+      at    config/capabilities.registry.json
+      why   ADR-0007 excludes network-dependent capabilities at L0. That exclusion is
+            unenforceable against an undeclared field: absence is not a declaration
+            of `false`.
 
-  FAIL  10 violation(s) across 11 checks
+  ✗ L0-ARTIFACT-004  cannot prove `images.github_mcp` is off the L0 path,
+                     and it is UNRESOLVED
+      at    artifacts.lock.yaml
+      why   An unpinned artifact of unknown reachability must be treated as reachable.
+
+  FAIL  6 violation(s) across 44 checks
 ```
 
-Distribution: `Phase0_Audit_Report.md` ×6 · `Architecture_Risk_Register.md` ×2 ·
-`ADR0013_Review.md` ×1 · `Phase0_Blockers.md` ×1
-
-Representative context — every hit is prose *about* the TODO registry:
+Confirmed independently:
 
 ```
-Phase0_Audit_Report.md:56    …with rules TODO-002 and LIC-005 policing the escape hatches…
-Phase0_Audit_Report.md:436   …a weaker standard than this project applies to a TODO comment.
-Phase0_Audit_Report.md:451   | AUD-N01 | TODO registry entry is over-broad | …
+filesystem   requires_network=(ABSENT)
+github       requires_network=(ABSENT)
+memory       requires_network=(ABSENT)
+system       requires_network=(ABSENT)
+media        requires_network=(ABSENT)
+
+schema: requires_network default=False, required=False
+```
+
+**ADR-0007's exclusion of the GitHub capability at L0 exists only in prose** — in the ADR,
+in the lockfile notes, in three audit reports. Nowhere machine-readable. The schema permits
+the field with a default of `false`; not one capability declares it.
+
+The other 12 invariants passed, including: L0 tier `network_allowed=false` · all services
+`inproc` · provider `ollama` not `anthropic` · no shell execution in the runtime surface ·
+no mutable image tags · required contracts present · policy default pinned `deny` ·
+ToolCall requires `trust` · ToolResult requires `trust_of_output` · ProviderRequest requires
+`cancellation_token_id` · `memory.forget` required · **egress guard active, 0 attempts**.
+
+### Exact remediation
+
+**Step 1 — declare network status on all five capabilities.** In
+`config/capabilities.registry.json`:
+
+```jsonc
+"filesystem": { …, "requires_network": false },
+"github":     { …, "requires_network": true  },   // ADR-0007 excludes it at L0
+"memory":     { …, "requires_network": false },   // inproc; Qdrant is local
+"system":     { …, "requires_network": false },
+"media":      { …, "requires_network": false }
+```
+
+This converts ADR-0007's exclusion from prose into an enforceable fact.
+
+**Step 2 — `L0-ARTIFACT-004` then clears automatically.** Once `github` declares
+`requires_network: true`, `images.github_mcp` is provably off the L0 path.
+
+**Recommended follow-up (separate review):** make `requires_network` **required** in
+`contracts/mcp/v1/capabilities-registry.schema.json` so a future capability cannot omit it.
+That is a schema change and belongs in its own change.
+
+> **Note the interaction with Gate 1.** Step 1 clears `l0-conformance` but leaves
+> `artifacts` red. The two gates ask different questions: `artifacts` wants the digest
+> recorded; `l0-conformance` wants to know whether the artifact is on the offline path.
+> That separation is intentional.
+
+### Blocks G0
+**YES.** ADR-0007: *"L0 conformance is a blocking CI gate on every release."*
+
+---
+
+## Gate 3 — `no-todo`
+
+### Gate name
+`no-todo` · `ci/gates/gate_no_todo.py` · job **"no-todo · unregistered markers"**
+
+### Failure reason
+Rule **TODO-001** — 33 unregistered `TODO` occurrences. **All 33 are in documents produced
+by this audit/review process**, where TODO governance is the subject matter. None is a
+deferred task.
+
+**Up from 10 in the previous run.** This is compounding.
+
+### Evidence
+
+| File | Hits | Origin |
+|---|---|---|
+| `Failed_Gates.md` | **21** | audit output — previous run of *this* report |
+| `Phase0_Audit_Report.md` | 6 | audit output |
+| `Architecture_Risk_Register.md` | 2 | audit output |
+| `Phase0_Blockers.md` | 1 | audit output |
+| `Gate_Summary.md` | 1 | audit output |
+| `CI_Execution_Report.md` | 1 | audit output |
+| `ADR0013_Review.md` | 1 | review output |
+
+Representative context — every hit is prose *about* the registry:
+
+```
+Phase0_Audit_Report.md:56   …with rules TODO-002 and LIC-005 policing the escape hatches…
+Phase0_Audit_Report.md:436  …a weaker standard than this project applies to a TODO comment.
+Phase0_Audit_Report.md:451  | AUD-N01 | TODO registry entry is over-broad | …
 ```
 
 ### Root cause
 
-`gate_no_todo.py` excludes `ci/` and `docs/`. **Root-level `.md` is not excluded.** Every
-audit artefact lives at the repository root.
+`gate_no_todo.py` excludes `ci/` and `docs/`. **Root-level `.md` is not excluded**, and
+every audit artefact lives at the repository root.
 
-This is the same class as the exclusion already granted to `no-latest` and `no-pending`,
-which skip `.md` entirely on the stated rationale that *"gates police executable config, not
-prose that documents a rejected practice."* **`no-todo` did not receive that treatment.**
+`no-latest` and `no-pending` both exclude `.md` wholesale, on the stated rationale that
+*"gates police executable config, not prose that documents a rejected practice."*
+**`no-todo` never received that treatment.**
 
-The gate is not malfunctioning — it is correctly reporting a scope that was never widened
-to cover documents whose subject is the thing being scanned.
+**This is a compounding feedback loop.** Each audit round produces documents discussing
+forbidden tokens; those documents are scanned; violations rise; the next round documents the
+rise. 10 → 33 in one cycle, with 21 from a single generated file. Left alone, this gate goes
+permanently red and stops being read — the failure `CI_Architecture.md` warns about when
+arguing against a warnings tier.
 
 ### Exact remediation
 
-Three valid options. **Not applied — audit only.**
+**Option A — align with the sibling gates (recommended).** In `ci/gates/gate_no_todo.py`,
+exclude `.md` as `no-latest` and `no-pending` already do. Makes three gates consistent
+rather than two-plus-one, and the rationale is already written and accepted.
 
-**Option A — align with `no-latest` / `no-pending` (recommended)**
-
-In `ci/gates/gate_no_todo.py`, extend the skip prefix from `("ci/", "docs/")` to also cover
-root-level markdown, or filter by suffix as the sibling gates do:
-
-```python
-# current
-if r.startswith(("ci/", "docs/")):
-# aligns with no-latest / no-pending, which exclude .md wholesale
-```
-
-Rationale is already written and accepted for two other gates. This makes three gates
-consistent rather than two-plus-one.
-
-**Option B — register the audit documents in `ci/policy/policy.yaml`**
+**Option B — register the generated documents** in `ci/policy/policy.yaml`:
 
 ```yaml
 todo:
   registry:
     - pattern: "TODO"
-      path_glob: "Phase0_*.md"
+      path_glob: "*.md"
       owner: architecture
-      unblocked_by: "never — audit records are immutable"
+      unblocked_by: "n/a — audit records are immutable"
 ```
-
-Consistent with the existing registry mechanism, but `unblocked_by: never` sits awkwardly
-against `TODO-002`, which exists to reject entries with no removal route. Would need
+Sits awkwardly against `TODO-002`, which rejects entries with no removal route; would need
 `TODO-002` to permit an explicit permanent-exemption value.
 
-**Option C — accept it as a standing red**
-
-Defensible, since `no-todo` does not block G0. **Not recommended** — a permanently red gate
-that everyone knows to ignore is how a pipeline stops being read.
+**Option C — accept a standing red.** Defensible since it does not block G0. **Not
+recommended** — and now actively harmful, since the count grows every audit round.
 
 ### Blocks G0
-**No.**
+**No.** Phase 0's DoD names: every ADR has decision and consequences · contract schemas
+validate · **CI runs and reports** · secret scanner blocks a planted credential · artifact
+lockfile fails closed on a corrupted checksum. TODO hygiene is not among them, and the DoD
+explicitly permits failing CI.
 
-MASTER_PLAN_v2's Phase 0 DoD names: every ADR has decision and consequences · contract
-schemas validate · **CI runs and reports** · secret scanner blocks a planted credential ·
-artifact lockfile fails closed on a corrupted checksum.
-
-**TODO hygiene is not among them**, and the DoD explicitly states *"failing is fine; present
-is mandatory"* for CI. This failure is cosmetic with respect to G0.
-
-Tracked as a variant of **AUD-N01** (TODO registry scope).
+Tracked as a variant of **AUD-N01**.
 
 ---
 
-## Not a gate failure, but worse than one
+## Gate 4 — `markdown`
 
-### `l0-conformance` reports SUCCESS while asserting nothing
+### Gate name
+`markdown` · `ci/gates/gate_markdown.py` · job **"markdown · links + structure"**
 
-Not counted above because it exits 0. Recorded here because a green vacuous gate is more
-dangerous than a red one.
+### Failure reason
+Rule **MD-HEADING** — a heading level jumps from `h1` to `h3`.
 
-```yaml
-- name: Assert no network egress during the L0 suite
-  run: echo "STUB — needs the sensory harness (ADR-0027)…"
-- name: Wake → STT → brain(ollama) → tools → TTS, EN and TR, no microphone
-  run: echo "STUB — Phase 6…"
+**New since the previous run.** Also generated by this audit process.
+
+### Evidence
+
+```
+  ✗ MD-HEADING  heading jumps from h1 to h3
+      at    Failed_Gates.md:199
+      why   Skipped levels break document outline and screen-reader navigation, and
+            usually mean a section was deleted without re-levelling its children.
+      fix   Use h2 here, or add the intermediate heading.
+
+  FAIL  1 violation(s) across 52 checks
 ```
 
-Both steps are `echo` → exit 0 → **GitHub reports a green checkmark.**
+`Failed_Gates.md:199` is in the previous run's output of **this very report** — the
+"Not a gate failure, but worse than one" section, which used `###` directly under `#`.
 
-This is the keystone gate of ADR-0007 — the mechanism that is supposed to make offline
-operation impossible to erode unnoticed. It currently produces a passing result for doing
-nothing, and `config/tiers/l0.toml` describes `network_allowed: false` as *"asserted by the
-conformance suite, not merely documented"* — no suite asserts it.
+All 51 other markdown checks passed: internal links resolve, no trailing whitespace,
+heading hierarchy correct everywhere else.
 
-The workflow comment anticipates two states (*"failing later is fine — ABSENT is not"*) but
-not the third: **present, green, and hollow.**
+### Exact remediation
 
-**Suggested remediation:** make the stub steps `exit 1` with an explicit "not implemented
-until Phase 6" message, so the job is honestly red until real. **Blocks G0: no** — the DoD
-requires the gate be *wired*, and it is.
+Re-level the heading in `Failed_Gates.md` from `###` to `##`, or introduce the intermediate
+`##` section.
+
+> This run's regenerated `Failed_Gates.md` uses `##` throughout, so the specific violation
+> is expected to clear on the next execution. The **class** of problem — generated
+> documents tripping structural gates — remains, and is the same scoping question as
+> Gate 3.
+
+### Blocks G0
+**No.** No G0 criterion references heading structure.
 
 ---
 
@@ -244,18 +274,33 @@ requires the gate be *wired*, and it is.
 
 | | |
 |---|---|
-| Gates failed | 2 of 16 |
-| **Blocking G0** | **1** — `artifacts` (AUD-M01) |
-| Non-blocking | 1 — `no-todo` |
+| Gates failed | 4 of 17 |
+| **Blocking G0** | **2** — `artifacts` (AUD-M01) and `l0-conformance` (new) |
+| Non-blocking | 2 — `no-todo`, `markdown` (both audit-generated) |
 | Gate errors (exit 2) | 0 |
-| New blockers found by this run | **none** |
+| New blockers this run | **1** — `l0-conformance`, and it is a genuine discovery |
 
-Both failures were known before execution. **The run surfaced no new G0 blocker.**
+### Where the four failures come from
 
-The outstanding G0 items remain **AUD-C01** (repository has 0 commits; CI has never run) and
-**AUD-M01** (`artifacts` gate red).
+| Source | Gates |
+|---|---|
+| Known open work | `artifacts` |
+| **Real gap found by the new L0 gate** | `l0-conformance` |
+| Audit process generating its own noise | `no-todo`, `markdown` |
+
+**Only two of the four represent work on the product.** The other two are a scoping gap in
+two gates, made visible by this process producing documents about the tokens those gates
+hunt.
+
+### G0 outlook
+
+| ID | Status |
+|---|---|
+| **AUD-C01** | ⚠️ **Mostly resolved** — 4 commits, 161 files, pushed to `origin/main`, clean clone works. Residual: no observable GitHub Actions run |
+| **AUD-M01** | **OPEN** — one `docker buildx imagetools inspect` away |
+| **L0 declaration gap** | **OPEN** — five `requires_network` fields away |
 
 ---
 
 *Audit only. No repository file was modified. `CI_Execution_Report.md`, `Gate_Summary.md`
-and `Failed_Gates.md` are new files.*
+and `Failed_Gates.md` were overwritten with this run's results.*

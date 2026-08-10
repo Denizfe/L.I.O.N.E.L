@@ -29,11 +29,16 @@ def main():
                 return e
         return None
 
-    pat = re.compile("|".join(re.escape(t) for t in cfg["forbid"]))
+    # Marker-shaped, not word-shaped. See policy.yaml `marker_patterns`.
+    pat = re.compile("|".join(f"(?:{x})" for x in cfg["marker_patterns"]))
     allowed = 0
     for f in repo_files(include={".py", ".sh", ".yaml", ".yml", ".json", ".toml", ".proto", ".md"}):
         r = rel(f)
-        if r.startswith(("ci/", "docs/")) or r.endswith(("Policy_Gates.md", "CI_Inventory.md", "CI_Architecture.md")):
+        # `ci/` and `docs/` remain excluded: the gates and ADRs necessarily contain
+        # the strings they govern. The former blanket skip of Policy_Gates.md,
+        # CI_Inventory.md and CI_Architecture.md was UNDOCUMENTED and has been removed —
+        # the gate now applies to them (Category B review, 2026-08-03).
+        if r.startswith(("ci/", "docs/")):
             continue
         for i, line in enumerate(read_text(f).splitlines(), 1):
             m = pat.search(line)

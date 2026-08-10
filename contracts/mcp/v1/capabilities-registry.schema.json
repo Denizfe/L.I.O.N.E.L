@@ -4,7 +4,7 @@
   "title": "CapabilitiesRegistry",
   "description": "Schema for config/capabilities.registry.json — which capability servers exist, how to reach them, and what secrets they need. Renamed from v1.0's mcp.servers.json.",
   "x-lionel": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "adr": [
       "ADR-0003",
       "ADR-0015",
@@ -25,8 +25,10 @@
     ],
     "compatibility": {
       "since": "1.0.0",
-      "breaking_changes": [],
-      "notes": "THIS IS A CONFIG SCHEMA, so additionalProperties is FALSE at every level — per ADR-0015 an unknown key is an error, not a silent ignore. A typo'd key that is quietly dropped leaves the system running on a default the operator believes they overrode. Wire-payload schemas in this contract set take the opposite stance deliberately; see contracts/README.md."
+      "breaking_changes": [
+        "1.1.0 — requires_network, offline_allowed, owner, phase and trust_level became REQUIRED on every capability. MAJOR for producers (an existing registry without them now fails validation), which is the intent: L0-NETDEP-004 proved that an optional network declaration is unenforceable, because absence is not a declaration of false."
+      ],
+      "notes": "THIS IS A CONFIG SCHEMA, so additionalProperties is FALSE at every level — per ADR-0015 an unknown key is an error, not a silent ignore. A typo'd key that is quietly dropped leaves the system running on a default the operator believes they overrode. Wire-payload schemas in this contract set take the opposite stance deliberately; see contracts/README.md. AS OF 1.1.0 the five governance fields are mandatory. ADR-0007's L0 exclusion was previously expressed only in prose; these fields make it machine-checkable."
     }
   },
   "type": "object",
@@ -66,7 +68,12 @@
       "required": [
         "transport",
         "side_effect_default",
-        "trust_required"
+        "trust_required",
+        "requires_network",
+        "offline_allowed",
+        "owner",
+        "phase",
+        "trust_level"
       ],
       "properties": {
         "transport": {
@@ -136,7 +143,8 @@
         },
         "requires_network": {
           "type": "boolean",
-          "default": false
+          "default": false,
+          "description": "REQUIRED. ADR-0007: true excludes this capability at tier L0. Declared explicitly on every entry — absence is not a declaration of false, and L0-NETDEP-004 rejects an undeclared field. Must be the logical inverse of `offline_allowed`."
         },
         "supervised": {
           "type": "boolean",
@@ -149,6 +157,42 @@
         },
         "note": {
           "type": "string"
+        },
+        "offline_allowed": {
+          "type": "boolean",
+          "description": "REQUIRED. Whether the L0 host may load this capability. ADR-0007 makes this the inverse of `requires_network`; both are stated so the intent is explicit and the gate can cross-check them rather than infer one from the other. A contradiction between the two is a violation, not a preference."
+        },
+        "owner": {
+          "type": "string",
+          "enum": [
+            "core-orchestration",
+            "brain",
+            "memory",
+            "capabilities",
+            "sensory",
+            "platform",
+            "observability"
+          ],
+          "description": "REQUIRED. Module accountable for this capability, drawn from the same vocabulary as contract ownership. Ownership decides who must be consulted, not who is to blame."
+        },
+        "phase": {
+          "type": "string",
+          "pattern": "^G(10|[0-9])[a-d]?$",
+          "description": "REQUIRED. The gate at which this capability is first built. Makes the registry readable as a delivery plan and lets a gate check that nothing is registered before the phase that introduces it."
+        },
+        "trust_level": {
+          "type": "string",
+          "enum": [
+            "operator",
+            "user_originated",
+            "tool_result",
+            "external_content"
+          ],
+          "description": "REQUIRED. Trust level this capability's OUTPUT carries into a turn — distinct from `trust_required`, which is the minimum caller trust needed to INVOKE it. A capability that returns file contents or remote data must declare `external_content`: ADR-0012 treats such output as hostile, and this field is what makes ToolResult.trust_of_output correct by construction rather than by convention."
+        },
+        "governance_note": {
+          "type": "string",
+          "description": "Why this entry's governance fields hold the values they do. Distinct from `note`, which describes the capability. Recorded because `requires_network: false` is a claim about the world that someone should be able to check without re-deriving it."
         }
       },
       "additionalProperties": false,
@@ -204,6 +248,45 @@
               "module"
             ]
           }
+        },
+        {
+          "$comment": "ADR-0007 consistency: requires_network and offline_allowed are logical inverses. Stated separately so a mismatch is detectable; a capability cannot claim to need the network and also be loadable offline.",
+          "if": {
+            "properties": {
+              "requires_network": {
+                "const": true
+              }
+            },
+            "required": [
+              "requires_network"
+            ]
+          },
+          "then": {
+            "properties": {
+              "offline_allowed": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "requires_network": {
+                "const": false
+              }
+            },
+            "required": [
+              "requires_network"
+            ]
+          },
+          "then": {
+            "properties": {
+              "offline_allowed": {
+                "const": true
+              }
+            }
+          }
         }
       ]
     }
@@ -225,7 +308,11 @@
           "trust_required": "any",
           "placement": "host_only",
           "requires_network": false,
-          "supervised": true
+          "supervised": true,
+          "offline_allowed": true,
+          "owner": "capabilities",
+          "phase": "G1",
+          "trust_level": "external_content"
         },
         "github": {
           "transport": "stdio",
@@ -245,7 +332,11 @@
           "trust_required": "user_originated",
           "requires_network": true,
           "supervised": true,
-          "note": "Digest is all-zero HERE ONLY because this is a schema example illustrating shape — it is not a lockfile entry and must never be copied into one. The real digest lives in artifacts.lock.yaml, currently UNRESOLVED. requires_network true excludes this capability at tier L0."
+          "note": "Digest is all-zero HERE ONLY because this is a schema example illustrating shape — it is not a lockfile entry and must never be copied into one. The real digest lives in artifacts.lock.yaml, currently UNRESOLVED. requires_network true excludes this capability at tier L0.",
+          "offline_allowed": false,
+          "owner": "capabilities",
+          "phase": "G1",
+          "trust_level": "external_content"
         }
       }
     }

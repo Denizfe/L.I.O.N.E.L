@@ -38,18 +38,18 @@
 #      absent one, because it looks verified.
 #
 # ─────────────────────────────────────────────────────────────────────────────────
-# STATUS: 12 of 13 artifacts reproducible. 1 UNRESOLVED (temporary, tooling-level).
-# G0 remains blocked until it reaches 0. See Artifact_Verification_Report.md.
+# STATUS: 13 of 13 artifacts reproducible. 0 UNRESOLVED.
+# The G0 artifact criterion is MET. See Artifacts_Final_Report.md.
 # ─────────────────────────────────────────────────────────────────────────────────
 
 meta:
   schema_version: 3
   format: yaml
   supersedes: artifacts.lock.toml
-  updated: "2026-08-02"
+  updated: "2026-08-03"
   retrieval_date: "2026-08-02"
-  resolved: 12
-  unresolved: 1
+  resolved: 13
+  unresolved: 0
   gate: "G0 blocks while unresolved > 0"
   report: Artifact_Verification_Report.md
   rules:
@@ -378,62 +378,48 @@ images:
       ADR-0024. Always pull by digest — the tag is advisory.
 
   github_mcp:
-    status: UNRESOLVED
+    status: RESOLVED
     adr: ADR-0013
     purpose: GitHub capability server.
-    version: "unpinned — must be resolved before use"
+    version: v1.1.2
     ref: ghcr.io/github/github-mcp-server
     source_url: https://github.com/github/github-mcp-server
-    digest: null
+    digest: sha256:30197479d8036c7811892bc07e06f9a05c9ef3cdd79bc59f256d50647f95788c
+    digest_amd64: sha256:a69e2173bf2f28b29686e03456fd228468f87292aadf17e2304e0d2a3fe9a221
+    digest_arm64: sha256:a915dc384abd24b8e558a72adc9e759dbb4b73590f819c0e6c56b9a326c8c004
+    pull_as: ghcr.io/github/github-mcp-server@sha256:30197479d8036c7811892bc07e06f9a05c9ef3cdd79bc59f256d50647f95788c
     license: MIT
     verification:
-      tier: E
-      provenance: null
-      method: null
-      retrieved: null
-    blocker:
-      what: >-
-        GHCR requires an Authorization: Bearer header on the manifest endpoint. An
-        anonymous token IS obtainable from https://ghcr.io/token (confirmed 2026-08-02),
-        but the available fetch tooling cannot set request headers, and passing the token
-        as a query parameter is rejected.
-      classification: TEMPORARY
-      why_temporary: >-
-        This is a limitation of the tooling available in this session, not of the
-        registry or the artifact. Any machine with docker or crane resolves it in one
-        command. Nothing about the upstream needs to change.
-    alternatives:
-      - id: 1
-        recommended: true
-        approach: "Resolve locally: docker buildx imagetools inspect ghcr.io/github/github-mcp-server:<tag>"
-        reproducible: true
-        effort: one command
-        note: >-
-          Docker performs the token exchange automatically. Pick an explicit version tag,
-          never :latest — a mutable tag defeats the purpose of pinning.
-      - id: 2
-        approach: "crane digest ghcr.io/github/github-mcp-server:<tag>"
-        reproducible: true
-        effort: one command, no Docker daemon required
-        note: go-containerregistry CLI. Useful in CI where a daemon is unavailable.
-      - id: 3
-        approach: Build from source and pin the git commit instead of an image digest.
-        reproducible: true
-        effort: moderate — requires a Go toolchain
-        note: >-
-          Trades a registry dependency for a build dependency. Gives a tier-A vcs-commit
-          pin, the same mechanism already used for whisper.cpp.
-      - id: 4
-        approach: Drop the GitHub capability from the L0 configuration.
-        reproducible: true
-        effort: zero — already the case
-        note: >-
-          requires_network is true, so ADR-0007 already excludes this capability at tier
-          L0. It is NOT on the offline critical path, which is why this single unresolved
-          artifact does not block L0 conformance — only full G0 sign-off.
+      tier: A
+      provenance: local-registry-inspect
+      method: >-
+        `docker buildx imagetools inspect ghcr.io/github/github-mcp-server:v1.1.2` run by
+        the operator on the Windows host, 2026-08-03. Docker performed the GHCR bearer-token
+        exchange and TLS verification; the returned OCI image index digest was transcribed
+        verbatim. This is the OCI MANIFEST DIGEST — content-addressed by construction, so a
+        digest reference cannot be re-pointed at different bytes.
+      retrieved: "2026-08-03"
+      verified_locally: true
+      confirm_locally: docker buildx imagetools inspect ghcr.io/github/github-mcp-server:v1.1.2
+    attestations:
+      present: true
+      amd64: sha256:87712651884b0bbc86f9952c83d7d3b1aa4b498aff5761c32830c450cb4e57af
+      arm64: sha256:fb18369a705a90ded70ac6a209265b0b1c38ad824f9dda51632cab65c6ad6146
+      note: >-
+        The index carries two attestation manifests (vnd.docker.reference.type =
+        attestation-manifest), one per platform. Build provenance is published alongside the
+        image. Recorded as evidence, not relied upon — the pin is the index digest.
     note: >-
-      The npm package @modelcontextprotocol/server-github has been unsupported since
-      April 2025. The Docker image is the only maintained distribution.
+      `digest` is the OCI image INDEX; the runtime selects the platform. Always pull by
+      digest — the `v1.1.2` tag is advisory and mutable in principle. requires_network is
+      true, so ADR-0007 excludes this capability at tier L0 (declared in
+      config/capabilities.registry.json).
+    resolution_history: >-
+      UNRESOLVED 2026-08-02 → RESOLVED 2026-08-03. Twelve remote retrieval attempts failed
+      because GHCR requires an Authorization header the audit environment could not set; the
+      blocker was correctly classified TEMPORARY throughout. Resolved by the operator running
+      one command locally, exactly as alternative 1 predicted. Full method log:
+      GHCR_Digest_Justification.md.
 
 # ═════════════════════════════════════════════════════════════════════════════════
 # SOURCE DEPENDENCIES
