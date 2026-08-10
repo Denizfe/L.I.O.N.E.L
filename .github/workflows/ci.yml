@@ -13,11 +13,19 @@
 #     A broken gate is not a passing build and not a failing repository. Collapsing
 #     those teaches people to ignore red, which is how a gate stops being a gate.
 #
-# CURRENT STATE (Phase 0)
-#   15/16 gates green. `artifacts` is RED BY DESIGN — one artifact digest is unresolved
-#   and ADR-0013 blocks G0 until it is zero. See Artifact_Verification_Report.md §5.
-#   The l0-conformance gate is a stub: it cannot run until Phase 6 builds the sensory
-#   harness. It is wired now so that offline operation cannot erode unnoticed (ADR-0007).
+# CURRENT STATE (Phase 0, architecture 1.0.0)
+#   17/17 gates green. The `artifacts` gate was red by design while one image digest was
+#   unresolved; that digest is now pinned (GHCR_Digest_Justification.md) and the lockfile
+#   reads 13 resolved / 0 unresolved. `l0-conformance` is no longer a stub — it enforces
+#   eight invariants under a network egress guard, and ci/self_test.sh plants a violation
+#   against it so it cannot silently regress.
+#
+# PLATFORM COVERAGE
+#   Most jobs are ubuntu-latest, but the host runtime targets Windows + Git Bash
+#   (ADR-0002, ADR-0014) and Turkish is a first-class locale (ADR-0023). The two jobs at
+#   the bottom of this file cover both, and they run the WHOLE suite rather than one
+#   gate: platform bugs live in the shell plumbing and the console encoding, not in the
+#   individual checks.
 
 name: lionel-policy
 
@@ -244,3 +252,77 @@ jobs:
       # while asserting nothing — a hollow gate is worse than an absent one.
       - name: L0 offline conformance
         run: python3 ci/gates/gate_l0_conformance.py
+
+  # ── Platform coverage ──────────────────────────────────────────────────────
+  #
+  # These two jobs run the full suite rather than a single gate. Everything above
+  # tests the repository; these test the pipeline itself on the platforms the host
+  # runtime actually targets. Both existed as gaps at the Phase 0 audit.
+
+  # ADR-0002, ADR-0014 — the host runtime runs on Windows under Git Bash. A pipeline
+  # that only ever runs on Ubuntu cannot tell you whether the tooling works where the
+  # product lives. Phase 1 implements ProcessSupervisor with Win32 Job Objects, which
+  # is untestable on Linux, so this job lands BEFORE the code it protects.
+  #
+  # This job already earned its place: it would have failed on the cp1252 crash in
+  # ci/gates/_lib.py, where every gate died in report_and_exit AFTER passing its checks
+  # and reported exit 2 on a clean repository.
+  windows-policy-gates:
+    name: "windows · full suite under Git Bash (ADR-0002, ADR-0014)"
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      # setup-python installs python.exe on Windows; every gate and both shell runners
+      # invoke `python3`. Shim rather than rewrite the scripts — `python3` is the
+      # correct name on the Linux jobs and in the documented local workflow.
+      - name: Provide python3 on PATH
+        run: |
+          set -euo pipefail
+          if ! command -v python3 >/dev/null 2>&1; then
+            printf '#!/usr/bin/env sh\nexec python "$@"\n' > /usr/bin/python3
+            chmod +x /usr/bin/python3
+          fi
+          python3 --version
+      - run: pip install pyyaml jsonschema grpcio-tools
+      # Deliberately NOT setting PYTHONIOENCODING. The gates must handle a console that
+      # cannot encode their own output; exporting it here would hide exactly the class
+      # of bug this job exists to catch.
+      - name: All policy gates
+        run: bash ci/run_gates.sh
+      - name: Gate self-test
+        run: bash ci/self_test.sh
+
+  # ADR-0023 — Turkish locale. `İ`.lower() is `i̇` and `ı`.upper() is `I`, so under
+  # tr_TR.UTF-8 case-insensitive comparison of ASCII identifiers stops being an
+  # identity. Python's str.lower() is Unicode-based and locale-independent, but the
+  # shell is not: `tr`, `grep -i` and `[[ = ]]` in ci/run_gates.sh and ci/self_test.sh
+  # all consult LC_CTYPE. Phase 1 writes the first identifier comparisons; this job
+  # makes the failure mode reachable in automation before then.
+  #
+  # If this job fails, the shell is wrong. Do not relax the locale.
+  turkish-locale:
+    name: "tr_TR.UTF-8 · locale-sensitive shell (ADR-0023)"
+    runs-on: ubuntu-latest
+    env:
+      LANG: tr_TR.UTF-8
+      LC_ALL: tr_TR.UTF-8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate the Turkish locale
+        run: |
+          set -euo pipefail
+          sudo locale-gen tr_TR.UTF-8
+          sudo update-locale LANG=tr_TR.UTF-8
+          locale -a | grep -i tr_TR
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml jsonschema grpcio-tools
+      - name: All policy gates
+        run: bash ci/run_gates.sh
+      - name: Gate self-test
+        run: bash ci/self_test.sh
