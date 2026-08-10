@@ -6,7 +6,12 @@
 *.yaml text eol=lf
 *.yml text eol=lf
 *.proto text eol=lf
-* text=auto
+# Default every text file to LF in the working tree, not just the extensions listed
+# above. The per-extension pins were incomplete -- *.proto was missing, so a Windows
+# clone checked the three proto files out as CRLF and computed a DIFFERENT architecture
+# checksum from the same commit (Architecture_Freeze.md section 8.3). Enumerating
+# extensions loses that race every time a new one appears; defaulting closes the class.
+* text=auto eol=lf
 *.onnx binary
 *.bin binary
 *.wav binary
