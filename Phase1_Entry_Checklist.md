@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Gate | G0 → G1 |
-| Status | **COMPLETE** — architecture 1.1.0 |
+| Status | **COMPLETE** — architecture 1.2.0, 0 ADRs pending |
 | Items | 9 |
 | Done | **9 of 9** |
 | Blocking | 0 |
@@ -123,8 +123,8 @@ Self-test **10/10**. Closes Finding M1.
 a byte-exact backup and verifies the restoration rather than assuming it.
 
 **Closed the same day, not deferred:** coverage went **9/17 → 20/20**, and `gate-coverage`
-now fails the build if a gate has never rejected anything (ADR-0030). 21 assertions across
-20 gates, `coverage.exempt` empty.
+now fails the build if a gate has never rejected anything (ADR-0030). **22 assertions across
+20 gates**, `coverage.exempt` empty.
 
 ### ☑ 6. Regenerate the drifted generated documents — **DONE 2026-08-10**
 
@@ -132,7 +132,9 @@ now fails the build if a gate has never rejected anything (ADR-0030). 21 asserti
 ended with "Regenerate rather than hand-edit" while no generator existed, which is why they
 drifted in the first place.
 
-Authoritative counts: **17 gates · 127 rules · 20 workflow jobs.**
+Counts when this item landed: 17 gates · 127 rules · 20 workflow jobs.
+**Current: 20 gates · 137 rules · 23 workflow jobs** — three meta-gates arrived with
+ADR-0030. `python3 scripts/generate_ci_docs.py --check` is the authority, not this line.
 
 > 127 supersedes 88, 90 and 116. Rule IDs read off `g.fail(...)` call sites miss the 24
 > rules `l0-conformance` emits through one table-driven call — which is how the keystone

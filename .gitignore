@@ -50,3 +50,6 @@ tmp/
 
 # tool metadata (serena MCP project index) — machine-local, not project state
 .serena/
+
+# personal Claude Code overrides — .claude/settings.json is the team-shared one
+.claude/settings.local.json

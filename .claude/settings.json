@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/guard_accepted_adr.py",
+            "timeout": 10,
+            "statusMessage": "Checking ADR append-only rule"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/checksum_feedback.py",
+            "timeout": 20,
+            "statusMessage": "Checking architecture checksum"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bash ci/run_gates.sh*)",
+      "Bash(bash ci/self_test.sh*)",
+      "Bash(python3 ci/gates/*)",
+      "Bash(python3 scripts/architecture_checksum.py*)",
+      "Bash(python3 scripts/generate_ci_docs.py*)",
+      "Bash(bash scripts/verify_artifacts.sh*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git ls-files*)",
+      "Bash(gh run list*)",
+      "Bash(gh run view*)",
+      "Bash(gh run watch*)",
+      "Bash(uv lock*)",
+      "Bash(uv sync*)"
+    ]
+  }
+}
