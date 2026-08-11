@@ -2,25 +2,29 @@
 
 | | |
 |---|---|
-| Architecture version | **1.2.0** |
+| Architecture version | **1.3.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.2.0`** |
+| Tag | **`architecture-1.3.0`** |
 | Status | **FROZEN** |
-| Previous versions | **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **0 ADRs pending.** 0029–0031 accepted 2026-08-11 |
+| Previous versions | **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **ADR-0032 `Proposed`** — awaiting Efe. 0029–0031 accepted 2026-08-11 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **All 31 ADRs are in force.** ADR-0029, ADR-0030 and ADR-0031 were accepted 2026-08-11;
+> **31 of 32 ADRs are in force.** ADR-0032 is `Proposed`; its `.mcp.json` is deliberately
+> not created, because the mechanism is the thing being proposed.
+> ADR-0029, ADR-0030 and ADR-0031 were accepted 2026-08-11;
 > `ADR-009`, which ADR-0029 deliberately left unimplemented while it was `Proposed`, landed
 > with the acceptance. §9.6 records what that surfaced.
 
 ---
 
 ## 1. Architecture version
+
+**1.3.0** — MINOR over 1.2.0: ADR-0032 added (`Proposed`). No decision in force changed.
 
 **1.2.0** — MINOR over 1.1.1: ADR-0029, ADR-0030 and ADR-0031 accepted and in force, and
 `ADR-009` implemented. No decision already in force changed; three that were pending now
@@ -50,21 +54,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.2.0
-sha256:77e6f37244a7ffa6248a3c1607b42f23145493ecebcd0cb1ce1f8b1425479ec7
+ARCHITECTURE CHECKSUM                                          architecture 1.3.0
+sha256:c13b16c6527ac26564e4041ec2c71aa88a72b59ac12cf6d6f94d3b4ef94bd481
 
-  ADRs         31 files   sha256:3357194b9ad1033cfd821236bf47afa0…
+  ADRs         32 files   sha256:3e006cb2d1a71302f224f4a8e22649a0…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:9287daaa0512b98a2ad9f13943e42373…
+  policy        8 files   sha256:b8010dd119b52aa253bc130b4d632971…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
-  72 files hashed
+  73 files hashed
 ```
 
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.2.0   sha256:77e6f37244a7ffa6248a3c1607b42f23145493ecebcd0cb1ce1f8b1425479ec7
+                     72 files — ADRs 31 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.1.1   sha256:aed60f6faa836855f634fa1fd5a547c728e3ccabf2d209c2eb798e45cea60d24
                      72 files — ADRs 31 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.1.0   sha256:71c7c2fce1fccb2e0e263f98454d72ce85ce3220f3a17c5fea1e7ccaa1181687
@@ -116,7 +122,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **31 ADRs, 0001–0031** — all Accepted or Superseded; none pending |
+| **Architecture decisions** | **32 ADRs, 0001–0032** — 0032 `Proposed`, the rest Accepted or Superseded |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -400,6 +406,31 @@ grandfathered violation that stops being visible is just a violation.
 > A rule cannot bind documents written before it existed. The cheap move was to drop rule 2;
 > the honest one was to bound it, say where the boundary is, and keep saying what sits on the
 > far side of it.
+
+### 9.7 Version 1.3.0 — ADR-0032, and a rule applied to itself
+
+An automation review recommended checking in a `.mcp.json` so the toolchain is part of the
+clone like everything else. Implementing it would have meant adding **context7** — a network
+documentation service — to the repository.
+
+**It was not added.** §4 requires an ADR and Efe's approval for any new technology, and
+`CLAUDE.md` had just been written stating that rule. Adding the server on the reasoning that
+"it's only dev tooling" is precisely the shortcut §4 exists to prevent, and the fact that the
+answer is probably *yes* is what makes the shortcut tempting.
+
+So ADR-0032 proposes it instead, and `.mcp.json` does not exist until the ADR is Accepted —
+the same discipline ADR-0029 applied to `ADR-009`.
+
+The ADR is worth reading for three things it had to resolve rather than assert:
+
+| | |
+|---|---|
+| **The offline objection** | ADR-0007's L0 guarantee constrains the **product at runtime**, not the workstation. A developer reading docs over the network no more breaks it than a browser does. But MASTER_PLAN_v2 §W1 names erosion as this project's characteristic failure mode, so the ADR draws a hard line: no gate, no runtime path, ever |
+| **`npx -y` versus ADR-0013** | Unpinned `npx -y <pkg>` resolves latest at every launch — *"a rebuild in three months produces a different system"*, the exact sentence ADR-0013 was written around. Pinned to `@4.0.0` |
+| **The API key** | The hosted endpoint takes one. Declined: it buys rate limit, not capability, and ADR-0015 plus a `gate_secrets` scan with no path exclusions make a checked-in credential a live hazard |
+
+Nothing else in 1.3.0. The automation work landed separately in `5bcecb6` and moved no
+checksum, because `CLAUDE.md`, `.claude/` and the hooks are outside the checksum set.
 
 ### 9.4 If the Proposed ADRs are rejected — *historical, superseded by §9.6*
 
