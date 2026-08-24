@@ -5,7 +5,7 @@ A local-first voice assistant whose defining constraint is an **offline autonomy
 
 **Right now this repository contains no runtime code.** It is an architecture — 33 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
-enforces them: 22 gates, 145 rules, 25 CI jobs.
+enforces them: 22 gates, 145 rules, 26 CI jobs.
 
 ---
 
@@ -96,13 +96,20 @@ itself is broken (fix the gate). Never collapse 1 and 2.
 
 ---
 
-## Phase 0 discipline
+## Phase discipline
 
-`STRUCT-004` forbids `.py` under `src/lionel/`. That ban lifts when Phase 1 starts; until
-then a stray runtime file fails the build. `ci/` and `scripts/` are tooling, not runtime, and
-are unaffected.
+**`STRUCT-004` was lifted at architecture 1.6.0.** G0 was signed off on 2026-08-10 and
+`repository.runtime_code_forbidden_until` is now `null`, so `src/lionel/` holds runtime code.
+The rule is **dormant, not deleted** — setting that value back to a gate name re-arms the
+ban, which is the right move if a later phase needs a code freeze. `structure` keeps its
+self-test coverage through `STRUCT-003` (`forbidden_paths`).
+
+`ARCH-001` is unaffected and permanent.
 
 `ARCH-001` forbids `src/lionel/capabilities/shell/` from ever existing again (ADR-0011).
+
+**Tests run on `unittest`, not pytest.** ADR-0027 defines five layers and names no runner;
+pytest would be a new dependency and needs an ADR. `python3 -m unittest discover -s tests -t .`
 
 ---
 

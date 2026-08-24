@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.5.0** |
+| Architecture version | **1.6.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.5.0`** |
-| Status | **FROZEN** |
-| Previous versions | **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Tag | **`architecture-1.6.0`** |
+| Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
+| Previous versions | **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **0 ADRs pending.** ADR-0033 and ADR-0032 both accepted 2026-08-24 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -28,6 +28,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.6.0** — MINOR over 1.5.0: `STRUCT-004` lifted and Phase 1 opened. No ADR was added
+and no decision changed — G0's sign-off (2026-08-10) was always the condition, and
+`STRUCT-004`'s own fix text names updating `repository.runtime_code_forbidden_until` as the
+way to satisfy it. The version moves because `ci/policy/policy.yaml` is in the checksum set.
 
 **1.5.0** — MINOR over 1.4.0: ADR-0033 added and accepted, bringing `doc-claims` with it.
 No decision already in force changed.
@@ -66,12 +71,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.5.0
-sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
+ARCHITECTURE CHECKSUM                                          architecture 1.6.0
+sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
 
   ADRs         33 files   sha256:20888f57f60d14ad15267a754f793c3c…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:e9bb3eadd88a0adba6022171bdf36276…
+  policy        8 files   sha256:5dbaf3178194cf136cd02c3aae785ae1…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -81,6 +86,8 @@ sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.5.0   sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
+                     74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.4.0   sha256:8d77af2c61f6fedfe748221abcffb00f6f7f703e81d8e3c5b0e4d35712d2d86d
                      73 files — ADRs 32 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.3.0   sha256:c13b16c6527ac26564e4041ec2c71aa88a72b59ac12cf6d6f94d3b4ef94bd481
@@ -102,7 +109,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
+python3 scripts/architecture_checksum.py --verify sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -157,7 +164,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 16 configuration sections (`mcp` added at 1.4.0) |
-| **CI gates** | **22 gates, 145 rules, 25 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 25/25, gate coverage 22/22 |
+| **CI gates** | **22 gates, 145 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 25/25, gate coverage 22/22 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -601,6 +608,68 @@ is not arithmetic.
 
 ---
 
+### 9.10 Version 1.6.0 — Phase 1 opens, and the first runtime code
+
+`STRUCT-004` forbade `.py` under `src/lionel/` for the whole of Phase 0. It is now
+**dormant**: `repository.runtime_code_forbidden_until` is `null`.
+
+**This is not a relaxation, and it is worth being precise about why.** §4 requires an ADR
+for any relaxation of a gate, and that rule is doing real work here — the temptation is to
+treat "the gate is in my way" as sufficient. It is not what happened. `STRUCT-004` was
+always conditional, its condition was G0, and its own fix text names the mechanism:
+
+> Remove them, or sign off G0 and update `repository.runtime_code_forbidden_until` in
+> ci/policy/policy.yaml.
+
+G0 was signed off on 2026-08-10 — `Phase0_Final_Signoff.md`, and `Phase1_Entry_Checklist.md`
+at 9 of 9 with 0 blocking. The gate was reporting a condition, and the condition is met.
+The version still moves, because `ci/policy/policy.yaml` is in the checksum set.
+
+**The rule is dormant rather than deleted.** Setting that value back to a gate name re-arms
+the ban, which is the right move if a later phase needs a code freeze; deleting the rule
+would mean rewriting the gate to get it back. `structure` keeps its self-test coverage
+through `STRUCT-003` (`forbidden_paths`) — assertion 4 now asserts both `architecture`
+/`ARCH-001` and `structure`/`STRUCT-003` against the same planted `capabilities/shell`
+directory. A gate that has never rejected anything is unproven whichever of its rules
+happens to be reachable today.
+
+**What landed under `src/lionel/`**
+
+| | ADR | G1 DoD clause |
+|---|---|---|
+| `secrets/` — `SecretStr`, `SecretResolver` | ADR-0015 | *"a `secret://` URI resolves and its value redacts in log output"* |
+| `platform/process_supervisor.py` | ADR-0014 | *"Job Object kill-tree verified by terminating a parent and confirming zero orphaned children"* |
+
+Both DoD clauses are now executable tests rather than intentions. The kill-tree test spawns
+a parent, which spawns a grandchild that would outlive it, shuts the supervisor down, and
+asserts the grandchild is gone. **Stopping one level up would have passed against the
+implementation ADR-0014 rejected**, so the test deliberately goes two.
+
+That test was then falsified before being trusted: the same fixture, killed with a plain
+`Popen.terminate()`, leaves the grandchild running and the detector reports it. The green
+test means something because the red one was observed first.
+
+`SecretStr` redacts through `__str__`, `__repr__`, `__format__`, `%`-formatting and a real
+`logging` call, and **refuses `==` against a plain `str`** — that comparison's failure
+message would print the secret, at the moment something is already going wrong.
+
+**Two decisions taken by not taking them.** `pytest` is not a dependency: ADR-0027 defines
+five test *layers* and names no runner, so the suite uses the standard library's
+`unittest`. Adding pytest is a §4 dependency decision needing an ADR, and "obviously
+needed" is exactly the reasoning §4 exists to catch. Likewise ADR-0014's `dpapi` and `k8s`
+secret backends raise `BackendNotAvailable` naming the tier that brings them, rather than
+falling back to `env` — a silent downgrade would move a secret from the Windows credential
+store into a process listing without anyone deciding to.
+
+**CI gains a `unit-tests` job on Linux *and* Windows.** Not symmetry for its own sake: the
+Job Object code path does not execute on Linux at all, so a Linux-only run would report
+success for a mechanism it never touched.
+
+`.mcp.json`, `src/`, `tests/` and `CLAUDE.md` remain outside the checksum set. The freeze
+governs the architecture; the code written against it is checked by its own tests.
+
+---
+
 ### 9.4 If the Proposed ADRs are rejected — *historical, superseded by §9.6*
 
 All three were accepted on 2026-08-11, so this section no longer describes a live
@@ -619,4 +688,4 @@ Any of those is a MINOR bump of its own, not a revert of 1.1.0.
 ---
 
 *Prepared 2026-08-03. In force 2026-08-10: 1.0.0, extended to 1.1.0, corrected to 1.1.1 — all the same day.
-Extended to 1.2.0 and 1.3.0 on 2026-08-11, and to 1.4.0 and 1.5.0 on 2026-08-24.*
+Extended to 1.2.0 and 1.3.0 on 2026-08-11, and to 1.4.0, 1.5.0 and 1.6.0 on 2026-08-24 — the day Phase 1 opened.*

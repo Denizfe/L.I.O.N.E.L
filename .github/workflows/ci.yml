@@ -330,6 +330,31 @@ jobs:
       # gate that has never rejected anything sits untouched.
       - run: python3 ci/gates/gate_gate_coverage.py
 
+  # ── Product tests (ADR-0027) ───────────────────────────────────────────────
+  #
+  # Phase 1 opened at architecture 1.6.0, so there is runtime code to test. ADR-0027
+  # defines five layers; `unit` and `contract` run every commit. The runner is the
+  # standard library's `unittest` — ADR-0027 names layers, not a runner, and pytest would
+  # be a new dependency requiring an ADR (Architecture_Freeze.md §4).
+  #
+  # Windows is not optional here. ADR-0014's kill-tree is a Job Object, and that code path
+  # does not execute on Linux at all — a Linux-only run would report success for a
+  # mechanism it never touched.
+  unit-tests:
+    name: "tests · ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install psutil
+      - run: python3 -m unittest discover -s tests -t . -v
+        shell: bash
+
   # ── Platform coverage ──────────────────────────────────────────────────────
   #
   # These two jobs run the full suite rather than a single gate. Everything above

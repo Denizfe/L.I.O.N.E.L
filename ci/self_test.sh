@@ -101,17 +101,22 @@ printf 'sha256: PENDING\n' > config/_selftest.yaml
 expect_violation no-pending "PLACEHOLDER-001" "a PENDING placeholder"
 rm -f config/_selftest.yaml
 
-# 4. ADR-0011: the shell capability must never come back.
+# 4. ADR-0011: the shell capability must never come back. Two gates guard it from
+#    different angles, and both are asserted: `architecture` because ARCH-001 is the
+#    recorded prohibition, `structure` because the path is also in `forbidden_paths`.
 mkdir -p src/lionel/capabilities/shell
 RESTORE+=("rmdir '$ROOT/src/lionel/capabilities/shell' 2>/dev/null || true")
 expect_violation architecture "ARCH-001" "a resurrected shell capability"
+expect_violation structure "STRUCT-003" "a path whose absence is a recorded decision"
 rmdir src/lionel/capabilities/shell
 
-# 5. Phase 0 forbids runtime code.
-printf 'x = 1\n' > src/lionel/_selftest.py
-RESTORE+=("rm -f '$ROOT/src/lionel/_selftest.py'")
-expect_violation structure "STRUCT-004" "runtime code during Phase 0"
-rm -f src/lionel/_selftest.py
+# 5. STRUCT-004 — no runtime code — was LIFTED at architecture 1.6.0, when Phase 1 opened
+#    and `repository.runtime_code_forbidden_until` went to null. The rule cannot fire, so
+#    an assertion against it would fail for the right reason and still leave a red suite.
+#    It is dormant rather than deleted: re-arming it is one policy value, and a later phase
+#    that needs a code freeze should not have to rewrite the gate. `structure` keeps its
+#    coverage through STRUCT-003 immediately above — a gate that has never rejected
+#    anything is unproven whichever of its rules happens to be reachable today.
 
 # 6. Unregistered TODO.
 printf '# TODO: unregistered\n' > scripts/_selftest.sh
@@ -331,7 +336,7 @@ rm -rf "$COV_TMP"
 # violations behind turns every subsequent run red for the wrong reason — and the
 # first person to see it will "fix" the gate rather than the litter.
 leftover=0
-for f in config/_selftest.toml config/_selftest.yaml src/lionel/_selftest.py \
+for f in config/_selftest.toml config/_selftest.yaml \
          scripts/_selftest.sh docs/_selftest.md \
          docs/decisions/ADR-9999-selftest.md \
          contracts/core/v1/_selftest.schema.json contracts/grpc/v1/_selftest.proto; do

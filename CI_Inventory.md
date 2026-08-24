@@ -9,7 +9,7 @@
 |---|---|
 | Gates | **22** |
 | Rules | **145** |
-| Workflow jobs | **25** |
+| Workflow jobs | **26** |
 | Current state | **all gates pass · 0 broken** |
 | Runner | `bash ci/run_gates.sh [gate]` |
 | Self-test | `bash ci/self_test.sh` — 25/25 planted violations caught |
@@ -98,7 +98,7 @@ Which decisions have an executable test, and which do not.
 
 ## 3. Workflow jobs
 
-`.github/workflows/ci.yml` — 25 jobs.
+`.github/workflows/ci.yml` — 26 jobs.
 
 | Job | Type | Notes |
 |---|---|---|
@@ -133,7 +133,7 @@ A gate that passes a clean repository but would miss a real violation is decorat
 | a :latest tag | `no-latest` | DOCKER-002 |
 | a PENDING placeholder | `no-pending` | PLACEHOLDER-001 |
 | a resurrected shell capability | `architecture` | ARCH-001 |
-| runtime code during Phase 0 | `structure` | STRUCT-004 |
+| a path whose absence is a recorded decision | `structure` | STRUCT-003 |
 | an unregistered TODO | `no-todo` | TODO-001 |
 | a script without strict mode | `shell` | SH-STRICT |
 | a broken internal link | `markdown` | MD-LINK |
@@ -184,7 +184,7 @@ ci/
     ├── _lib.py                  Finding model, exit-code contract, reporting
     └── gate_*.py                22 gates
 
-.github/workflows/ci.yml         25 jobs
+.github/workflows/ci.yml         26 jobs
 scripts/verify_artifacts.sh      thin wrapper → gate_artifacts.py
 scripts/architecture_checksum.py recompute / verify the freeze checksum
 scripts/generate_ci_docs.py      regenerates this file and Policy_Gates.md

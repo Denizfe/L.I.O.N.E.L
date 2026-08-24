@@ -464,7 +464,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a :latest tag | `no-latest` | DOCKER-002 |
 | a PENDING placeholder | `no-pending` | PLACEHOLDER-001 |
 | a resurrected shell capability | `architecture` | ARCH-001 |
-| runtime code during Phase 0 | `structure` | STRUCT-004 |
+| a path whose absence is a recorded decision | `structure` | STRUCT-003 |
 | an unregistered TODO | `no-todo` | TODO-001 |
 | a script without strict mode | `shell` | SH-STRICT |
 | a broken internal link | `markdown` | MD-LINK |

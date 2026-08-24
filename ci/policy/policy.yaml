@@ -13,7 +13,16 @@ phase: "0"
 repository:
   # Phase 0 forbids runtime code. This is the single loudest architectural signal
   # in the repo and it is machine-checked (ADR: MASTER_PLAN_v2 Phase 0).
-  runtime_code_forbidden_until: "G0"
+  # LIFTED at architecture 1.6.0. G0 was signed off on 2026-08-10
+  # (Phase0_Final_Signoff.md; Phase1_Entry_Checklist.md 9/9, 0 blocking), and STRUCT-004's
+  # own fix text names this as the way to lift it: "sign off G0 and update
+  # `repository.runtime_code_forbidden_until`". Setting it back to a gate name re-arms the
+  # ban -- which is the right move if a later phase ever needs a code freeze again.
+  #
+  # STRUCT-004 is now dormant, not deleted. `structure` keeps its self-test coverage
+  # through STRUCT-003 (forbidden_paths), because a gate that has never rejected anything
+  # is unproven whichever of its rules is currently reachable.
+  runtime_code_forbidden_until: null
   runtime_code_globs: ["src/lionel/**/*.py"]
 
   required_paths:
