@@ -129,6 +129,21 @@ printf '#!/usr/bin/env bash\necho hi\n' > scripts/_selftest.sh
 expect_violation shell "SH-STRICT" "a script without strict mode"
 rm -f scripts/_selftest.sh
 
+# 7b/7c. The Git Bash hazard rules (MASTER_PLAN_v1 §2, carried forward by v2 Phase 1).
+#     These two rows are the only ones in that seven-row table that can be checked
+#     statically in this repository's own scripts; the rest describe what an operator
+#     types at a terminal and live in scripts/check_env.sh instead. Both plants are
+#     lines that LOOK correct and are not, which is the whole difficulty: the Store
+#     stub exits 9009 with no useful message, and a mangled bind mount silently lands
+#     in C:/Program Files/Git and the container comes up empty.
+printf '#!/usr/bin/env bash\nset -euo pipefail\npython -m unittest\n' > scripts/_selftest.sh
+expect_violation shell "SH-BARE-PYTHON" "a bare interpreter name (the Store stub)"
+rm -f scripts/_selftest.sh
+
+printf '#!/usr/bin/env bash\nset -euo pipefail\ndocker run -v /qdrant/storage:/s qdrant\n' > scripts/_selftest.sh
+expect_violation shell "SH-MSYS-DOCKER" "a container path MSYS would rewrite"
+rm -f scripts/_selftest.sh
+
 # 8. Broken internal doc link.
 printf '# t\n\n[x](does-not-exist.md)\n' > docs/_selftest.md
 RESTORE+=("rm -f '$ROOT/docs/_selftest.md'")

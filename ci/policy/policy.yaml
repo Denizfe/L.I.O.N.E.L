@@ -359,6 +359,9 @@ doc_claims:
     - id: assertions-ratio
       regex: '(\d+)/(\d+) assertions'
       fact: assertions
+    - id: policy-sections
+      regex: '(\d+) configuration sections'
+      fact: policy_sections
 
   documents:
     - doc: CLAUDE.md
@@ -419,6 +422,26 @@ shell:
     - id: SH-EVAL
       regex: "\\beval\\s+\"?\\$"
       why: "eval on a variable is command injection waiting for the right input."
+    # ── MASTER_PLAN_v1 §2, the Git Bash / Windows hazard table ──────────────
+    # v2 Phase 1 carries these forward. Three of the seven rows are statically
+    # checkable in this repository's own scripts; the rest describe operator
+    # behaviour at a terminal and are recorded in scripts/check_env.sh instead.
+    # CRLF is already SH-CRLF above — that row was enforced from the start.
+    - id: SH-BARE-PYTHON
+      regex: '^(?!.*\b(uvx|uv run)\b).*(?<![\w./-])(python|pip)(?![\w.-])'
+      why: >-
+        On Windows `python` resolves to the Microsoft Store stub, which exits 9009
+        and opens the Store instead of running anything. MASTER_PLAN_v1 §2: use
+        `python3`, or `uv run` and let uv own the interpreter. Lines that already
+        go through `uv run` or `uvx` are exempt, because there uv chose the
+        interpreter and the stub is not on the path being used.
+    - id: SH-MSYS-DOCKER
+      regex: '^(?!.*MSYS_NO_PATHCONV).*\bdocker\b.*\s/[A-Za-z]'
+      why: >-
+        Git Bash rewrites a container-side absolute path into a Windows one before
+        Docker ever sees it — `/qdrant/storage` becomes `C:/Program Files/Git/qdrant/storage`
+        and the mount silently lands somewhere else. MASTER_PLAN_v1 §2: prefix with
+        `MSYS_NO_PATHCONV=1`, or double the leading slash (`//qdrant/storage`).
 
 architecture:
   # ADR-0009: callers branch on ProviderCapabilities, never on provider identity.
@@ -483,3 +506,105 @@ l0:
     - contracts/media/v1/audio-frame.schema.json
   control_plane_dirs: ["contracts/mcp", "contracts/events", "contracts/core"]
   media_payload_keys: [payload_b64, payload, pcm, audio_bytes, raw_audio]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PREFLIGHT — the host tooling table.  ADR-0002, ADR-0014.
+#
+# MASTER_PLAN_v1 §1.1 is a table of six tools a human was expected to check by
+# hand, and MASTER_PLAN_v2 Phase 1 carries it forward verbatim: "the tooling
+# preflight table, the Git Bash hazard rules". A table nobody executes is the
+# same failure this pipeline exists to prevent, so `scripts/check_env.sh` runs
+# it and this is where it lives.
+#
+# NO GATE READS THIS SECTION. The preflight describes the HOST, and a gate that
+# failed CI because a developer's machine lacked VS Build Tools would be
+# checking the wrong thing entirely — CI is not the host runtime. It is read by
+# scripts/check_env.sh and by tests/unit/test_preflight.py, which checks the
+# table's shape rather than the machine's contents.
+#
+# required_at:
+#   now        blocking. `check_env.sh` exits 1 without it.
+#   G<n>       needed by that gate's phase, not before. Reported, never blocking.
+#              A row here is a promise to the future with a date on it.
+# ─────────────────────────────────────────────────────────────────────────────
+preflight:
+  tools:
+    - id: git
+      minimum: "2.40"
+      probe: "git --version"
+      extract: '([0-9]+\.[0-9]+(\.[0-9]+)?)'
+      required_at: now
+      why: "Versioning, and the submodule that carries whisper.cpp from G6."
+    - id: python3
+      minimum: "3.11"
+      probe: "python3 --version"
+      extract: '([0-9]+\.[0-9]+(\.[0-9]+)?)'
+      required_at: now
+      why: "Every gate, every script and the test suite. 3.11 is the floor tomllib sets."
+    - id: node
+      minimum: "20.0"
+      probe: "node --version"
+      extract: '([0-9]+\.[0-9]+(\.[0-9]+)?)'
+      required_at: now
+      why: "npx launches the filesystem capability and the ADR-0032 dev-tooling servers."
+    - id: uv
+      minimum: "0.5"
+      probe: "uv --version"
+      extract: '([0-9]+\.[0-9]+(\.[0-9]+)?)'
+      required_at: now
+      why: "Owns the interpreter and reproduces uv.lock. Bare `python` is a Store stub."
+    - id: docker
+      minimum: "24.0"
+      probe: "docker --version"
+      extract: '([0-9]+\.[0-9]+(\.[0-9]+)?)'
+      required_at: now
+      why: "Runs the digest-pinned GitHub MCP server (ADR-0013); Qdrant from G2."
+    - id: cl
+      minimum: "19.0"
+      probe: "cl"
+      extract: '([0-9]+\.[0-9]+(\.[0-9]+)?)'
+      required_at: G6
+      why: >-
+        VS Build Tools 2022, Desktop development with C++. Compiles whisper.cpp
+        at G6. Only resolves inside a Developer Command Prompt, which is why this
+        row is reported and never blocking.
+  # Python packages the gates import. Absence is not a style problem: without
+  # grpcio-tools the protobuf gate exits 2, and exit 2 is a BROKEN GATE, not a
+  # passing repository (CI_Architecture §4).
+  python_packages:
+    - id: yaml
+      distribution: pyyaml
+      required_at: now
+      why: "Every gate reads this file with it. Without it nothing below can be read."
+    - id: jsonschema
+      distribution: jsonschema
+      required_at: now
+      why: "gate_jsonschema and the contract test layer."
+    - id: grpc_tools
+      distribution: grpcio-tools
+      required_at: now
+      why: "gate_protobuf exits 2 without it — a broken gate reported as such."
+    - id: psutil
+      distribution: psutil
+      required_at: now
+      why: "ADR-0014. The kill-tree test cannot observe orphaned children without it."
+  # Live checks that need the network or a credential. Never run by default:
+  # ADR-0007 means the ordinary path must work with the cable pulled, and a
+  # preflight that silently reached the internet would be the first thing to
+  # break that promise. `check_env.sh --live` opts in, and says so before it does.
+  #
+  # The v1.0 DoD clause "the filesystem server lists the project root" splits in
+  # two here. That the declared root EXISTS is a host fact, checked on every run —
+  # it is how the stale Desktop path was found. That the server STARTS and refuses
+  # to escape needs npx and a fetch, so it lives below.
+  live_checks:
+    - id: filesystem-escape
+      why: >-
+        v1.0 Phase 1 DoD: the filesystem capability starts, lists the project root,
+        and REFUSES a read outside it. The refusal is the half worth testing — a
+        server that lists the root and also lists C:/Windows has passed nothing.
+    - id: github-identity
+      why: >-
+        v1.0 Phase 1 DoD: the digest-pinned GitHub MCP container starts and `get_me`
+        returns Efe's login. Needs a fine-grained PAT resolved through ADR-0015,
+        which is why it can never be part of an offline run.

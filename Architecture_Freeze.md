@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.6.0** |
+| Architecture version | **1.7.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.6.0`** |
+| Tag | **`architecture-1.7.0`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Previous versions | **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **0 ADRs pending.** ADR-0033 and ADR-0032 both accepted 2026-08-24 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -28,6 +28,14 @@
 ---
 
 ## 1. Architecture version
+
+**1.7.0** — MINOR over 1.6.0: v1.0's Phase 1 preflight table becomes executable, and the
+two statically checkable rows of its Git Bash hazard table become gate rules. No ADR was
+added and no decision changed — both tables are decisions MASTER_PLAN_v2's Phase 1 section
+already carries forward in prose ("the tooling preflight table, the Git Bash hazard
+rules"), and this makes them run. MINOR rather than PATCH because `ci/policy/policy.yaml`
+gains a section and two enforcing rules, which is more than correcting text. §9.11 records
+what the preflight found on its first run.
 
 **1.6.0** — MINOR over 1.5.0: `STRUCT-004` lifted and Phase 1 opened. No ADR was added
 and no decision changed — G0's sign-off (2026-08-10) was always the condition, and
@@ -71,12 +79,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.6.0
-sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
+ARCHITECTURE CHECKSUM                                          architecture 1.7.0
+sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
 
   ADRs         33 files   sha256:20888f57f60d14ad15267a754f793c3c…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:5dbaf3178194cf136cd02c3aae785ae1…
+  policy        8 files   sha256:9a0f7be61f24c45d40bfb53cdde8326d…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -86,6 +94,8 @@ sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.6.0   sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
+                     74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.5.0   sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
                      74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.4.0   sha256:8d77af2c61f6fedfe748221abcffb00f6f7f703e81d8e3c5b0e4d35712d2d86d
@@ -109,7 +119,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
+python3 scripts/architecture_checksum.py --verify sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -163,8 +173,8 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Tier model** | L0–L3 per ADR-0007; L0 conformance is a blocking gate |
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
-| **Policy** | `ci/policy/policy.yaml` — 16 configuration sections (`mcp` added at 1.4.0) |
-| **CI gates** | **22 gates, 145 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 25/25, gate coverage 22/22 |
+| **Policy** | `ci/policy/policy.yaml` — 20 configuration sections (`preflight` added at 1.7.0), and the count is now measured by `doc-claims` |
+| **CI gates** | **22 gates, 145 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 27/27, gate coverage 22/22 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -667,6 +677,84 @@ success for a mechanism it never touched.
 
 `.mcp.json`, `src/`, `tests/` and `CLAUDE.md` remain outside the checksum set. The freeze
 governs the architecture; the code written against it is checked by its own tests.
+
+---
+
+### 9.11 Version 1.7.0 — the preflight table runs, and finds a stale root
+
+MASTER_PLAN_v2's Phase 1 section says, of v1.0's environment work: *"Carries forward v1.0's
+environment work — the tooling preflight table, the Git Bash hazard rules."* Carried
+forward, but not carried anywhere. Both were prose in a superseded plan, and both had been
+prose for the whole of Phase 0.
+
+**What 1.7.0 adds**
+
+| | |
+|---|---|
+| `ci/policy/policy.yaml` → `preflight` | the six-tool table from MASTER_PLAN_v1 §1.1, the four Python packages the gates import, and two opt-in live checks. One registry |
+| `scripts/check_env.sh` | runs it. Exit `0` ready · `1` the environment is wrong · `2` the preflight is broken |
+| `scripts/_preflight_table.py` | reads the registry and prints TSV. A separate file so two quoting regimes never fight over the same backslashes |
+| `SH-BARE-PYTHON`, `SH-MSYS-DOCKER` | the two rows of the seven-row hazard table that can be checked statically |
+| `tests/unit/test_preflight.py` | 16 tests over the table's shape and the agreement between the three files |
+| `doc-claims` → `policy_sections` | a measured fact behind the claim "N configuration sections" |
+
+**Why the preflight is not a gate.** It describes the *host*, and CI is not the host runtime
+(ADR-0002). A gate that went red because a laptop lacked VS Build Tools would be asserting
+something true about the wrong computer. So `check_env.sh` is a script an operator runs, and
+what CI checks is the table's shape — that every row has a probe naming its own tool, an
+extract pattern that finds a version, and a `why` long enough to be a reason.
+
+**What it found on its first run.** The `filesystem` capability is handed exactly one allowed
+root and cannot escape it, which is the whole point of the scope note in MASTER_PLAN_v1 §1.4.
+That root was `C:/Users/deniz/Desktop/L.I.O.N.E.L`. The repository is in `Projects/`. The
+declared root had not existed for as long as anyone can date, and:
+
+```
+docker-digests   PASS      artifacts       PASS      l0-conformance  PASS
+structure        PASS      contracts       PASS      checksum        PASS
+```
+
+Every gate green, because every gate was checking the file's *shape*. The path is a host
+fact, and a host fact cannot be checked by anything that runs on a different machine — which
+is exactly why nothing was checking it. The same stale root was written in **two** files:
+`config/capabilities.registry.json` and `config/lionel.toml` `[project].root`. A check that
+had read only the capability registry would have fixed one of them and reported success, so
+the preflight scans both, and a test asserts it scans both.
+
+This also settles what "v1.0's Phase 1 DoD in full" can mean. Two of its seven items —
+the filesystem server refusing to escape its root, and `get_me` returning Efe's login —
+need the network and a credential. They are `live_checks`, run only under `--live`, which
+announces itself first. A preflight that quietly dialled out would be the first thing to
+break ADR-0007's promise that the ordinary path works with the cable pulled.
+
+**A hard-coded number in a generated document.** `CI_Inventory.md` read *"Runtime code | **0
+files** — Phase 0 discipline machine-checked"*. It was a string literal in
+`scripts/generate_ci_docs.py`, true while `STRUCT-004` forbade runtime code and false from
+the moment 1.6.0 lifted it. `generated-docs` could not catch it: the document matched the
+generator, and the generator was wrong — the same shape as the self-test undercount at
+1.5.0. It is now measured (`7 files`). A number in a generated document is a hand-written
+claim wearing a generated document's authority unless something counts it.
+
+**The blunt rule that caught its own author.** `SH-BARE-PYTHON` is line-based and skips
+comments, not strings. Its first finding was a heading inside `check_env.sh` that printed
+the words "python packages". The rule was right by its own terms and the cost was one
+capital letter; teaching it to parse shell string literals would mean writing a shell
+parser, and a parser that is 95% correct on this class is worse than a rule that is blunt
+and known to be blunt.
+
+**Not done, and deliberately.** `contracts/mcp/v1/capabilities-registry.schema.json` carries
+the same stale `Desktop/` path in its `examples` block. It is illustrative rather than part
+of the stable surface — but it is inside a frozen contract, and §4 guards contract files
+hardest. Raised rather than edited. Five of the seven hazard rows (`$(pwd -W)` in mounts,
+`winpty` for anything that prompts, forward slashes in config values, the WSL2 backend, and
+CRLF in scripts — the last already enforced as `SH-CRLF`) describe what an operator types at
+a terminal and cannot be checked from a file; they are recorded in `check_env.sh` where the
+operator will read them.
+
+Self-test **27/27**. Gates **22/22**, 0 broken. Tests **102**, 1 skipped (a POSIX-only
+kill-tree case). `scripts/`, `src/`, `tests/` and `CLAUDE.md` remain outside the checksum
+set; the version moves because `ci/policy/policy.yaml`, `config/lionel.toml` and
+`config/capabilities.registry.json` are in it.
 
 ---
 

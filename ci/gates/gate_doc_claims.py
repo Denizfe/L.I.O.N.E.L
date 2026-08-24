@@ -71,6 +71,12 @@ def measure() -> dict[str, int]:
             "jobs": len(gen.workflow_jobs()),
             "assertions": len(gen.selftest_cases()),
             "adrs": len(sorted((ROOT / "docs" / "decisions").glob("ADR-*.md"))),
+            # Top-level keys in policy.yaml. Added at 1.7.0 because the claim
+            # "16 configuration sections" in Architecture_Freeze.md §3 was wrong by
+            # two on the day it was written and had drifted to four by the time
+            # anyone counted — inside the very section this gate already watches,
+            # for want of a pattern that matched the sentence.
+            "policy_sections": len(load_policy()),
         }
     except Exception as e:
         gate_error("scripts/generate_ci_docs.py changed shape", f"{type(e).__name__}: {e}")

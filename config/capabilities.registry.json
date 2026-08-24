@@ -15,7 +15,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "C:/Users/deniz/Desktop/L.I.O.N.E.L"
+        "C:/Users/deniz/Projects/L.I.O.N.E.L"
       ],
       "scope": "project_root_only",
       "side_effect_default": "read",

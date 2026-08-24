@@ -218,6 +218,20 @@ def workflow_jobs() -> list[str]:
     return list(yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"])
 
 
+def runtime_file_count() -> int:
+    """How many .py files live under `src/lionel/`.
+
+    This line used to read "**0 files** — Phase 0 discipline machine-checked", hard-coded.
+    It was true for as long as `STRUCT-004` forbade runtime code, and false from the moment
+    1.6.0 lifted it — in a document whose own banner says it is generated, which is exactly
+    the assurance that makes a stale number expensive. `generated-docs` could never catch
+    it: the document matched the generator, and the generator was wrong. Same shape as the
+    23-vs-24 self-test undercount. A number in a generated document must be measured, or it
+    is a hand-written claim wearing a generated document's authority.
+    """
+    return sum(1 for _ in (ROOT / "src" / "lionel").rglob("*.py"))
+
+
 def selftest_cases() -> list[tuple[str, str, str]]:
     """(planted thing, gate, rule) read off ci/self_test.sh."""
     text = (ROOT / "ci" / "self_test.sh").read_text(encoding="utf-8")
@@ -338,7 +352,7 @@ def render_inventory(gates: list[dict], total_rules: int, jobs: list[str]) -> st
         "| Current state | **all gates pass · 0 broken** |",
         "| Runner | `bash ci/run_gates.sh [gate]` |",
         f"| Self-test | `bash ci/self_test.sh` — {len(cases)}/{len(cases)} planted violations caught |",
-        "| Runtime code | **0 files** — Phase 0 discipline machine-checked |", "",
+        f"| Runtime code | **{runtime_file_count()} files** under `src/lionel/` |", "",
         "---", "", "## 1. The gates", "",
         "Every gate is a standalone script. None depends on another, so a failure never cascades "
         f"and never hides the other {len(gates) - 1} results.", "",

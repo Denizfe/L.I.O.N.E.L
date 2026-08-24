@@ -454,7 +454,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 25 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 27 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -467,6 +467,8 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a path whose absence is a recorded decision | `structure` | STRUCT-003 |
 | an unregistered TODO | `no-todo` | TODO-001 |
 | a script without strict mode | `shell` | SH-STRICT |
+| a bare interpreter name (the Store stub) | `shell` | SH-BARE-PYTHON |
+| a container path MSYS would rewrite | `shell` | SH-MSYS-DOCKER |
 | a broken internal link | `markdown` | MD-LINK |
 | L0 declaring network_allowed = true | `l0-conformance` | L0-OFFLINE-002 |
 | an ADR count that no longer matches policy | `adr` | ADR-001 |
@@ -484,7 +486,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 | a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
 
-**25/25 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**27/27 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

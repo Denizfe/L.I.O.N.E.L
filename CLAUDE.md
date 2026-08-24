@@ -83,13 +83,22 @@ it — no fixed point to chase. Record it **last**.
 ```bash
 bash ci/run_gates.sh                    # 22/22, 0 broken
 bash ci/run_gates.sh <gate>             # one gate
-bash ci/self_test.sh                    # 25/25 assertions, 22/22 gates covered
+bash ci/self_test.sh                    # 27/27 assertions, 22/22 gates covered
 python3 scripts/architecture_checksum.py --verify
 python3 scripts/generate_ci_docs.py --check
+bash scripts/check_env.sh               # the host, not the repository
 ```
 
 Requires `pyyaml`, `jsonschema` and **`grpcio-tools`**. Without the last one the `protobuf`
 gate exits **2** — a *broken gate*, not a passing repository, and the runner says so.
+`check_env.sh` checks for all four and tells you which is missing before you spend an hour
+reading a stack trace.
+
+**`check_env.sh` is not a gate and never will be.** It describes the *host*, and CI is not
+the host runtime (ADR-0002) — a gate red because a laptop lacks VS Build Tools is asserting
+something true about the wrong computer. Its table lives in `ci/policy/policy.yaml` under
+`preflight`; `tests/unit/test_preflight.py` checks the table's shape, which is the part that
+*is* portable. It reaches the network only under `--live`, and says so before it does.
 
 **Exit codes are a contract:** `0` pass · `1` policy violation (fix the repo) · `2` the gate
 itself is broken (fix the gate). Never collapse 1 and 2.
@@ -122,9 +131,19 @@ pytest would be a new dependency and needs an ADR. `python3 -m unittest discover
 | `lionel.coordinators` | ADR-0008 | the five coordinators satisfy contract tests with stubs |
 | `tests/contract/test_pinned_artifacts.py` | ADR-0013 | the pinned GitHub MCP image digest is verified |
 
-**All six G1 DoD items now have an executable test.** What remains before G1 is signed off
-is v1.0's Phase 1 DoD carried forward — the tooling preflight table and the Git Bash hazard
-rules — plus whatever a sign-off audit turns up.
+**All six G1 DoD items now have an executable test.** v1.0's Phase 1 DoD, which
+MASTER_PLAN_v2 carries forward in full, is executable too as of 1.7.0: `bash
+scripts/check_env.sh` runs the tooling preflight table, and two of the seven Git Bash hazard
+rows became `SH-BARE-PYTHON` and `SH-MSYS-DOCKER`.
+
+**Two of its clauses need `--live`** — the filesystem server refusing to escape its root, and
+`get_me` returning Efe's login. Both need the network and a credential, so they are opt-in;
+an offline default is not laziness here, it is ADR-0007. **They have not been run.** G1
+sign-off wants one `--live` run on Efe's machine and the output recorded.
+
+The preflight's first run found the `filesystem` capability rooted at a directory that does
+not exist (`Desktop/`, not `Projects/`), written identically in two config files, with all
+22 gates green — a host fact, and nothing that runs on another machine can check one.
 
 Three traps in what is already there:
 
@@ -208,6 +227,7 @@ ci/policy/policy.yaml    ALL thresholds, allowlists and registries
 ci/run_gates.sh          ORDER is the canonical gate list
 ci/self_test.sh          plants violations; proves the gates bite
 scripts/                 architecture_checksum.py · generate_ci_docs.py · verify_artifacts.sh
+                         check_env.sh — the host preflight, table in policy.yaml `preflight`
 MASTER_PLAN_v2.md        11 gated phases, G0–G10. Phase 1 scope is §10
 Architecture_Freeze.md   the frozen state, the checksum, and the change-control rules
 .mcp.json                dev-tooling MCP servers (ADR-0032). Pinned, egress-declared,

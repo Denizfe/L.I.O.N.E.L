@@ -9,7 +9,7 @@
 
 [project]
 name = "lionel"
-root = "C:/Users/deniz/Desktop/L.I.O.N.E.L"   # ADR-0002
+root = "C:/Users/deniz/Projects/L.I.O.N.E.L"   # ADR-0002
 
 [tier]
 active = "l0"                                  # ADR-0007. Overridden by LIONEL_TIER.

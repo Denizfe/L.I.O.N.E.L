@@ -12,8 +12,8 @@
 | Workflow jobs | **26** |
 | Current state | **all gates pass · 0 broken** |
 | Runner | `bash ci/run_gates.sh [gate]` |
-| Self-test | `bash ci/self_test.sh` — 25/25 planted violations caught |
-| Runtime code | **0 files** — Phase 0 discipline machine-checked |
+| Self-test | `bash ci/self_test.sh` — 27/27 planted violations caught |
+| Runtime code | **7 files** under `src/lionel/` |
 
 ---
 
@@ -103,7 +103,7 @@ Which decisions have an executable test, and which do not.
 | Job | Type | Notes |
 |---|---|---|
 | 22 policy gates | one per gate | **No `needs:` between them.** Independent by design |
-| `gate-self-test` | meta | Plants 25 known violations, asserts each is caught |
+| `gate-self-test` | meta | Plants 27 known violations, asserts each is caught |
 | `l0-conformance` | blocking | `needs: [structure, contracts, architecture]`. ADR-0007 |
 | `checksum` · `generated-docs` · `gate-coverage` | **meta** | Check the pipeline, not the repository. ADR-0030 |
 | `windows-policy-gates` | platform | `windows-latest` under Git Bash. ADR-0002, ADR-0014 |
@@ -136,6 +136,8 @@ A gate that passes a clean repository but would miss a real violation is decorat
 | a path whose absence is a recorded decision | `structure` | STRUCT-003 |
 | an unregistered TODO | `no-todo` | TODO-001 |
 | a script without strict mode | `shell` | SH-STRICT |
+| a bare interpreter name (the Store stub) | `shell` | SH-BARE-PYTHON |
+| a container path MSYS would rewrite | `shell` | SH-MSYS-DOCKER |
 | a broken internal link | `markdown` | MD-LINK |
 | L0 declaring network_allowed = true | `l0-conformance` | L0-OFFLINE-002 |
 | an ADR count that no longer matches policy | `adr` | ADR-001 |
@@ -153,7 +155,7 @@ A gate that passes a clean repository but would miss a real violation is decorat
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 | a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
 
-**25/25 caught.**
+**27/27 caught.**
 
 ---
 
