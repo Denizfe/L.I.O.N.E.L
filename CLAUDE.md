@@ -111,6 +111,24 @@ self-test coverage through `STRUCT-003` (`forbidden_paths`).
 **Tests run on `unittest`, not pytest.** ADR-0027 defines five layers and names no runner;
 pytest would be a new dependency and needs an ADR. `python3 -m unittest discover -s tests -t .`
 
+### Phase 1 (G1) — what exists
+
+| Module | ADR | The G1 clause it makes executable |
+|---|---|---|
+| `lionel.secrets` | ADR-0015 | a `secret://` URI resolves and its value redacts in log output |
+| `lionel.platform.process_supervisor` | ADR-0014 | kill-tree verified by terminating a parent — zero orphaned children |
+| `lionel.capabilities` | ADR-0003, ADR-0007 | the capability registry replacing `mcp.servers.json` |
+| `lionel.policy` | ADR-0012 | the Policy Engine denies an unregistered tool by default |
+
+**Still open at G1:** the five coordinators as contract-conforming shells, and verifying the
+pinned GitHub MCP image digest.
+
+Two traps in what is already there. `PolicyEngine` evaluates **constraint rules** — limits
+with no `decision` — in a pass of their own, before first-match-wins; under strict
+positional matching the shipped `runaway containment` rule is unreachable and the loop it
+bounds runs free. And `TrustContext.level` is recomputed from `sources` on every read
+rather than cached, so no code path can forget to lower it.
+
 ---
 
 ## Generated documents — do not hand-edit
