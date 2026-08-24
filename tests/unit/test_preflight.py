@@ -145,6 +145,7 @@ class TestScriptAndTableAgree(unittest.TestCase):
                            capture_output=True)
         self.assertEqual(3, r.returncode)
 
+    @unittest.skipIf(yaml is None, "pyyaml not installed (pyproject `ci` extra)")
     def test_the_helper_emits_no_carriage_returns(self):
         """Python translates newlines to os.linesep on write, and the shell then reads
         a trailing CR as part of the last field — which made `[[ -d ]]` deny a
