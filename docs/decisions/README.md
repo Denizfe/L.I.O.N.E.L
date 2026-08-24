@@ -62,8 +62,13 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0030](ADR-0030-self-enforcing-ci.md) | The pipeline enforces its own invariants | Accepted | 0 |
 | [0031](ADR-0031-reviewed-licence-register.md) | A licence that needs review must have somewhere to be reviewed | Accepted | 0 |
 | [0032](ADR-0032-dev-tooling-mcp-servers.md) | Developer-tooling MCP servers are declared, pinned, and disclosed | Accepted | 1 |
+| [0033](ADR-0033-hand-written-claim-checking.md) | Count-shaped claims in hand-written documents are measured, not remembered | Accepted | 0 |
 
-**0 ADRs pending.** ADR-0032 was accepted 2026-08-24 and implemented in the same version
+**0 ADRs pending.** ADR-0033 was accepted 2026-08-24 and implemented in the same version —
+after the already-working gate was removed from the repository so the decision could be made
+in writing rather than by having shipped. `Architecture_Freeze.md` §9.9 records it.
+
+**ADR-0032 was accepted 2026-08-24 and implemented in the same version
 (architecture 1.4.0): `.mcp.json` holds one pinned entry and `gate_mcp` enforces
 `MCP-000`–`MCP-003`. Its Erratum of that date discharges the two paragraphs that described
 it as pending — including the one saying `.mcp.json` would not be created until acceptance.

@@ -305,6 +305,19 @@ jobs:
       # not a check.
       - run: python3 ci/gates/gate_generated_docs.py
 
+  doc-claims:
+    name: "doc-claims · hand-written counts match measurement"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # ADR-0030. `generated-docs` covers documents that have a generator; this covers the
+      # current-state claims in the ones that do not. It measures rather than remembers:
+      # nothing here reads a number out of a document except to compare it.
+      - run: python3 ci/gates/gate_doc_claims.py
+
   gate-coverage:
     name: "gate-coverage · every gate has rejected something"
     runs-on: ubuntu-latest

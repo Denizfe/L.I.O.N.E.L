@@ -56,7 +56,7 @@ repository:
 
 adr:
   dir: docs/decisions
-  expected_count: 32
+  expected_count: 33
   required_sections: ["## Context", "## Decision", "## Consequences", "## Alternatives Rejected", "## Verification"]
   valid_statuses: ["Accepted", "Provisional", "Superseded", "Proposed", "Deprecated"]
   # ── ADR-0029: Errata / Amendments / Corrections ──────────────────────────
@@ -315,6 +315,75 @@ mcp:
   # as a violation — blocking it would settle by implementation a question the ADR
   # deliberately left to a reviewer.
   standing_entry_count: 1
+
+# -- ADR-0030: the counts this repository states about itself ----------------
+# `generated-docs` covers documents that HAVE a generator. Everything else asserting a
+# count is hand-written prose, and ADR-0030's Costs section records that as open. Four
+# stale claims surfaced while architecture 1.4.0 was being prepared, one of them under a
+# heading reading "Verify before you claim anything".
+#
+# The registry names WHERE current-state claims live; the gate measures WHETHER they are
+# true. Most numbers in this repository are supposed to be stale -- Architecture_Freeze.md
+# section 9.x and the sign-off's evidence tables are dated records, and this project appends
+# corrections rather than rewriting history. A gate that flagged those would be arguing
+# with the archive.
+doc_claims:
+  patterns:
+    - id: gates
+      regex: '(\d+) gates'
+      fact: gates
+    - id: gates-ratio
+      regex: '(\d+)/(\d+)(?:,| ) *(?:0 broken|gates covered)'
+      fact: gates
+    - id: rules
+      regex: '(\d+) rules'
+      fact: rules
+    - id: jobs
+      regex: '(\d+) (?:workflow |CI )?jobs'
+      fact: jobs
+    - id: adrs
+      regex: '(\d+) ADRs'
+      fact: adrs
+    - id: selftest
+      regex: '[Ss]elf-test (\d+)/(\d+)'
+      fact: assertions
+    - id: assertions-ratio
+      regex: '(\d+)/(\d+) assertions'
+      fact: assertions
+
+  documents:
+    - doc: CLAUDE.md
+      region: null                       # the whole file
+      historical:
+        - line: "They drifted to 16 gates against 17, 88 rules against 127"
+          why: "A dated account of the drift that motivated the generator. Its numbers are
+                the point; correcting them would delete the evidence."
+          owner: architecture
+    - doc: CI_Architecture.md
+      region: "## 8. Current state"
+    - doc: Architecture_Freeze.md
+      region: "## 3. Frozen scope"
+
+  # Left out, deliberately and with an owner. Both interleave current claims with dated
+  # records line by line -- Phase1_Entry_Checklist.md carries "Counts when this item landed"
+  # two lines above "Current:" -- so bringing them in needs document surgery, not a gate.
+  out_of_scope:
+    - doc: Phase1_Entry_Checklist.md
+      why: "Per-item records and current-state claims are interleaved; separating them means
+            restructuring the document."
+      owner: architecture
+      unblocked_by: "splitting the current-state table into its own section, then registering it"
+    - doc: Phase0_Final_Signoff.md
+      why: "A dated audit record. Its numbers describe what was true at sign-off and must
+            not move."
+      owner: architecture
+      unblocked_by: "nothing -- this one is correct as an exclusion, and is listed so the
+                     omission is visible rather than implied"
+    - doc: Architecture_Risk_Register.md
+      why: "Status and severity claims, not counts. The doc-claim-auditor agent covers them;
+            a gate would need to evaluate whether a risk is closed."
+      owner: architecture
+      unblocked_by: "a rule that can read a risk's closure evidence, if one is ever possible"
 
 coverage:
   exempt: []

@@ -2,19 +2,23 @@
 
 | | |
 |---|---|
-| Architecture version | **1.4.0** |
+| Architecture version | **1.5.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.4.0`** |
+| Tag | **`architecture-1.5.0`** |
 | Status | **FROZEN** |
-| Previous versions | **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **0 ADRs pending.** ADR-0032 accepted 2026-08-24; 0029–0031 accepted 2026-08-11 |
+| Previous versions | **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** ADR-0033 and ADR-0032 both accepted 2026-08-24 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **All 32 ADRs are in force.** ADR-0032 was accepted 2026-08-24 and implemented in the
+> **All 33 ADRs are in force.** ADR-0033 was accepted 2026-08-24 and implemented in the
+> same version — but only after the working gate was removed from the repository so the
+> decision could be made in writing rather than by having shipped. §9.9.
+>
+> ADR-0032 was accepted 2026-08-24 and implemented in the
 > same version: `.mcp.json` now exists, `gate_mcp` enforces `MCP-000`–`MCP-003`, and the ADR
 > carries an Erratum discharging the two paragraphs that described it as pending. §9.8.
 > ADR-0029, ADR-0030 and ADR-0031 were accepted 2026-08-11;
@@ -24,6 +28,9 @@
 ---
 
 ## 1. Architecture version
+
+**1.5.0** — MINOR over 1.4.0: ADR-0033 added and accepted, bringing `doc-claims` with it.
+No decision already in force changed.
 
 **1.4.0** — MINOR over 1.3.0: ADR-0032 accepted, so a pending decision comes into force,
 which §1 defines as MINOR. Nothing already in force changed. `.mcp.json` and `gate_mcp`
@@ -59,21 +66,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.4.0
-sha256:8d77af2c61f6fedfe748221abcffb00f6f7f703e81d8e3c5b0e4d35712d2d86d
+ARCHITECTURE CHECKSUM                                          architecture 1.5.0
+sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
 
-  ADRs         32 files   sha256:b79058e620b261176bf7113d2fc7cff3…
+  ADRs         33 files   sha256:20888f57f60d14ad15267a754f793c3c…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:2e85272124d033ab3efd78e4404141d2…
+  policy        8 files   sha256:e9bb3eadd88a0adba6022171bdf36276…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
-  73 files hashed
+  74 files hashed
 ```
 
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.4.0   sha256:8d77af2c61f6fedfe748221abcffb00f6f7f703e81d8e3c5b0e4d35712d2d86d
+                     73 files — ADRs 32 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.3.0   sha256:c13b16c6527ac26564e4041ec2c71aa88a72b59ac12cf6d6f94d3b4ef94bd481
                      73 files — ADRs 32 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.2.0   sha256:77e6f37244a7ffa6248a3c1607b42f23145493ecebcd0cb1ce1f8b1425479ec7
@@ -90,10 +99,10 @@ architecture 1.0.0   sha256:fab0610aa3167a2f26b0e812dbfe9563abbf7aa28ab18b9d773d
 `CHECKSUM-001` on drift, `CHECKSUM-003` if a group changes shape (ADR-0030). Between 1.0.0
 and 1.1.0 it was recorded and checked by nothing — which is how it came to be wrong.
 
-**Verified against a clean clone on 2026-08-24.** Reproduce it with:
+**Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:8d77af2c61f6fedfe748221abcffb00f6f7f703e81d8e3c5b0e4d35712d2d86d
+python3 scripts/architecture_checksum.py --verify sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -116,7 +125,7 @@ recorded, and the only thing that noticed was a `git add` warning. §9.8.
 ### Files in the checksum set
 
 ```
-docs/decisions/ADR-*.md                    32
+docs/decisions/ADR-*.md                    33
 contracts/{core,mcp,events,media}/v1/*.schema.json   27
 contracts/grpc/v1/*.proto                   3
 contracts/MANIFEST.json                     1
@@ -140,7 +149,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **32 ADRs, 0001–0032** — all Accepted or Superseded, 0 pending |
+| **Architecture decisions** | **33 ADRs, 0001–0033** — all Accepted or Superseded, 0 pending |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -148,7 +157,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 16 configuration sections (`mcp` added at 1.4.0) |
-| **CI gates** | **21 gates, 142 rules, 24 workflow jobs** — 18 checking the repository, 3 checking the pipeline (ADR-0030). Self-test 24/24, gate coverage 21/21 |
+| **CI gates** | **22 gates, 145 rules, 25 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 25/25, gate coverage 22/22 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -525,6 +534,73 @@ of them.
 
 ---
 
+### 9.9 Version 1.5.0 — ADR-0033, and a working gate removed before it could decide anything
+
+`gate_doc_claims` was written, wired into `ORDER` and `ci.yml`, given a planted violation,
+and run. It worked. On its first execution against the 1.4.0 tree it reported
+
+```
+CLAIM-001  `CLAUDE.md` claims `20/20, 0 broken`; the pipeline reports gates = 21
+           at CLAUDE.md:84
+```
+
+— four gates out of date, under a heading reading **"Verify before you claim anything"**, in
+the file every session loads first.
+
+Then ADR-0030's Costs section turned out to have already answered the question:
+
+> Closing the rest is a larger question than this ADR answers. It means either generating
+> those documents too — which would cost the prose that makes them worth reading — or **a
+> narrower check over count-shaped claims, which is a different decision needing its own
+> ADR.**
+
+That is exactly what had just been built. The reasoning available at that moment — *"this
+only enforces ADR-0030 more completely, which §4 item 3 permits"* — is the reasoning §4
+exists to prevent, and it is at its most persuasive when the thing already works and is
+already green.
+
+So the implementation was **removed from the repository**, and `ADR-0033` written as
+`Proposed` instead. Efe accepted it the same day, and it went back in. The round trip cost
+an hour and produced a decision with a record behind it rather than a gate with an
+implementer behind it.
+
+**What landed**
+
+| | |
+|---|---|
+| `ci/gates/gate_doc_claims.py` | `CLAIM-001` count disagrees with measurement · `CLAIM-002` registered document or region missing · `CLAIM-003` exclusion missing `why`/`owner`/`unblocked_by`, or matching nothing |
+| `ci/policy/policy.yaml` | `doc_claims:` — seven claim patterns, three registered regions, three out-of-scope documents each with an owner and a route in |
+| `ci/self_test.sh` | Assertion 19b plants a wrong count in `CLAUDE.md` and asserts `CLAIM-001`. 25/25 |
+| Meta-gate group | Now four rather than three: `checksum`, `generated-docs`, `doc-claims`, `gate-coverage` |
+
+The gate measures rather than remembers: gate, rule, job, ADR and assertion counts come from
+`scripts/generate_ci_docs.py`, imported rather than reimplemented — the `_checksum.py`
+precedent, for the same reason. It reads a number out of a document only in order to
+disagree with it.
+
+**Most numbers here are supposed to be stale**, which is why this is a registry and not a
+sweep. §9.x above, the superseded-checksum block and `Phase0_Final_Signoff.md`'s evidence
+tables are dated records; ADR-0029 is why they are appended rather than rewritten, and a
+gate that flagged them would be arguing with the archive. Three documents are registered.
+The other three are named as out of scope, with owners — the gap is now a list rather than
+an absence.
+
+**It does not close the class.** A current-state claim in a document nobody registered is
+still unchecked, and rule 4 can police the entries that exist but not the entry nobody
+wrote. ADR-0033's Costs section says so, and `doc-claim-auditor` still earns its keep on
+the judgements a gate cannot make — a risk row reading OPEN next to the gate that closed it
+is not arithmetic.
+
+**The third withholding.** Worth naming as a pattern rather than three coincidences:
+
+| | Withheld | Released |
+|---|---|---|
+| ADR-0029 | `ADR-009`, the errata-shape rule | 1.2.0, on acceptance |
+| ADR-0032 | `.mcp.json` and `gate_mcp` | 1.4.0, on acceptance |
+| ADR-0033 | `gate_doc_claims` | 1.5.0, on acceptance |
+
+---
+
 ### 9.4 If the Proposed ADRs are rejected — *historical, superseded by §9.6*
 
 All three were accepted on 2026-08-11, so this section no longer describes a live
@@ -543,4 +619,4 @@ Any of those is a MINOR bump of its own, not a revert of 1.1.0.
 ---
 
 *Prepared 2026-08-03. In force 2026-08-10: 1.0.0, extended to 1.1.0, corrected to 1.1.1 — all the same day.
-Extended to 1.2.0 and 1.3.0 on 2026-08-11, and to 1.4.0 on 2026-08-24.*
+Extended to 1.2.0 and 1.3.0 on 2026-08-11, and to 1.4.0 and 1.5.0 on 2026-08-24.*

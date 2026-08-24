@@ -9,8 +9,8 @@ Every rule below is enforced by a gate that runs on every push and every pull re
 
 | | |
 |---|---|
-| Rules | **142** |
-| Gates | **21** |
+| Rules | **145** |
+| Gates | **22** |
 | Severity | **All rules are blocking.** There is no warnings-only tier |
 | Exit codes | `0` pass · `1` violation · `2` gate itself broken |
 
@@ -383,6 +383,20 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 
 **2 rules.**
 
+## `doc-claims` — Hand-written counts match what the pipeline reports
+
+**Enforces:** ADR-0030, ADR-0016
+
+**Run:** `python3 ci/gates/gate_doc_claims.py`
+
+| Rule | Triggers when |
+|---|---|
+| `CLAIM-001` | `{doc}` claims `{m.group(0).strip()}`; the pipeline reports {fact} = {want} |
+| `CLAIM-002` | claim pattern `{spec.get('id')}` measures `{fact}`, which this gate does not know how to measure |
+| `CLAIM-003` | `doc_claims.out_of_scope` entry is missing {', '.join(missing)} |
+
+**3 rules.**
+
 ## `gate-coverage` — Every gate has rejected something
 
 **Enforces:** ADR-0030, ADR-0016
@@ -440,7 +454,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 24 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 25 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -468,8 +482,9 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a change to the architecture checksum set | `checksum` | CHECKSUM-001 |
 | a CRLF file inside the architecture checksum set | `checksum` | CHECKSUM-004 |
 | a hand-edited generated document | `generated-docs` | GEN-001 |
+| a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
 
-**24/24 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**25/25 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

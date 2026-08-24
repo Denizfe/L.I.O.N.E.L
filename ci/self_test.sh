@@ -302,6 +302,15 @@ printf '\nhand-edited line the generator would never produce\n' >> CI_Inventory.
 expect_violation generated-docs "GEN-001" "a hand-edited generated document"
 unplant CI_Inventory.md "$GEN_BAK"
 
+# 19b. Hand-written counts. `generated-docs` covers documents that have a generator;
+#      this covers the current-state claims in the ones that do not. The gate found a real
+#      stale claim on its first run — `CLAUDE.md` promised `20/20, 0 broken` under a heading
+#      reading "Verify before you claim anything", four gates after that stopped being true.
+DOC_BAK="$(plant_in CLAUDE.md)"
+sed -i 's|run_gates.sh                    # [0-9]*/[0-9]*, 0 broken|run_gates.sh                    # 99/99, 0 broken|' CLAUDE.md
+expect_violation doc-claims "CLAIM-001" "a hand-written count that disagrees with the pipeline"
+unplant CLAUDE.md "$DOC_BAK"
+
 # 20. Gate coverage itself. The plant goes into a COPY of this script: bash reads a script
 #     incrementally as it executes, so editing the running file could change the behaviour
 #     of the test doing the editing. The gate takes --suite for exactly this, the same way
@@ -333,6 +342,8 @@ grep -q '^network_allowed = false' config/tiers/l0.toml || {
   echo "  FAIL  config/tiers/l0.toml was not restored — L0 still reads network_allowed = true"; leftover=1; }
 grep -q '@upstash/context7-mcp@4\.0\.0' .mcp.json || {
   echo "  FAIL  .mcp.json was not restored — the context7 pin is missing"; leftover=1; }
+grep -q '99/99' CLAUDE.md && {
+  echo "  FAIL  CLAUDE.md was not restored — the planted 99/99 count survived"; leftover=1; }
 (( leftover )) && { echo; echo "  Planted files survived cleanup. Remove them before re-running."; exit 1; }
 
 echo

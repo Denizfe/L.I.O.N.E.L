@@ -3,9 +3,9 @@
 A local-first voice assistant whose defining constraint is an **offline autonomy guarantee**
 (ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. Phase 1 may begin.
 
-**Right now this repository contains no runtime code.** It is an architecture — 32 ADRs, 27
+**Right now this repository contains no runtime code.** It is an architecture — 33 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
-enforces them: 21 gates, 142 rules, 24 CI jobs.
+enforces them: 22 gates, 145 rules, 25 CI jobs.
 
 ---
 
@@ -81,9 +81,9 @@ it — no fixed point to chase. Record it **last**.
 ## Verify before you claim anything
 
 ```bash
-bash ci/run_gates.sh                    # 20/20, 0 broken
+bash ci/run_gates.sh                    # 22/22, 0 broken
 bash ci/run_gates.sh <gate>             # one gate
-bash ci/self_test.sh                    # 24/24 assertions, 21/21 gates covered
+bash ci/self_test.sh                    # 25/25 assertions, 22/22 gates covered
 python3 scripts/architecture_checksum.py --verify
 python3 scripts/generate_ci_docs.py --check
 ```
@@ -160,16 +160,16 @@ its checks.
 |---|---|
 | **Turkish TTS blocks distribution** | `tr_TR-dfki-medium` is **CC-BY-NC-SA-4.0** and is the only Turkish voice. Personal use is unaffected. Replacing it needs an ADR amending ADR-0017. Risk **R-A15**, Major |
 | **ADR-0029 rule 1 has no gate** | The append-only rule is enforced by a `PreToolUse` hook, which sees `Edit`/`Write` but not `sed` through `Bash`. A guardrail, not a proof |
-| **Hand-written count claims** | See above. `generated-docs` covers only documents that have a generator |
+| **Hand-written count claims** | Narrowed, not closed. `doc-claims` (ADR-0033) checks the count-shaped claims in three registered documents; `Phase1_Entry_Checklist.md`, `Phase0_Final_Signoff.md` and `Architecture_Risk_Register.md` are out of scope with owners, and a claim in an unregistered document is still unchecked |
 
 ---
 
 ## Where things are
 
 ```
-docs/decisions/          32 ADRs + README index (ARCH-016 requires the index be complete)
+docs/decisions/          33 ADRs + README index (ARCH-016 requires the index be complete)
 contracts/               27 JSON Schemas + 3 protobuf, 5 planes, MANIFEST.json
-ci/gates/                21 gates + _lib.py (Finding, exit codes) + _checksum.py
+ci/gates/                22 gates + _lib.py (Finding, exit codes) + _checksum.py
 ci/policy/policy.yaml    ALL thresholds, allowlists and registries
 ci/run_gates.sh          ORDER is the canonical gate list
 ci/self_test.sh          plants violations; proves the gates bite

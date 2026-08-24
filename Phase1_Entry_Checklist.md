@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Gate | G0 → G1 |
-| Status | **COMPLETE** — architecture 1.4.0, 0 ADRs pending |
+| Status | **COMPLETE** — architecture 1.5.0, 0 ADRs pending |
 | Items | 9 |
 | Done | **9 of 9** |
 | Blocking | 0 |
@@ -124,7 +124,7 @@ a byte-exact backup and verifies the restoration rather than assuming it.
 
 **Closed the same day, not deferred:** coverage went **9/17 → 20/20**, and `gate-coverage`
 now fails the build if a gate has never rejected anything (ADR-0030). `coverage.exempt` is
-empty. At architecture 1.4.0 the suite is **24 assertions across 21 gates**.
+empty. At architecture 1.4.0 the suite is **25 assertions across 22 gates**.
 
 ### ☑ 6. Regenerate the drifted generated documents — **DONE 2026-08-10**
 
@@ -133,7 +133,7 @@ ended with "Regenerate rather than hand-edit" while no generator existed, which 
 drifted in the first place.
 
 Counts when this item landed: 17 gates · 127 rules · 20 workflow jobs.
-**Current: 21 gates · 142 rules · 24 workflow jobs** — three meta-gates arrived with
+**Current: 22 gates · 145 rules · 25 workflow jobs** — three meta-gates arrived with
 ADR-0030, and `mcp` with ADR-0032. `python3 scripts/generate_ci_docs.py --check` is the
 authority, not this line.
 
@@ -180,8 +180,8 @@ The three pushes before the freeze commit are red in the same history. That is t
 | ✅ Capability registry — 5 capabilities, all governance fields, consistent with ADR-0007 |
 | ✅ Artifact lock — 13/13 resolved, tiers declared, digest matches registry |
 | ✅ Trust model — vocabularies identical across contracts and registry |
-| ✅ **21 gates, 142 rules, 24 workflow jobs**, 0 stubs |
-| ✅ **Gate coverage 21/21**, 24 assertions — every gate has rejected a planted violation |
+| ✅ **22 gates, 145 rules, 25 workflow jobs**, 0 stubs |
+| ✅ **Gate coverage 22/22**, 25 assertions — every gate has rejected a planted violation |
 | ✅ **The pipeline enforces its own invariants** — checksum, generated docs, gate coverage |
 | ✅ Repository hygiene — 0 CRLF, 0 runtime `.py`, ignore rules exercised |
 | ✅ Security assumptions documented — ADR-0011, 0012, 0015, 0022 |
