@@ -119,15 +119,24 @@ pytest would be a new dependency and needs an ADR. `python3 -m unittest discover
 | `lionel.platform.process_supervisor` | ADR-0014 | kill-tree verified by terminating a parent — zero orphaned children |
 | `lionel.capabilities` | ADR-0003, ADR-0007 | the capability registry replacing `mcp.servers.json` |
 | `lionel.policy` | ADR-0012 | the Policy Engine denies an unregistered tool by default |
+| `lionel.coordinators` | ADR-0008 | the five coordinators satisfy contract tests with stubs |
+| `tests/contract/test_pinned_artifacts.py` | ADR-0013 | the pinned GitHub MCP image digest is verified |
 
-**Still open at G1:** the five coordinators as contract-conforming shells, and verifying the
-pinned GitHub MCP image digest.
+**All six G1 DoD items now have an executable test.** What remains before G1 is signed off
+is v1.0's Phase 1 DoD carried forward — the tooling preflight table and the Git Bash hazard
+rules — plus whatever a sign-off audit turns up.
 
-Two traps in what is already there. `PolicyEngine` evaluates **constraint rules** — limits
-with no `decision` — in a pass of their own, before first-match-wins; under strict
-positional matching the shipped `runaway containment` rule is unreachable and the loop it
-bounds runs free. And `TrustContext.level` is recomputed from `sources` on every read
-rather than cached, so no code path can forget to lower it.
+Three traps in what is already there:
+
+- `PolicyEngine` evaluates **constraint rules** — limits with no `decision` — in a pass of
+  their own, before first-match-wins. Under strict positional matching the shipped
+  `runaway containment` rule is unreachable and the loop it bounds runs free. The contract
+  does not describe constraint-only rules; resolving that needs an ADR.
+- `TrustContext.level` is recomputed from `sources` on every read rather than cached, so no
+  code path can forget to lower it.
+- The four stateless coordinators are **frozen dataclasses**. That is ADR-0008's
+  state-ownership rule enforced by the language: caching on `self` raises rather than
+  passing review.
 
 ---
 
