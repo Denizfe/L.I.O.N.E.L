@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@4.0.0"],
+      "x-lionel": {
+        "adr": "ADR-0032",
+        "package": "@upstash/context7-mcp@4.0.0",
+        "license": "MIT",
+        "transport": "stdio",
+        "scope": "Documentation lookup only. Not a source of runtime behaviour, and no gate may depend on it: CI validates this repository with pyyaml, jsonschema and grpcio-tools, and that list is the whole contract.",
+        "egress": "Library and package names, and the documentation queries you type, leave the machine and go to Context7's servers. Repository contents are not sent.",
+        "secrets": "None. The hosted endpoint accepts an Authorization: Bearer key; the keyless stdio path is used deliberately, because the key buys rate limit rather than capability (ADR-0015)."
+      }
+    }
+  }
+}

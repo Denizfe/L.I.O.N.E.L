@@ -9,8 +9,8 @@ Every rule below is enforced by a gate that runs on every push and every pull re
 
 | | |
 |---|---|
-| Rules | **137** |
-| Gates | **20** |
+| Rules | **142** |
+| Gates | **21** |
 | Severity | **All rules are blocking.** There is no warnings-only tier |
 | Exit codes | `0` pass · `1` violation · `2` gate itself broken |
 
@@ -260,6 +260,21 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 
 **2 rules.**
 
+## `mcp` — Dev-tooling MCP servers are pinned and disclosed
+
+**Enforces:** ADR-0032, ADR-0013, ADR-0015
+
+**Run:** `python3 ci/gates/gate_mcp.py`
+
+| Rule | Triggers when |
+|---|---|
+| `MCP-000` | `mcpServers` in {manifest} is not an object |
+| `MCP-001` | MCP server `{name}` resolves its package at launch instead of pinning it: `{shown}` |
+| `MCP-002` | MCP server `{name}` does not declare what leaves the machine |
+| `MCP-003` | MCP server `{name}` passes a credential on the command line: `args[{i}]` |
+
+**4 rules.**
+
 ## `shell` — Shell script policy
 
 **Enforces:** ADR-0011, ADR-0014
@@ -351,8 +366,9 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 | `CHECKSUM-001` | architecture checksum drift: recorded `{recorded[:16]}…`, computed `{actual[:16]}…` |
 | `CHECKSUM-002` | no `sha256:` value recorded in `{FREEZE_DOC}` §2 |
 | `CHECKSUM-003` | architecture group `{name}` {verb} files: {count} on disk, §2 records {want} |
+| `CHECKSUM-004` | `{rel(path)}` contains CRLF line endings |
 
-**3 rules.**
+**4 rules.**
 
 ## `generated-docs` — Generated documents are current
 
@@ -424,12 +440,13 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 21 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 24 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
 | a generated AWS key (planted outside the repo) | `secrets` | SEC-AWS |
 | every pattern matches its sample and rejects its near-miss | `secrets` | SEC-REGEX-POS / SEC-REGEX-NEG |
+| a gate whose planted violation was deleted (asserted against a doctored copy of the suite, via --suite) | `gate-coverage` | COV-001 |
 | a :latest tag | `no-latest` | DOCKER-002 |
 | a PENDING placeholder | `no-pending` | PLACEHOLDER-001 |
 | a resurrected shell capability | `architecture` | ARCH-001 |
@@ -447,10 +464,12 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a tagged image with no digest | `docker-digests` | DOCKER-006 |
 | a licence that is on no allowlist | `licenses` | LIC-004 |
 | a dependency with no version bound | `dependencies` | DEP-001 |
+| an MCP server that resolves its package at launch | `mcp` | MCP-001 |
 | a change to the architecture checksum set | `checksum` | CHECKSUM-001 |
+| a CRLF file inside the architecture checksum set | `checksum` | CHECKSUM-004 |
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 
-**21/21 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**24/24 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

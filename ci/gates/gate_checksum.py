@@ -17,7 +17,7 @@ WHAT IT ACTUALLY PROTECTS
     it was first computed — which is exactly what CI is for.
 """
 from _checksum import GROUPS, collect, compute, recorded_checksum, recorded_counts, FREEZE_DOC
-from _lib import Gate
+from _lib import Gate, rel
 
 
 def main():
@@ -69,13 +69,37 @@ def main():
     else:
         g.note(f"checksum reproduces: sha256:{actual[:32]}…")
 
+    # Content is hashed as it sits on disk, so a CR is a byte like any other. `.gitattributes`
+    # says `* text=auto eol=lf`, which governs what git CHECKS OUT — it does not stop a tool
+    # from writing CRLF into a working copy afterwards. When that happens, the number computed
+    # here and recorded in §2 is a property of one machine, and a clean clone disagrees with
+    # it. Twice now:
+    #   * `*.proto` unpinned in `.gitattributes` — a Windows clone hashed CRLF for eight days;
+    #   * at 1.4.0, a Python `write_text()` without `newline=""` rewrote `policy.yaml` and an
+    #     ADR with `os.linesep`, and the wrong value was recorded. `git add` warned; nothing
+    #     in this pipeline did.
+    # CHECKSUM-001 cannot catch that on its own: it compares against a value computed from
+    # the same contaminated bytes, so both sides agree and the gate goes green.
+    CRLF = b"\r\n"
+    for _group, patterns in GROUPS:
+        for path in collect(patterns):
+            g.check()
+            if CRLF not in path.read_bytes():
+                continue
+            g.fail("CHECKSUM-004", f"`{rel(path)}` contains CRLF line endings",
+                "Architecture_Freeze.md §2: line endings are part of the checksum. A CRLF file "
+                "in the set makes the recorded number a property of the machine that recorded "
+                "it, so the freeze stops being reproducible from a clean clone — and "
+                "CHECKSUM-001 stays green throughout, because it hashes the same contaminated "
+                "bytes it is compared against.",
+                "Normalise the file to LF, then run `python3 scripts/architecture_checksum.py` "
+                f"and update {FREEZE_DOC} §2. If a script wrote the file: Python's "
+                "`Path.write_text()` translates newlines to `os.linesep` unless you pass "
+                "`newline=\"\"`, which is how this happened at 1.4.0.", rel(path))
+
     total = sum(n for _, n, _ in rows)
     g.note(f"{total} files across {len(GROUPS)} groups: "
            + " · ".join(f"{n} {c}" for n, c, _ in rows))
-    # Content is hashed as it sits on disk, so line-ending normalisation is part of the
-    # result. Said out loud on every run because it is the one property of this gate that
-    # is invisible until it breaks, and it broke once already.
-    g.note("line endings are part of the checksum — `.gitattributes` must keep `eol=lf`")
 
     g.report_and_exit()
 

@@ -61,11 +61,12 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0029](ADR-0029-adr-errata-provision.md) | Errata, Amendments and Corrections to Accepted ADRs | Accepted | 0 |
 | [0030](ADR-0030-self-enforcing-ci.md) | The pipeline enforces its own invariants | Accepted | 0 |
 | [0031](ADR-0031-reviewed-licence-register.md) | A licence that needs review must have somewhere to be reviewed | Accepted | 0 |
-| [0032](ADR-0032-dev-tooling-mcp-servers.md) | Developer-tooling MCP servers are declared, pinned, and disclosed | **Proposed** | 1 |
+| [0032](ADR-0032-dev-tooling-mcp-servers.md) | Developer-tooling MCP servers are declared, pinned, and disclosed | Accepted | 1 |
 
-**ADR-0032 is `Proposed`** and awaits Efe (§5 step 4). Its `.mcp.json` is deliberately not
-created: the mechanism is the thing being proposed, so shipping it early would be deciding
-by doing.
+**0 ADRs pending.** ADR-0032 was accepted 2026-08-24 and implemented in the same version
+(architecture 1.4.0): `.mcp.json` holds one pinned entry and `gate_mcp` enforces
+`MCP-000`–`MCP-003`. Its Erratum of that date discharges the two paragraphs that described
+it as pending — including the one saying `.mcp.json` would not be created until acceptance.
 
 **0029–0031 accepted 2026-08-11.** All three carry a dated `## Erratum` recording the status
 change, because each asserted its own `Proposed` status in its body and the body is

@@ -223,13 +223,16 @@ def selftest_cases() -> list[tuple[str, str, str]]:
     text = (ROOT / "ci" / "self_test.sh").read_text(encoding="utf-8")
     cases = [(desc, gate, rule) for gate, rule, desc in
              re.findall(r'expect_violation\s+(\S+)\s+"([^"]+)"\s+"([^"]+)"', text)]
-    # The secrets cases are asserted inline rather than through expect_violation,
-    # because the credential is generated and planted outside the repository.
-    inline = re.findall(r'printf\s+\'\s+\\033\[32mok', text)
+    # Three cases are asserted inline rather than through expect_violation, each because
+    # the gate needs an argument the helper does not pass. They are listed here by hand
+    # and they must stay in step with the suite: the suite counts what it ran, this counts
+    # what it could parse, and the two disagreeing is how CI_Inventory.md came to claim
+    # 23/23 for a run that reported 24/24.
     cases = [("a generated AWS key (planted outside the repo)", "secrets", "SEC-AWS"),
              ("every pattern matches its sample and rejects its near-miss", "secrets",
-              "SEC-REGEX-POS / SEC-REGEX-NEG")] + cases
-    del inline
+              "SEC-REGEX-POS / SEC-REGEX-NEG"),
+             ("a gate whose planted violation was deleted (asserted against a doctored "
+              "copy of the suite, via --suite)", "gate-coverage", "COV-001")] + cases
     return cases
 
 

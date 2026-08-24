@@ -50,7 +50,7 @@ Finding M1 closed it.
 
 The register named the failure before it was measured. Nothing acted on it for eight days,
 because a risk row is prose and prose does not fail a build. `gate-coverage` (ADR-0030,
-`Proposed`) now counts **gates rather than assertions** and blocks on the difference.
+Accepted 2026-08-11) now counts **gates rather than assertions** and blocks on the difference.
 
 | Row | Closed by |
 |---|---|

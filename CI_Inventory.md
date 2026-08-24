@@ -7,19 +7,19 @@
 
 | | |
 |---|---|
-| Gates | **20** |
-| Rules | **137** |
-| Workflow jobs | **23** |
+| Gates | **21** |
+| Rules | **142** |
+| Workflow jobs | **24** |
 | Current state | **all gates pass · 0 broken** |
 | Runner | `bash ci/run_gates.sh [gate]` |
-| Self-test | `bash ci/self_test.sh` — 21/21 planted violations caught |
+| Self-test | `bash ci/self_test.sh` — 24/24 planted violations caught |
 | Runtime code | **0 files** — Phase 0 discipline machine-checked |
 
 ---
 
 ## 1. The gates
 
-Every gate is a standalone script. None depends on another, so a failure never cascades and never hides the other 19 results.
+Every gate is a standalone script. None depends on another, so a failure never cascades and never hides the other 20 results.
 
 | # | Gate | Enforces | Rules |
 |---|---|---|---|
@@ -37,12 +37,13 @@ Every gate is a standalone script. None depends on another, so a failure never c
 | 12 | [`licenses`](ci/gates/gate_licenses.py) | ADR-0013 | 6 |
 | 13 | [`markdown`](ci/gates/gate_markdown.py) | — | 3 |
 | 14 | [`dependencies`](ci/gates/gate_dependencies.py) | ADR-0013 | 2 |
-| 15 | [`shell`](ci/gates/gate_shell.py) | ADR-0011, ADR-0014 | 3 |
-| 16 | [`architecture`](ci/gates/gate_architecture.py) | ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0025, ADR-0026 | 16 |
-| 17 | [`l0-conformance`](ci/gates/gate_l0_conformance.py) | ADR-0007, ADR-0011, ADR-0013, ADR-0006, ADR-0012 | 24 |
-| 18 | [`checksum`](ci/gates/gate_checksum.py) | ADR-0030, ADR-0013 | 3 |
-| 19 | [`generated-docs`](ci/gates/gate_generated_docs.py) | ADR-0030, ADR-0016 | 2 |
-| 20 | [`gate-coverage`](ci/gates/gate_gate_coverage.py) | ADR-0030, ADR-0016 | 3 |
+| 15 | [`mcp`](ci/gates/gate_mcp.py) | ADR-0032, ADR-0013, ADR-0015 | 4 |
+| 16 | [`shell`](ci/gates/gate_shell.py) | ADR-0011, ADR-0014 | 3 |
+| 17 | [`architecture`](ci/gates/gate_architecture.py) | ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0025, ADR-0026 | 16 |
+| 18 | [`l0-conformance`](ci/gates/gate_l0_conformance.py) | ADR-0007, ADR-0011, ADR-0013, ADR-0006, ADR-0012 | 24 |
+| 19 | [`checksum`](ci/gates/gate_checksum.py) | ADR-0030, ADR-0013 | 4 |
+| 20 | [`generated-docs`](ci/gates/gate_generated_docs.py) | ADR-0030, ADR-0016 | 2 |
+| 21 | [`gate-coverage`](ci/gates/gate_gate_coverage.py) | ADR-0030, ADR-0016 | 3 |
 
 The `artifacts` gate was red by design through Phase 0 while one image digest was unresolved — ADR-0013 blocks G0 until that count reaches zero. It is now green: the digest is pinned and justified in [GHCR_Digest_Justification.md](GHCR_Digest_Justification.md).
 
@@ -96,12 +97,12 @@ Which decisions have an executable test, and which do not.
 
 ## 3. Workflow jobs
 
-`.github/workflows/ci.yml` — 23 jobs.
+`.github/workflows/ci.yml` — 24 jobs.
 
 | Job | Type | Notes |
 |---|---|---|
-| 20 policy gates | one per gate | **No `needs:` between them.** Independent by design |
-| `gate-self-test` | meta | Plants 21 known violations, asserts each is caught |
+| 21 policy gates | one per gate | **No `needs:` between them.** Independent by design |
+| `gate-self-test` | meta | Plants 24 known violations, asserts each is caught |
 | `l0-conformance` | blocking | `needs: [structure, contracts, architecture]`. ADR-0007 |
 | `checksum` · `generated-docs` · `gate-coverage` | **meta** | Check the pipeline, not the repository. ADR-0030 |
 | `windows-policy-gates` | platform | `windows-latest` under Git Bash. ADR-0002, ADR-0014 |
@@ -127,6 +128,7 @@ A gate that passes a clean repository but would miss a real violation is decorat
 |---|---|---|
 | a generated AWS key (planted outside the repo) | `secrets` | SEC-AWS |
 | every pattern matches its sample and rejects its near-miss | `secrets` | SEC-REGEX-POS / SEC-REGEX-NEG |
+| a gate whose planted violation was deleted (asserted against a doctored copy of the suite, via --suite) | `gate-coverage` | COV-001 |
 | a :latest tag | `no-latest` | DOCKER-002 |
 | a PENDING placeholder | `no-pending` | PLACEHOLDER-001 |
 | a resurrected shell capability | `architecture` | ARCH-001 |
@@ -144,17 +146,19 @@ A gate that passes a clean repository but would miss a real violation is decorat
 | a tagged image with no digest | `docker-digests` | DOCKER-006 |
 | a licence that is on no allowlist | `licenses` | LIC-004 |
 | a dependency with no version bound | `dependencies` | DEP-001 |
+| an MCP server that resolves its package at launch | `mcp` | MCP-001 |
 | a change to the architecture checksum set | `checksum` | CHECKSUM-001 |
+| a CRLF file inside the architecture checksum set | `checksum` | CHECKSUM-004 |
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 
-**21/21 caught.**
+**24/24 caught.**
 
 ---
 
 ## 4. Running gates
 
 ```bash
-bash ci/run_gates.sh                 # all 20, with a summary
+bash ci/run_gates.sh                 # all 21, with a summary
 bash ci/run_gates.sh architecture    # one
 bash ci/run_gates.sh --list          # names and paths
 python3 ci/gates/gate_adr.py         # fully standalone, no runner needed
@@ -176,9 +180,9 @@ ci/
 │   └── policy.yaml              ALL thresholds, allowlists, registries
 └── gates/
     ├── _lib.py                  Finding model, exit-code contract, reporting
-    └── gate_*.py                20 gates
+    └── gate_*.py                21 gates
 
-.github/workflows/ci.yml         23 jobs
+.github/workflows/ci.yml         24 jobs
 scripts/verify_artifacts.sh      thin wrapper → gate_artifacts.py
 scripts/architecture_checksum.py recompute / verify the freeze checksum
 scripts/generate_ci_docs.py      regenerates this file and Policy_Gates.md

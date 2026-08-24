@@ -264,6 +264,15 @@ sed -i 's|^dependencies = \[|dependencies = [\n    "unbounded-selftest-package",
 expect_violation dependencies "DEP-001" "a dependency with no version bound"
 unplant pyproject.toml "$DEP_BAK"
 
+# 17b. ADR-0032: an MCP server that resolves its package at launch. `.mcp.json` is not
+#      in the architecture checksum set — it is workstation tooling, not architecture — so
+#      the checksum assertion at the end would NOT catch a surviving plant here. The
+#      content check below the litter list is what covers it.
+MCP_BAK="$(plant_in .mcp.json)"
+sed -i 's|@upstash/context7-mcp@4\.0\.0"|@upstash/context7-mcp"|' .mcp.json
+expect_violation mcp "MCP-001" "an MCP server that resolves its package at launch"
+unplant .mcp.json "$MCP_BAK"
+
 # ── 18–20: the meta-gates (ADR-0030) ───────────────────────────────────────────────
 # These check the pipeline rather than the repository, so they are the ones most likely
 # to be quietly wrong: nothing else in CI would notice.
@@ -275,6 +284,16 @@ unplant pyproject.toml "$DEP_BAK"
 printf 'selftest = true\n' > config/_selftest.toml
 expect_violation checksum "CHECKSUM-001" "a change to the architecture checksum set"
 rm -f config/_selftest.toml
+
+# 18b. Line endings are part of the checksum, and CHECKSUM-001 cannot notice on its own:
+#      it compares the recorded value against one computed from the same contaminated bytes,
+#      so both sides agree and the gate goes green. `.gitattributes` governs what git checks
+#      OUT; it does not stop a tool from writing CRLF afterwards, which is exactly what
+#      happened while 1.4.0 was being prepared.
+CRLF_BAK="$(plant_in artifacts.lock.yaml)"
+sed -i 's/$/\r/' artifacts.lock.yaml
+expect_violation checksum "CHECKSUM-004" "a CRLF file inside the architecture checksum set"
+unplant artifacts.lock.yaml "$CRLF_BAK"
 
 # 19. Generated documents. Both say "regenerate rather than hand-edit"; this proves the
 #     gate notices when someone does the opposite.
@@ -312,6 +331,8 @@ done
 [[ -d src/lionel/capabilities/shell ]] && { echo "  FAIL  self-test litter: src/lionel/capabilities/shell"; leftover=1; }
 grep -q '^network_allowed = false' config/tiers/l0.toml || {
   echo "  FAIL  config/tiers/l0.toml was not restored — L0 still reads network_allowed = true"; leftover=1; }
+grep -q '@upstash/context7-mcp@4\.0\.0' .mcp.json || {
+  echo "  FAIL  .mcp.json was not restored — the context7 pin is missing"; leftover=1; }
 (( leftover )) && { echo; echo "  Planted files survived cleanup. Remove them before re-running."; exit 1; }
 
 echo

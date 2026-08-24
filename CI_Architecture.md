@@ -214,10 +214,10 @@ self-test surfaced.
 ## 8. Current state
 
 ```
-20 pass · 0 fail · 0 broken          self-test 21/21 · gate coverage 20/20
+21 pass · 0 fail · 0 broken          self-test 24/24 · gate coverage 21/21
 ```
 
-Architecture 1.1.1. The `artifacts` gate was red by design through Phase 0 while one image
+Architecture 1.4.0. The `artifacts` gate was red by design through Phase 0 while one image
 digest was unresolved — ADR-0013 blocks G0 until that count is zero. It is now pinned and
 justified in [GHCR_Digest_Justification.md](GHCR_Digest_Justification.md).
 
@@ -225,7 +225,7 @@ justified in [GHCR_Digest_Justification.md](GHCR_Digest_Justification.md).
 The failure mode to fear is a green build that means nothing.
 
 The last three gates — `checksum`, `generated-docs`, `gate-coverage` — check this pipeline
-rather than the repository (ADR-0030, `Proposed`). They exist because every defect found
+rather than the repository (ADR-0030, Accepted 2026-08-11). They exist because every defect found
 verifying the 1.0.0 freeze had one shape: a rule stated in §7 of this very document, or in
 `Architecture_Freeze.md`, and enforced nowhere. **Step 6 above is now a gate.**
 

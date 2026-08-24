@@ -29,6 +29,10 @@ repository:
     - docs/decisions/README.md
     - docs/LATENCY_BUDGET.md
     - ci/policy/policy.yaml
+    # ADR-0032: the dev-tooling MCP manifest. Existence is this gate's business;
+    # gate_mcp checks the contents. Without this line a deleted manifest would
+    # disarm gate_mcp silently — it would simply have nothing to check.
+    - .mcp.json
 
   required_dirs:
     - contracts/core/v1
@@ -285,6 +289,33 @@ licenses:
 #
 # EMPTY IS THE CORRECT STATE. Every gate in ORDER plants a violation in ci/self_test.sh.
 # An entry here is a gate that has never proven it can reject anything.
+# ── ADR-0032: developer-tooling MCP servers ─────────────────────────────────
+# Declared, pinned, egress-disclosed, credential-free. `.mcp.json` is NOT in the
+# architecture checksum set: it is workstation tooling, not architecture, and the
+# ADR is emphatic that it never becomes a runtime or CI dependency.
+mcp:
+  manifest: .mcp.json
+
+  # Commands that resolve a package from a registry at launch. `npx -y <pkg>` takes
+  # whatever is newest at the moment someone opens their editor, which is precisely
+  # the failure ADR-0013 names: "a rebuild in three months produces a different system".
+  npm_style_commands: ["npx", "bunx", "pnpm", "npm", "yarn"]
+  python_style_commands: ["uvx", "pipx"]
+  require_exact_pin: true          # name@1.2.3 · pkg==1.2.3. Ranges and `latest` are not pins.
+  require_egress_note: true        # x-lionel.egress — what leaves the machine, and to whom.
+
+  # ADR-0015 forbids interpolated credentials, and gate_secrets scans this file with no
+  # path exclusions. A key here is a committed key.
+  credential_key_regex: "(?i)(api[-_]?key|access[-_]?key|token|secret|password|passwd|credential|authorization|bearer)"
+  # A value that is only an environment reference is not a credential.
+  credential_value_allowed: ['^\$\{[A-Za-z_][A-Za-z0-9_]*\}$', '^secret://', '^$']
+
+  # ADR-0032's standing criterion: `.mcp.json` holds one entry, and a second is a
+  # decision rather than a routine addition. Reported as a NOTE on every run and never
+  # as a violation — blocking it would settle by implementation a question the ADR
+  # deliberately left to a reviewer.
+  standing_entry_count: 1
+
 coverage:
   exempt: []
 

@@ -2,20 +2,21 @@
 
 | | |
 |---|---|
-| Architecture version | **1.3.0** |
+| Architecture version | **1.4.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.3.0`** |
+| Tag | **`architecture-1.4.0`** |
 | Status | **FROZEN** |
-| Previous versions | **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **ADR-0032 `Proposed`** — awaiting Efe. 0029–0031 accepted 2026-08-11 |
+| Previous versions | **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** ADR-0032 accepted 2026-08-24; 0029–0031 accepted 2026-08-11 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **31 of 32 ADRs are in force.** ADR-0032 is `Proposed`; its `.mcp.json` is deliberately
-> not created, because the mechanism is the thing being proposed.
+> **All 32 ADRs are in force.** ADR-0032 was accepted 2026-08-24 and implemented in the
+> same version: `.mcp.json` now exists, `gate_mcp` enforces `MCP-000`–`MCP-003`, and the ADR
+> carries an Erratum discharging the two paragraphs that described it as pending. §9.8.
 > ADR-0029, ADR-0030 and ADR-0031 were accepted 2026-08-11;
 > `ADR-009`, which ADR-0029 deliberately left unimplemented while it was `Proposed`, landed
 > with the acceptance. §9.6 records what that surfaced.
@@ -23,6 +24,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.4.0** — MINOR over 1.3.0: ADR-0032 accepted, so a pending decision comes into force,
+which §1 defines as MINOR. Nothing already in force changed. `.mcp.json` and `gate_mcp`
+land with the acceptance.
 
 **1.3.0** — MINOR over 1.2.0: ADR-0032 added (`Proposed`). No decision in force changed.
 
@@ -54,12 +59,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.3.0
-sha256:c13b16c6527ac26564e4041ec2c71aa88a72b59ac12cf6d6f94d3b4ef94bd481
+ARCHITECTURE CHECKSUM                                          architecture 1.4.0
+sha256:8d77af2c61f6fedfe748221abcffb00f6f7f703e81d8e3c5b0e4d35712d2d86d
 
-  ADRs         32 files   sha256:3e006cb2d1a71302f224f4a8e22649a0…
+  ADRs         32 files   sha256:b79058e620b261176bf7113d2fc7cff3…
   contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:b8010dd119b52aa253bc130b4d632971…
+  policy        8 files   sha256:2e85272124d033ab3efd78e4404141d2…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -69,6 +74,8 @@ sha256:c13b16c6527ac26564e4041ec2c71aa88a72b59ac12cf6d6f94d3b4ef94bd481
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.3.0   sha256:c13b16c6527ac26564e4041ec2c71aa88a72b59ac12cf6d6f94d3b4ef94bd481
+                     73 files — ADRs 32 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.2.0   sha256:77e6f37244a7ffa6248a3c1607b42f23145493ecebcd0cb1ce1f8b1425479ec7
                      72 files — ADRs 31 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.1.1   sha256:aed60f6faa836855f634fa1fd5a547c728e3ccabf2d209c2eb798e45cea60d24
@@ -83,10 +90,10 @@ architecture 1.0.0   sha256:fab0610aa3167a2f26b0e812dbfe9563abbf7aa28ab18b9d773d
 `CHECKSUM-001` on drift, `CHECKSUM-003` if a group changes shape (ADR-0030). Between 1.0.0
 and 1.1.0 it was recorded and checked by nothing — which is how it came to be wrong.
 
-**Verified against a clean clone on 2026-08-10.** Reproduce it with:
+**Verified against a clean clone on 2026-08-24.** Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:fab0610aa3167a2f26b0e812dbfe9563abbf7aa28ab18b9d773d945a5a84f233
+python3 scripts/architecture_checksum.py --verify sha256:8d77af2c61f6fedfe748221abcffb00f6f7f703e81d8e3c5b0e4d35712d2d86d
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -95,16 +102,21 @@ bytes) with no separator; architecture checksum = `sha256` over the five **raw**
 digests concatenated in the order listed. `scripts/architecture_checksum.py` implements it
 and reproduces every group digest above.
 
-**Line endings are part of the checksum.** `.gitattributes` must pin every extension in the
-set to `eol=lf` or the same commit yields two different checksums on two machines. This was
-not merely theoretical: `*.proto` was unpinned, so a Windows clone checked the three proto
+**Line endings are part of the checksum, and `CHECKSUM-004` now enforces it directly.**
+`.gitattributes` governs what git *checks out*; it does not stop a tool from writing CRLF
+into a working copy afterwards, and `CHECKSUM-001` cannot see that on its own — it compares
+the recorded value against one computed from the same contaminated bytes, so both agree and
+the gate goes green. `CHECKSUM-004` reads every file in the set and fails on a CR. This was
+not merely theoretical, twice: `*.proto` was unpinned, so a Windows clone checked the three proto
 files out as CRLF and computed `222451c5…` → `0a3b44bc…` for the contracts group. Fixed in
-`b2e0b94`.
+`b2e0b94`. And while 1.4.0 was being prepared, a Python `write_text()` without `newline=""`
+rewrote `ci/policy/policy.yaml` and `ADR-0032` with `os.linesep`; the wrong value was
+recorded, and the only thing that noticed was a `git add` warning. §9.8.
 
 ### Files in the checksum set
 
 ```
-docs/decisions/ADR-*.md                    28
+docs/decisions/ADR-*.md                    32
 contracts/{core,mcp,events,media}/v1/*.schema.json   27
 contracts/grpc/v1/*.proto                   3
 contracts/MANIFEST.json                     1
@@ -114,6 +126,12 @@ artifacts.lock.yaml                         1
 MASTER_PLAN_v2.md                           1
 ```
 
+**`.mcp.json` is not in this set**, and ADR-0032 says why: it is workstation tooling, not
+architecture. Adding it would mean every developer-tool version bump moved the architecture
+checksum, which would teach people that a moved checksum is routine — the one lesson this
+mechanism cannot afford to teach. `structure` guarantees the file exists and `gate_mcp`
+checks its contents; neither is a claim about the architecture.
+
 ---
 
 ## 3. Frozen scope
@@ -122,15 +140,15 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **32 ADRs, 0001–0032** — 0032 `Proposed`, the rest Accepted or Superseded |
+| **Architecture decisions** | **32 ADRs, 0001–0032** — all Accepted or Superseded, 0 pending |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
 | **Tier model** | L0–L3 per ADR-0007; L0 conformance is a blocking gate |
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
-| **Policy** | `ci/policy/policy.yaml` — 16 sections |
-| **CI gates** | **20 gates, 137 rules, 23 workflow jobs** — 17 checking the repository, 3 checking the pipeline (ADR-0030). Self-test 21/21, gate coverage 20/20 |
+| **Policy** | `ci/policy/policy.yaml` — 16 configuration sections (`mcp` added at 1.4.0) |
+| **CI gates** | **21 gates, 142 rules, 24 workflow jobs** — 18 checking the repository, 3 checking the pipeline (ADR-0030). Self-test 24/24, gate coverage 21/21 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -432,6 +450,81 @@ The ADR is worth reading for three things it had to resolve rather than assert:
 Nothing else in 1.3.0. The automation work landed separately in `5bcecb6` and moved no
 checksum, because `CLAUDE.md`, `.claude/` and the hooks are outside the checksum set.
 
+### 9.8 Version 1.4.0 — ADR-0032 accepted, and the mechanism it proposed
+
+Efe accepted ADR-0032 on 2026-08-24. §1 calls this MINOR — a pending decision comes into
+force — and nothing already in force changed.
+
+**What landed**
+
+| | |
+|---|---|
+| `.mcp.json` | One entry, `context7`, pinned to `@upstash/context7-mcp@4.0.0` (MIT), with an `x-lionel` block declaring licence, transport, scope and egress. No credential |
+| `ci/gates/gate_mcp.py` | `MCP-000` malformed manifest · `MCP-001` unpinned package · `MCP-002` undeclared egress · `MCP-003` literal credential |
+| `ci/policy/policy.yaml` | `mcp:` section — pinning shapes, the egress requirement, the credential key pattern and the allowed value forms |
+| `repository.required_paths` | `.mcp.json`, so a deleted manifest fails `structure` instead of leaving `gate_mcp` with nothing to check |
+| `ci/self_test.sh` | Assertion 17b: strips the version pin and asserts `MCP-001`. 23/23 |
+| `.github/workflows/ci.yml` | A 24th job. It runs the gate; it does not install or launch an MCP server, because a gate that depended on one would be ADR-0032's first violation |
+
+**One rule beyond the ADR.** `MCP-000` is not in ADR-0032's Verification list. A malformed
+`.mcp.json` is a file the repository owns and a human must fix, so reporting it through
+`gate_error` — exit 2, "the gate is broken" — would collapse the two exit codes §5 keeps
+apart. It is mechanical necessity, not a new decision, and the ADR's Erratum says so rather
+than leaving the discrepancy for a reader to find.
+
+**One rule deliberately not written.** ADR-0032's standing criterion — one entry, and a
+second is a decision rather than a routine addition — is a *note* on every run, never a
+violation. Blocking the second entry would settle by implementation the question the ADR
+left to a reviewer, and a gate that answered it would be claiming to check something it
+cannot see.
+
+**Why `.mcp.json` is outside the checksum set.** It is workstation tooling. Inside the set,
+every developer-tool version bump would move the architecture checksum, and a checksum that
+moves routinely stops carrying information — which is the failure §2 exists to prevent, not
+one it should import.
+
+**A stale count, found by hand again.** §3 read *"Self-test 21/21"* through the whole of
+1.3.0, when the suite had been 22/22 since 1.2.0. §3 also read *"16 sections"* for a
+`policy.yaml` that had 15; adding `mcp` has made that figure accidentally true. Both are the
+class ADR-0030's Costs section records as open: `generated-docs` covers only documents that
+have a generator, and this one does not. The `doc-claim-auditor` agent mitigates it. It does
+not close it.
+
+**The checksum was recorded wrong, and nothing in the pipeline caught it.** Two files in
+the set — `ci/policy/policy.yaml` and `ADR-0032` — were rewritten by a Python
+`Path.write_text()` call, which translates `
+` to `os.linesep` unless you pass
+`newline=""`. Both acquired CRLF, and the value first recorded in §2 (`0e8cfbc2…`) was a
+property of one Windows working copy. A clean clone would have computed something else — the
+1.0.0-era defect, by a different route, thirteen days after `gate_checksum` was written to
+prevent it.
+
+`CHECKSUM-001` was green throughout, and could not have been anything else: it compares the
+recorded number against one computed from the same contaminated bytes. `git add`'s "CRLF
+will be replaced by LF" warning was the only signal, and warnings are not gates.
+
+**`CHECKSUM-004`** now reads every file in the checksum set and fails on a CR. `ci/self_test.sh`
+assertion 18b plants CRLF in `artifacts.lock.yaml` and asserts it — 24/24. This is gate work
+enforcing a decision §2 already states, which §4 item 3 permits without an ADR.
+
+**And the generated documents were under-reporting.** `CI_Inventory.md` and
+`Policy_Gates.md` read the self-test by parsing `expect_violation` lines, plus two inline
+cases listed by hand. The third inline case — `gate-coverage`, asserted against a doctored
+copy of the suite because the gate needs `--suite` — was never added to that list, so both
+documents said `23/23` for a run that reported `24/24`. `generated-docs` could not catch it:
+the documents matched what the generator produced, and the generator was wrong. Fixed by
+listing all three inline cases, with a comment saying why the two counts can drift apart.
+
+**A bug the self-test caught in its own new assertion.** The first draft of assertion 17b
+described the plant as ``"an MCP server pinned to nothing but `npx -y`"``. Backticks inside
+a double-quoted bash string are command substitution, so the suite *ran* `npx -y` — a
+network fetch, in the offline-first project's own test harness, which then hung. It was
+found because the run stopped, not because anything checked for it. `SH-EVAL` and friends
+police `ci/` for injection shapes; command substitution in a description string is not one
+of them.
+
+---
+
 ### 9.4 If the Proposed ADRs are rejected — *historical, superseded by §9.6*
 
 All three were accepted on 2026-08-11, so this section no longer describes a live
@@ -449,4 +542,5 @@ Any of those is a MINOR bump of its own, not a revert of 1.1.0.
 
 ---
 
-*Prepared 2026-08-03. In force 2026-08-10: 1.0.0, extended to 1.1.0, corrected to 1.1.1 — all the same day.*
+*Prepared 2026-08-03. In force 2026-08-10: 1.0.0, extended to 1.1.0, corrected to 1.1.1 — all the same day.
+Extended to 1.2.0 and 1.3.0 on 2026-08-11, and to 1.4.0 on 2026-08-24.*

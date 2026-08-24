@@ -20,7 +20,7 @@ export PYTHONPATH="$GATES:${PYTHONPATH:-}"
 # repository. They run last because a finding there is about the checks above it, and
 # reading it first invites fixing the wrong thing.
 ORDER=(structure adr contracts jsonschema protobuf artifacts docker-digests
-       no-latest no-pending no-todo secrets licenses markdown dependencies
+       no-latest no-pending no-todo secrets licenses markdown dependencies mcp
        shell architecture l0-conformance
        checksum generated-docs gate-coverage)
 

@@ -3,9 +3,9 @@
 A local-first voice assistant whose defining constraint is an **offline autonomy guarantee**
 (ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. Phase 1 may begin.
 
-**Right now this repository contains no runtime code.** It is an architecture — 31 ADRs, 27
+**Right now this repository contains no runtime code.** It is an architecture — 32 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
-enforces them: 20 gates, 137 rules, 23 CI jobs.
+enforces them: 21 gates, 142 rules, 24 CI jobs.
 
 ---
 
@@ -83,7 +83,7 @@ it — no fixed point to chase. Record it **last**.
 ```bash
 bash ci/run_gates.sh                    # 20/20, 0 broken
 bash ci/run_gates.sh <gate>             # one gate
-bash ci/self_test.sh                    # 22/22 assertions, 20/20 gates covered
+bash ci/self_test.sh                    # 24/24 assertions, 21/21 gates covered
 python3 scripts/architecture_checksum.py --verify
 python3 scripts/generate_ci_docs.py --check
 ```
@@ -167,15 +167,17 @@ its checks.
 ## Where things are
 
 ```
-docs/decisions/          31 ADRs + README index (ARCH-016 requires the index be complete)
+docs/decisions/          32 ADRs + README index (ARCH-016 requires the index be complete)
 contracts/               27 JSON Schemas + 3 protobuf, 5 planes, MANIFEST.json
-ci/gates/                20 gates + _lib.py (Finding, exit codes) + _checksum.py
+ci/gates/                21 gates + _lib.py (Finding, exit codes) + _checksum.py
 ci/policy/policy.yaml    ALL thresholds, allowlists and registries
 ci/run_gates.sh          ORDER is the canonical gate list
 ci/self_test.sh          plants violations; proves the gates bite
 scripts/                 architecture_checksum.py · generate_ci_docs.py · verify_artifacts.sh
 MASTER_PLAN_v2.md        11 gated phases, G0–G10. Phase 1 scope is §10
 Architecture_Freeze.md   the frozen state, the checksum, and the change-control rules
+.mcp.json                dev-tooling MCP servers (ADR-0032). Pinned, egress-declared,
+                         credential-free. NOT in the checksum set; no gate may depend on it
 ```
 
 Every exemption anywhere in this repo carries an **owner** and a **route to removal**. One

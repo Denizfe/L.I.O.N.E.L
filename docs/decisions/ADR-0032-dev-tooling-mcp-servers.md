@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Proposed** — awaiting Efe's approval (Architecture_Freeze.md §5 step 4) |
+| Status | **Accepted** 2026-08-24 — see the Erratum of the same date |
 | Date | 2026-08-11 |
 | Phase | 1 |
 | Related | [ADR-0013](ADR-0013-artifact-pinning.md), [ADR-0015](ADR-0015-secret-resolver.md), [ADR-0007](ADR-0007-degradation-ladder.md), [ADR-0022](ADR-0022-zero-trust-runtimes.md) |
@@ -140,3 +140,45 @@ routine addition, and this line is where that gets noticed.
 **Until this ADR is Accepted, `.mcp.json` is not created.** The mechanism is the thing being
 proposed, so shipping it early would be deciding by doing — which is the practice this
 document exists to interrupt.
+
+## Erratum — 2026-08-24: Accepted; the deferral it describes has been discharged
+
+This ADR was written while Proposed, and two of its paragraphs describe that pending state
+as if it were ongoing. Efe accepted it on 2026-08-24. The decision is unchanged — what
+follows corrects text that has stopped being true, per ADR-0029 rule 2.
+
+The Verification section opened:
+
+> **Not yet implemented — deliberately.** ADR-0029's precedent: a gate enforcing an
+> unapproved decision is the error ADR-0030 is about.
+
+and closed:
+
+> **Until this ADR is Accepted, `.mcp.json` is not created.** The mechanism is the thing
+> being proposed, so shipping it early would be deciding by doing — which is the practice
+> this document exists to interrupt.
+
+Both were true and are now discharged. As of architecture 1.4.0:
+
+- `.mcp.json` exists at the repository root and holds exactly one entry, `context7`,
+  pinned to `@upstash/context7-mcp@4.0.0`, with an `x-lionel` block declaring its licence,
+  its scope and its egress. It carries no credential.
+- `ci/gates/gate_mcp.py` implements **`MCP-001`** (exact version pin), **`MCP-002`**
+  (declared egress) and **`MCP-003`** (no literal credential), configured from
+  `mcp:` in `ci/policy/policy.yaml`.
+- `ci/self_test.sh` plants an unpinned `npx -y` entry and asserts `MCP-001`, as this
+  section required.
+- `repository.required_paths` now names `.mcp.json`, so its deletion fails `structure`
+  rather than silently disarming the gate. Existence is the structure gate's business;
+  `gate_mcp` checks content.
+
+One rule was added beyond the three named above. **`MCP-000`** fires when `.mcp.json` is
+not valid JSON. It is mechanical necessity rather than a new decision: without it a
+malformed manifest would have to be reported through `gate_error`, which means exit 2 —
+"the gate is broken" — for a file the repository owns and a human must fix. The exit-code
+contract does not permit that confusion.
+
+The standing criterion — one entry, and a second is a decision rather than a routine
+addition — is **not** enforced as a blocking rule. `gate_mcp` reports the entry count as a
+note on every run, restating the criterion. Turning it into a gate would decide, by
+implementation, a question this ADR deliberately left to a reviewer.

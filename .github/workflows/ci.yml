@@ -137,6 +137,21 @@ jobs:
       - run: pip install pyyaml
       - run: python3 ci/gates/gate_dependencies.py
 
+  mcp:
+    name: "mcp · dev-tooling servers pinned + disclosed"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # ADR-0032. Checks the CONTENTS of .mcp.json; its existence is `structure`'s job
+      # (repository.required_paths), so a deleted manifest fails loudly rather than
+      # leaving this gate with nothing to check and a green light to show for it.
+      # Nothing here installs or launches an MCP server: ADR-0032 forbids any gate from
+      # depending on one, and a job that started `npx` would be the first violation.
+      - run: python3 ci/gates/gate_mcp.py
+
   # ── Hygiene ────────────────────────────────────────────────────────────────
   no-latest:
     name: "no-latest · mutable tags"
