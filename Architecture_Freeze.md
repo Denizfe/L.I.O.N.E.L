@@ -2,19 +2,22 @@
 
 | | |
 |---|---|
-| Architecture version | **1.8.0** |
+| Architecture version | **1.9.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.8.0`** |
+| Tag | **`architecture-1.9.0`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **0 ADRs pending.** ADR-0033 and ADR-0032 both accepted 2026-08-24 |
+| Previous versions | **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **1 ADR pending — ADR-0034**, awaiting Efe. ADR-0033 and ADR-0032 both accepted 2026-08-24 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **All 33 ADRs are in force.** ADR-0033 was accepted 2026-08-24 and implemented in the
+> **33 of 34 ADRs are in force.** ADR-0034 (2026-08-25) is `Proposed`: it changes
+> `policy-ruleset.schema.json`'s stable surface, so §4 requires Efe's approval before the
+> change rather than after, and the schema edit it describes is deliberately not in the
+> repository. ADR-0033 was accepted 2026-08-24 and implemented in the
 > same version — but only after the working gate was removed from the repository so the
 > decision could be made in writing rather than by having shipped. §9.9.
 >
@@ -28,6 +31,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.9.0** — MINOR over 1.8.0: ADR-0034 added, `Proposed`. No decision in force changed,
+and nothing it describes is implemented while it waits — §1's own definition of MINOR is
+"a new ADR that adds a decision", and this is the first one since 1.3.0 to arrive without
+its implementation. §9.14.
 
 **1.8.0** — MINOR over 1.7.0: the four items 1.7.0 left open are closed, and one of them
 turned out to be a false claim in §9.11 rather than a deferral. ADR-0002 carries an Erratum
@@ -85,21 +93,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.8.0
-sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea
+ARCHITECTURE CHECKSUM                                          architecture 1.9.0
+sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
 
-  ADRs         33 files   sha256:58f939c1796f926cfd8ea3ded7028074…
+  ADRs         34 files   sha256:a7e1ded966dcedcb8ad3a11850c7033b…
   contracts    31 files   sha256:ed9dea767311ffa3d1ba0aa7e14d2345…
-  policy        8 files   sha256:a7e31dee3cf9a25161f1bd80396ebf10…
+  policy        8 files   sha256:17e8bab5b3056e9c17a709697a6083a2…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
-  74 files hashed
+  75 files hashed
 ```
 
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.8.0   sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea
+                     74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.7.0   sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
                      74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.6.0   sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
@@ -127,7 +137,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea
+python3 scripts/architecture_checksum.py --verify sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -174,7 +184,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **33 ADRs, 0001–0033** — all Accepted or Superseded, 0 pending |
+| **Architecture decisions** | **34 ADRs, 0001–0034** — 33 Accepted or Superseded, **1 pending: ADR-0034**, which changes a contract's stable surface and so waits for Efe |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -944,6 +954,70 @@ Gates **22/22**, 0 broken. Self-test **28/28**. Tests **111**, 1 skipped.
 > A test now flags any bare assignment capturing a helper that signals by exit code, and
 > the verdict counts un-run live checks so `PASS` cannot be read as "the DoD clauses were
 > verified". Found by a sign-off audit, which is what a sign-off audit is for.
+
+---
+
+### 9.14 Version 1.9.0 — ADR-0034, and a bound that bounds nothing
+
+One ADR, `Proposed`, and none of what it describes. The first ADR since 1.3.0 to arrive
+without its implementation, and for the reason §4 exists.
+
+**The finding.** `config/policy/default.toml` ends with:
+
+```toml
+[[rule]]
+name = "runaway containment"
+
+max_calls_per_turn = 40
+on_exceeded = "halt_turn"
+```
+
+`policy-ruleset.schema.json` says rule evaluation is *"Evaluated top to bottom. **FIRST
+MATCH WINS.** Falls through to `defaults.decision`"*, and that in a `Match`, *"an absent
+condition is a wildcard"*. Under those two sentences the rule above does nothing, in both
+directions at once:
+
+- No `match` means it matches everything — but it is last, and `reads are broadly permitted`
+  matches any read first. For every tool the policy allows, evaluation stops before it.
+- If evaluation did reach it, it "wins" carrying no `decision`, and the contract has no
+  account of that state. Falling through to `defaults.decision` is the only sensible
+  reading, and that path discards `max_calls_per_turn` too.
+
+The schema permits the rule — `Rule` requires only `name` — so the file validates, and all
+twenty-two gates are green. **A reviewer reading the policy sees a bound. A reviewer reading
+the contract sees that the bound is unreachable. Both are reading the frozen architecture.**
+
+**The implementation was already ahead of the contract.** `PolicyEngine._decide()` evaluates
+constraint-only rules in a pass of their own, before first-match-wins, which makes the
+40-call bound real — and which no contract describes. The tests assert it. The argument
+*"the code works, the contract is merely imprecise"* was available and is the argument §4
+refuses; it is most persuasive once the work is done, which is precisely when it is worth
+the least. So the gap is closed by a decision, not by the fact that code shipped.
+
+**Nothing was changed.** `policy-ruleset.schema.json` is `stability: stable` and inside the
+checksum set, and §4 requires an ADR *and* Efe's approval before a stable surface moves.
+Shipping the schema edit alongside the proposal would make the approval ceremonial. This is
+the fourth time the repository has withheld the implementation of its own proposal —
+ADR-0029 withheld `ADR-009`, ADR-0032 withheld `.mcp.json`, ADR-0033 withheld
+`gate_doc_claims`, and now ADR-0034 withholds the 1.1.0 schema.
+
+The engine's two-pass behaviour stays as it is meanwhile. It is the safer of the two
+readings — a bound that applies beats one that does not — and reverting it to match a
+contract that may be about to change would be churn toward the more dangerous state. The
+ADR says so rather than leaving it to be inferred.
+
+**Why it matters before G4 and not after.** ADR-0008 gives `ToolRouter` a single policy
+chokepoint *"so it cannot be bypassed"*. A limit that silently does not apply is a bypass
+that leaves nothing in the diff. The failure has no symptom until dispatch is real, and
+every symptom afterwards: an API bill at best, an unattended destructive sequence at worst.
+
+Found by the G1 sign-off audit. It is the third defect that audit surfaced whose shape was
+**something that could not do its job while appearing to** — after five hazard rows recorded
+nowhere, and a live check that could not fail. None of the three was caught by a gate.
+
+`docs/decisions/README.md` records **1 ADR pending**. The version moves because
+`docs/decisions/ADR-*.md` and `ci/policy/policy.yaml` are both in the checksum set: 74 files
+becomes 75.
 
 ---
 

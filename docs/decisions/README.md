@@ -63,8 +63,11 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0031](ADR-0031-reviewed-licence-register.md) | A licence that needs review must have somewhere to be reviewed | Accepted | 0 |
 | [0032](ADR-0032-dev-tooling-mcp-servers.md) | Developer-tooling MCP servers are declared, pinned, and disclosed | Accepted | 1 |
 | [0033](ADR-0033-hand-written-claim-checking.md) | Count-shaped claims in hand-written documents are measured, not remembered | Accepted | 0 |
+| [0034](ADR-0034-constraint-only-policy-rules.md) | A policy rule may constrain without deciding | **Proposed** | 0 |
 
-**0 ADRs pending.** ADR-0033 was accepted 2026-08-24 and implemented in the same version —
+**1 ADR pending — ADR-0034**, awaiting Efe under `Architecture_Freeze.md` §5 step 4. It changes a contract's stable surface, so §4 requires the approval before the change, not after: the schema edit it describes is deliberately **not** in the repository while it is `Proposed`.
+
+ADR-0033 was accepted 2026-08-24 and implemented in the same version —
 after the already-working gate was removed from the repository so the decision could be made
 in writing rather than by having shipped. `Architecture_Freeze.md` §9.9 records it.
 
