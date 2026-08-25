@@ -206,44 +206,42 @@ if [[ "$LIVE" -eq 0 ]]; then
 else
   echo "  ${Y}--live given: the two checks below WILL reach the network.${Z}"
 
-  # filesystem-escape: the server must list its root AND refuse to leave it. The
-  # refusal is the half worth testing; a server that lists both has proved nothing.
-  FS_ROOT="$(python3 "$ROOT/scripts/_preflight_table.py" fs-root)"
-  INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lionel-preflight","version":"1"}}}'
-  READY='{"jsonrpc":"2.0","method":"notifications/initialized"}'
-  ESCAPE='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"read_file","arguments":{"path":"C:/Windows/System32/drivers/etc/hosts"}}}'
-  fs_out="$(printf '%s\n%s\n%s\n' "$INIT" "$READY" "$ESCAPE" \
-    | npx -y @modelcontextprotocol/server-filesystem "$FS_ROOT" 2>&1 || true)"
-  if printf '%s' "$fs_out" | grep -qi 'outside allowed\|not allowed\|access denied\|not permitted'; then
-    row "ok" "$G" "filesystem" "refuses" "${D}a read outside the root was denied${Z}"
-  else
-    row "FAIL" "$R" "filesystem" "escaped?" "no refusal seen for a read outside the root"
-    blocking_failures=$((blocking_failures + 1))
-  fi
+  # Both handshakes run inside _preflight_table.py, not as a shell pipeline. The
+  # pipeline version looked right and could not pass: `printf ... | server` closes
+  # stdin the moment printf finishes, and a server that reads EOF as "the client
+  # hung up" tears the session down before writing a byte of response. See the
+  # MCPClient docstring — the GitHub check reported "no login" for every input,
+  # including a valid credential.
+  #
+  # Each command prints one TAB-separated line: <verdict>\t<detail>.
+  #   pass    the clause is satisfied
+  #   fail    it is not, and the detail says which half
+  #   skip    it could not be attempted, and the detail says what to do
+  #   broken  the check itself could not run — exit 2, not 1
+  live_check() {
+    local label="$1" out verdict detail rc
+    out="$(PYTHONPATH="$ROOT/src" python3 "$ROOT/scripts/_preflight_table.py" "$2" 2>&1)"
+    rc=$?
+    verdict="${out%%$'\t'*}"; detail="${out#*$'\t'}"
+    case "$verdict" in
+      pass)   row "ok"   "$G" "$label" "verified" "${D}${detail}${Z}" ;;
+      skip)   row "skip" "$Y" "$label" "not run"  "$detail" ;;
+      broken) row "BRK"  "$R" "$label" "broken"   "$detail"; exit 2 ;;
+      *)      row "FAIL" "$R" "$label" "failed"   "${detail:-$out}"
+              blocking_failures=$((blocking_failures + 1)) ;;
+    esac
+    return 0
+  }
 
-  # github-identity: resolve the credential through ADR-0015's resolver rather than
-  # reading the variable here, so the preflight takes the same path the runtime does
-  # and the value stays wrapped in a SecretStr that cannot be printed by accident.
-  # A skip is not a pass, and the two reasons a skip can happen are different jobs:
-  # "start Docker Desktop" and "issue a fine-grained PAT". Reporting either as
-  # "no login" would send the reader to debug an authentication problem that is not
-  # there — which is the failure `check_env.sh` exists to prevent, one level up.
+  live_check "filesystem" live-filesystem
+
+  # "Start Docker Desktop" and "issue a new token" are different jobs, so the
+  # daemon is checked first rather than letting a dead daemon surface as a
+  # credential failure.
   if [[ "${backend%%$'\t'*}" == "unreachable" ]]; then
-    row "skip" "$Y" "github" "no daemon" "start Docker Desktop and re-run with --live"
-  elif PYTHONPATH="$ROOT/src" python3 "$ROOT/scripts/_preflight_table.py" pat-resolves; then
-    GH_IMG="$(python3 "$ROOT/scripts/_preflight_table.py" gh-image)"
-    GETME='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_me","arguments":{}}}'
-    gh_out="$(printf '%s\n%s\n%s\n' "$INIT" "$READY" "$GETME" \
-      | GITHUB_PERSONAL_ACCESS_TOKEN="${GITHUB_PAT:-}" docker run -i --rm \
-          -e GITHUB_PERSONAL_ACCESS_TOKEN "$GH_IMG" 2>&1 || true)"
-    if printf '%s' "$gh_out" | grep -q '"login"'; then
-      row "ok" "$G" "github" "get_me" "${D}the pinned container authenticated${Z}"
-    else
-      row "FAIL" "$R" "github" "no login" "container started but get_me returned no login"
-      blocking_failures=$((blocking_failures + 1))
-    fi
+    row "skip" "$Y" "github" "not run" "no Docker daemon — start Docker Desktop and re-run"
   else
-    row "skip" "$Y" "github" "no PAT" "secret://env/GITHUB_PAT does not resolve"
+    live_check "github" live-github
   fi
 fi
 

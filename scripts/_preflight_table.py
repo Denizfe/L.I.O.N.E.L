@@ -151,6 +151,247 @@ def cmd_docker_backend() -> None:
         print(f"other\t{kernel}")
 
 
+class MCPClient:
+    """A minimal stdio MCP client: spawn, initialize, call one tool, close.
+
+    WHY THIS EXISTS INSTEAD OF A PIPELINE
+        The live checks were first written as `printf '...' | server`, which looks
+        right and is not. The pipe closes the moment printf finishes, and a server
+        that treats EOF on stdin as "the client hung up" tears the session down
+        before it has written a single byte of response. The GitHub MCP server does
+        exactly that:
+
+            session initialized
+            server session disconnected
+            server session ended with error: server is closing: EOF
+
+        No JSON-RPC ever reached stdout, so the check reported "container started
+        but get_me returned no login" — **which it would have reported for a
+        perfectly valid credential.** A check that cannot pass is worse than no
+        check: it sends the reader to debug an authentication problem that is not
+        there, and this one sits on the G1 sign-off path.
+
+        The filesystem check passed through the same pipeline, which was luck
+        rather than design: Node answers before its teardown reaches the write.
+        Both go through here now.
+
+    It holds stdin open until it has what it asked for, and reads with a timeout
+    on a reader thread — Windows cannot `select()` on a pipe, so a blocking
+    `readline()` against a wedged server would hang the preflight forever.
+
+    It never logs the environment it was given. The credential goes into the child
+    process and nowhere else.
+    """
+
+    def __init__(self, argv: list[str], env: dict | None = None, timeout: float = 60.0):
+        import os
+        import queue
+        import shutil
+        import subprocess
+        import threading
+
+        self.timeout = timeout
+        # `npx` on Windows is `npx.cmd`, which CreateProcess will not find from the
+        # bare name — Popen without a shell does no PATHEXT resolution. `shell=True`
+        # would fix it and is not available: ADR-0011 forbids any path from text to
+        # an interpreter, and a preflight that quietly opened one would be arguing
+        # against the thing it is checking. `which` does the resolution instead, and
+        # execution stays argv-only.
+        resolved = shutil.which(argv[0])
+        if resolved is None:
+            raise FileNotFoundError(argv[0])
+        self._proc = subprocess.Popen(
+            [resolved, *argv[1:]], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL, text=True, bufsize=1,
+            env={**os.environ, **(env or {})})
+        self._q: "queue.Queue[str | None]" = queue.Queue()
+
+        def pump():
+            for line in self._proc.stdout:  # type: ignore[union-attr]
+                self._q.put(line)
+            self._q.put(None)
+
+        threading.Thread(target=pump, daemon=True).start()
+        self._next_id = 0
+
+    def _send(self, message: dict) -> None:
+        self._proc.stdin.write(json.dumps(message) + "\n")  # type: ignore[union-attr]
+        self._proc.stdin.flush()                            # type: ignore[union-attr]
+
+    def _await(self, want_id: int) -> dict | None:
+        """Read until the response to `want_id` arrives, a timeout, or EOF.
+
+        Servers interleave notifications and log lines with responses, so matching
+        on the id is the only correct way to read one — taking the first line back
+        would pair a request with whatever happened to be printed next.
+        """
+        import queue
+        deadline = __import__("time").monotonic() + self.timeout
+        while True:
+            remaining = deadline - __import__("time").monotonic()
+            if remaining <= 0:
+                return None
+            try:
+                line = self._q.get(timeout=remaining)
+            except queue.Empty:
+                return None
+            if line is None:
+                return None
+            line = line.strip()
+            if not line.startswith("{"):
+                continue
+            try:
+                doc = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if doc.get("id") == want_id:
+                return doc
+
+    def initialize(self) -> dict | None:
+        self._next_id += 1
+        rid = self._next_id
+        self._send({"jsonrpc": "2.0", "id": rid, "method": "initialize", "params": {
+            "protocolVersion": "2024-11-05", "capabilities": {},
+            "clientInfo": {"name": "lionel-preflight", "version": "1"}}})
+        reply = self._await(rid)
+        if reply is not None:
+            self._send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        return reply
+
+    def call(self, name: str, arguments: dict) -> dict | None:
+        self._next_id += 1
+        rid = self._next_id
+        self._send({"jsonrpc": "2.0", "id": rid, "method": "tools/call",
+                    "params": {"name": name, "arguments": arguments}})
+        return self._await(rid)
+
+    def close(self) -> None:
+        try:
+            self._proc.stdin.close()  # type: ignore[union-attr]
+        except (OSError, ValueError):
+            pass
+        try:
+            self._proc.terminate()
+            self._proc.wait(timeout=10)
+        except Exception:  # pragma: no cover - best effort teardown
+            try:
+                self._proc.kill()
+            except Exception:
+                pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        self.close()
+        return False
+
+
+def _result_text(reply: dict | None) -> str:
+    """The text of a tools/call result, error or not."""
+    if not reply:
+        return ""
+    result = reply.get("result") or {}
+    parts = [c.get("text", "") for c in result.get("content", []) if isinstance(c, dict)]
+    return " ".join(p for p in parts if p)
+
+
+def cmd_live_filesystem() -> None:
+    """v1.0 Phase 1 DoD + ADR-0002 Verification, both halves.
+
+    A server that refuses everything also refuses the escape, and a server that
+    allows everything also lists the root. Either half alone proves nothing, so
+    both are asserted: a file INSIDE the root must read, and a read OUTSIDE it must
+    come back as an error.
+    """
+    spec = _registry()["filesystem"]
+    argv = [spec["command"], *spec.get("args", [])]
+    root = Path(spec["args"][-1])
+    inside = root / ".python-version"
+    outside = "C:/Windows/System32/drivers/etc/hosts"
+
+    try:
+        client = MCPClient(argv)
+    except FileNotFoundError:
+        print(f"skip\t`{spec['command']}` is not on PATH; the filesystem capability "
+              f"cannot be launched")
+        sys.exit(1)
+    with client:
+        if client.initialize() is None:
+            print("broken\tthe filesystem server never completed an MCP handshake")
+            sys.exit(3)
+        in_reply = client.call("read_file", {"path": str(inside).replace("\\", "/")})
+        out_reply = client.call("read_file", {"path": outside})
+
+    in_ok = bool(in_reply) and not (in_reply.get("result") or {}).get("isError")
+    out_denied = bool(out_reply) and bool((out_reply.get("result") or {}).get("isError"))
+
+    if not in_ok:
+        print(f"fail\tthe server could not read {inside.name} INSIDE its own root; "
+              f"a refusal below would prove nothing")
+        sys.exit(1)
+    if not out_denied:
+        print(f"fail\ta read of {outside} was NOT refused; the root is not a boundary")
+        sys.exit(1)
+    detail = " ".join(_result_text(out_reply).split())[:80]
+    print(f"pass\treads inside the root, refuses outside it — {detail}")
+
+
+def cmd_live_github() -> None:
+    """v1.0 Phase 1 DoD: the pinned container starts and `get_me` returns a login.
+
+    The credential is resolved through ADR-0015's resolver, handed to the child
+    process, and never printed. A 401 is reported as a 401 — "no login" would send
+    the reader to debug the container when the answer is "issue a new token".
+    """
+    sys.path.insert(0, str(ROOT / "src"))
+    from lionel.secrets import SecretError, SecretResolver
+
+    spec = _registry()["github"]
+    secrets = spec.get("secrets") or {}
+    env = {}
+    for var, uri in secrets.items():
+        try:
+            env[var] = SecretResolver().resolve(uri).reveal()
+        except SecretError as e:
+            print(f"skip\t{uri} does not resolve ({type(e).__name__})")
+            sys.exit(1)
+
+    argv = [spec["command"], *spec.get("args", [])]
+    try:
+        client = MCPClient(argv, env=env)
+    except FileNotFoundError:
+        print(f"skip\t`{spec['command']}` is not on PATH")
+        sys.exit(1)
+    with client:
+        if client.initialize() is None:
+            print("broken\tthe container never completed an MCP handshake")
+            sys.exit(3)
+        reply = client.call("get_me", {})
+
+    text = _result_text(reply)
+    if reply and not (reply.get("result") or {}).get("isError"):
+        try:
+            login = json.loads(text).get("login", "")
+        except json.JSONDecodeError:
+            login = ""
+        if login:
+            print(f"pass\tget_me returned login {login}")
+            return
+        print("fail\tget_me succeeded but the response carries no login field")
+        sys.exit(1)
+
+    if "401" in text or "Bad credentials" in text:
+        print("fail\t401 Bad credentials — the token is rejected by api.github.com. "
+              "Expired, revoked, or not authorised for this account")
+        sys.exit(1)
+    if "403" in text:
+        print("fail\t403 — the token authenticates but lacks the scopes get_me needs")
+        sys.exit(1)
+    print(f"fail\t{' '.join(text.split())[:120] or 'no response from the container'}")
+    sys.exit(1)
+
+
 def cmd_live() -> None:
     for c in _preflight().get("live_checks", []):
         why = _flat(c["why"])
@@ -196,6 +437,8 @@ COMMANDS = {
     "live": cmd_live,
     "hazards": cmd_hazards,
     "docker-backend": cmd_docker_backend,
+    "live-filesystem": cmd_live_filesystem,
+    "live-github": cmd_live_github,
     "roots": cmd_roots,
     "fs-root": cmd_fs_root,
     "gh-image": cmd_gh_image,

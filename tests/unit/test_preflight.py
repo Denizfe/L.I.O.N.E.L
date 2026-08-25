@@ -222,6 +222,126 @@ class TestScriptAndTableAgree(unittest.TestCase):
         self.assertNotIn(b"\r", r.stdout)
 
 
+FAKE_SERVER = '''
+import json, sys
+# A server that behaves the way the GitHub MCP server behaves: it tears down on EOF,
+# and it interleaves noise with its responses.
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
+        continue
+    msg = json.loads(line)
+    if msg.get("method") == "initialize":
+        sys.stdout.write("a log line that is not JSON\\n")
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": msg["id"],
+                                     "result": {"capabilities": {}}}) + "\\n")
+        sys.stdout.flush()
+    elif msg.get("method") == "tools/call":
+        # An unrelated notification and a response to a DIFFERENT id, first.
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0",
+                                     "method": "notifications/message"}) + "\\n")
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": 99,
+                                     "result": {"content": []}}) + "\\n")
+        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": {
+            "content": [{"type": "text", "text": "the real answer"}]}}) + "\\n")
+        sys.stdout.flush()
+sys.exit(0)
+'''
+
+SILENT_SERVER = '''
+import sys
+for line in sys.stdin:
+    pass
+'''
+
+
+class TestMCPClient(unittest.TestCase):
+    """The bug this class was written to fix, tested without a network.
+
+    `printf '...' | server` closes stdin the moment printf finishes. A server that
+    reads EOF as "the client hung up" then tears the session down before writing a
+    byte of response — so the GitHub check reported "container started but get_me
+    returned no login" for **every** input, including a valid credential. A check
+    that cannot pass is worse than no check, and this one sits on the G1 sign-off
+    path.
+
+    These use a fake server written to behave the same way, so the properties are
+    checked offline: ADR-0007's guarantee would not survive a suite that needed the
+    network to test the thing that talks to the network.
+    """
+
+    def _server(self, source: str):
+        import tempfile
+        import _preflight_table as helper
+        fh = tempfile.NamedTemporaryFile("w", suffix=".py", delete=False,
+                                         encoding="utf-8", newline="")
+        fh.write(source)
+        fh.close()
+        self.addCleanup(lambda: Path(fh.name).unlink(missing_ok=True))
+        return helper.MCPClient([sys.executable, "-u", fh.name], timeout=20)
+
+    def test_initialize_gets_its_response(self):
+        with self._server(FAKE_SERVER) as c:
+            reply = c.initialize()
+        self.assertIsNotNone(reply, "the client closed stdin before the server answered")
+        self.assertEqual(1, reply["id"])
+
+    def test_a_response_is_matched_by_id_not_by_arrival_order(self):
+        """The fake server answers a different id first, then the real one.
+
+        Taking the first line back would pair a request with whatever happened to be
+        printed next — which for a chatty server is a log line or a notification.
+        """
+        import _preflight_table as helper
+        with self._server(FAKE_SERVER) as c:
+            c.initialize()
+            reply = c.call("anything", {})
+        self.assertIsNotNone(reply)
+        self.assertEqual(2, reply["id"])
+        self.assertEqual("the real answer", helper._result_text(reply))
+
+    def test_a_silent_server_times_out_instead_of_hanging(self):
+        """Windows cannot select() on a pipe, so a blocking readline against a wedged
+        server would hang the preflight with no output and no way to tell why."""
+        with self._server(SILENT_SERVER) as c:
+            c.timeout = 2.0
+            self.assertIsNone(c.initialize())
+
+    def test_a_missing_command_raises_rather_than_being_reported_as_a_failure(self):
+        """`npx` is `npx.cmd` on Windows and Popen finds neither from the bare name.
+
+        It has to surface as "not on PATH", not as "the capability failed its check":
+        one is an environment to fix, the other sends the reader after a bug.
+        """
+        import _preflight_table as helper
+        with self.assertRaises(FileNotFoundError):
+            helper.MCPClient(["definitely-not-a-real-command-xyzzy"])
+
+    def test_no_shell_is_ever_used(self):
+        """ADR-0011: no path from text to an interpreter, including in the preflight.
+
+        A `shell=True` would have been the one-line fix for the npx.cmd problem,
+        which is exactly why this is a test rather than a resolution to remember.
+
+        Checked against the parsed tree, not the text. A substring search fails on
+        the comment explaining why it was not used — the same shape as
+        `SH-BARE-PYTHON` firing on a heading that printed the words "python
+        packages". A rule that cannot tell code from prose about code will keep
+        finding the documentation.
+        """
+        import ast
+        tree = ast.parse(HELPER.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                for kw in node.keywords:
+                    if kw.arg == "shell":
+                        self.fail(f"a `shell=` argument at line {node.lineno}; "
+                                  f"ADR-0011 forbids any path from text to an interpreter")
+                target = ast.unparse(node.func)
+                self.assertNotIn("os.system", target)
+                self.assertNotIn("popen", target.lower().replace("subprocess.popen", ""))
+
+
 class TestHostPathDetection(unittest.TestCase):
     """The check that found the stale root, tested on its own."""
 

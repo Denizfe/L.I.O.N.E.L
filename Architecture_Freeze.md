@@ -841,11 +841,88 @@ refuses the escape, and a server that allows everything also lists the root. `gi
 did not run — no daemon was reachable — and is reported as a skip naming that reason, not as
 a pass and not as a failed login. **It is still owed.**
 
+> **Corrected at §9.13.** Both checks above ran through a shell pipeline that closes stdin
+> before the server can answer. The `filesystem` result stands — it was re-run through a real
+> client and passed both halves again — but it passed here by luck rather than by design, and
+> the GitHub check in the same shape could not have passed for any input.
+
 Self-test **28/28**. Gates **22/22**, 0 broken. Tests **106**, 1 skipped. The contract example
 in `capabilities-registry.schema.json` was corrected too: it is illustrative rather than
 stable surface, and an example that points somewhere non-existent is a trap for whoever
 copies it. `MASTER_PLAN_v1.md` and `Phase0_Blockers.md` keep the old path — frozen historical
 records, preserved verbatim by decision.
+
+---
+
+### 9.13 A check that could not pass, and the clause it was hiding
+
+No version. The architecture checksum is unchanged — only `scripts/` and `tests/` moved, and
+neither is in the set. Recorded here because of what it found.
+
+**The GitHub live check reported `no login` for every input, valid credentials included.**
+
+It was written as a shell pipeline: `printf '<init><ready><get_me>' | docker run -i …`. That
+looks right. The pipe closes the instant `printf` finishes, and a server that reads EOF on
+stdin as "the client hung up" tears the session down before writing a byte of response. The
+GitHub MCP server does exactly that:
+
+```
+session initialized
+server session disconnected
+server session ended with error: server is closing: EOF
+```
+
+No JSON-RPC reached stdout at all, so the branch that looked for a login never had anything
+to look at. The check was not strict; it was **inert**, and its failure message —
+*"container started but get_me returned no login"* — sent the reader to audit a token that
+was fine.
+
+This is worse than an unwritten check. An unwritten check is visibly absent. This one
+occupied the slot, reported a specific and plausible diagnosis, and sat on the G1 sign-off
+path. It was the last thing standing between the project and a signature.
+
+**The `filesystem` check passed through the same broken pipeline** at 1.8.0, and was recorded
+in §9.12 as evidence. It passed because Node answers before its teardown reaches the write —
+luck, not design, and it would have gone on being read as proof.
+
+**What replaced it.** `MCPClient` in `scripts/_preflight_table.py`: it holds stdin open until
+it has what it asked for, and matches each response **by request id**. Taking the first line
+back would pair a request with whatever the server happened to print next, which for a chatty
+server is a log line or an unrelated notification. Reads run on a reader thread with a
+deadline, because Windows cannot `select()` on a pipe and a blocking `readline()` against a
+wedged server hangs the preflight with no output and no way to tell why.
+
+`401`, `403` and silence are now three different reports. "Start Docker Desktop", "issue a
+new token" and "the container is broken" are three different jobs, and a check that collapses
+them has moved the diagnosis onto the reader at the least convenient moment.
+
+**`npx` is `npx.cmd` on Windows,** and `Popen` without a shell does no PATHEXT resolution —
+`FileNotFoundError` from the bare name. `shell=True` was the one-line fix and was not
+available: ADR-0011 forbids any path from text to an interpreter, and a preflight that quietly
+opened one would be arguing against the thing it checks. `shutil.which()` resolves it and
+execution stays argv-only. A test walks the parsed tree for a `shell=` keyword — a substring
+search finds the comment explaining why it is not used, which is the same shape as
+`SH-BARE-PYTHON` firing on a heading that printed the words "python packages".
+
+**The tests need no network.** A fake server reproduces the two behaviours that mattered: it
+exits on EOF, and it interleaves a log line, a notification and a response to a different id
+before answering. ADR-0007's guarantee would not survive a suite that needed the network in
+order to test the thing that talks to the network.
+
+**v1.0's Phase 1 DoD is closed.** Run on the host, 2026-08-25:
+
+```
+filesystem  reads .python-version inside the root
+            refuses C:/Windows/System32/drivers/etc/hosts — "path outside allowed directories"
+github      get_me -> login denizefekaracakaya, from the digest-pinned container,
+            credential resolved through secret://env/GITHUB_PAT
+```
+
+ADR-0002's Verification clause — *"The MCP filesystem server starts scoped to this root,
+lists it successfully, and refuses a read outside it"* — has been owed since 2026-08-01 and
+is now satisfied, on the host, by the ADR's own terms.
+
+Gates **22/22**, 0 broken. Self-test **28/28**. Tests **111**, 1 skipped.
 
 ---
 

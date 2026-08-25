@@ -137,12 +137,19 @@ scripts/check_env.sh` runs the tooling preflight table, and two of the seven Git
 rows became `SH-BARE-PYTHON` and `SH-MSYS-DOCKER`.
 
 **Two of its clauses need `--live`** — both need the network or a credential, so they are
-opt-in; an offline default is not laziness here, it is ADR-0007.
+opt-in; an offline default is not laziness here, it is ADR-0007. **Both passed on the host on
+2026-08-25**, which closes v1.0's Phase 1 DoD in full:
 
-| `--live` check | State |
+| `--live` check | Evidence |
 |---|---|
-| filesystem refuses a read outside its root | **passed on the host 2026-08-25**, both halves: `.python-version` reads, `C:/Windows/.../hosts` is denied. §9.12 |
-| `get_me` returns Efe's login | **still owed** — no Docker daemon was reachable. Reported as a skip naming that reason, never as a pass |
+| filesystem refuses a read outside its root | both halves: `.python-version` reads, `C:/Windows/…/hosts` returns `isError` with *"path outside allowed directories"*. ADR-0002's Verification clause, owed since 2026-08-01 |
+| `get_me` returns Efe's login | `denizefekaracakaya`, from the digest-pinned container, credential resolved through `secret://env/GITHUB_PAT` |
+
+**The first version of that GitHub check could not have passed.** It was
+`printf … | docker run -i`, which closes stdin the moment printf finishes; the server reads
+EOF as a hangup and tears the session down before writing a byte. It reported *"no login"*
+for every input, a valid credential included. Both handshakes now go through `MCPClient` in
+`scripts/_preflight_table.py`, which holds stdin open and matches responses by id. §9.13.
 
 The preflight's first run found the `filesystem` capability rooted at a directory that does
 not exist (`Desktop/`, not `Projects/`), written identically in two config files, with all
