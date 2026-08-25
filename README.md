@@ -5,20 +5,24 @@ and designed to work with the network unplugged.
 
 ## Status
 
-**Phase 0 — Contracts & Foundations.** No implementation code yet, by design.
-ADRs and interface contracts land before the code they constrain.
+**Phase 1 — Host Runtime Skeleton & Control Plane.** Gate G1, open since
+architecture 1.6.0 (2026-08-24). Phase 0 is frozen and signed off; `STRUCT-004`, which
+forbade any runtime code, is lifted but dormant rather than deleted.
+
+ADRs and interface contracts land before the code they constrain, and they did: 33 ADRs
+and 30 contracts were frozen before the first line of `src/lionel/` was written.
 
 ## Read these first
 
 | Document | Purpose |
 |---|---|
 | [MASTER_PLAN_v2.md](MASTER_PLAN_v2.md) | **Authoritative blueprint.** Start here |
-| [docs/decisions/](docs/decisions/README.md) | 28 ADRs. Every decision, with its rejected alternatives |
+| [docs/decisions/](docs/decisions/README.md) | 33 ADRs. Every decision, with its rejected alternatives |
 | [docs/LATENCY_BUDGET.md](docs/LATENCY_BUDGET.md) | Per-stage targets, wired to alerts from Phase 5 |
 | [MASTER_PLAN_v1.md](MASTER_PLAN_v1.md) | Historical. Superseded in full by v2.0 |
 | [CI_Architecture.md](CI_Architecture.md) | How the policy pipeline is built, and why |
-| [CI_Inventory.md](CI_Inventory.md) | The 16 gates, and which ADR each enforces |
-| [Policy_Gates.md](Policy_Gates.md) | All 88 rules, with triggers |
+| [CI_Inventory.md](CI_Inventory.md) | The gates, and which ADR each enforces. **Generated** |
+| [Policy_Gates.md](Policy_Gates.md) | Every rule, with its trigger. **Generated** |
 | [Artifact_Verification_Report.md](Artifact_Verification_Report.md) | Artifact reproducibility state |
 
 ## The one thing to understand
@@ -47,9 +51,18 @@ crosses MCP; control decisions never ride the media stream. Both are correlated 
 ## CI
 
 ```bash
-bash ci/run_gates.sh          # all 16 policy gates
+bash ci/run_gates.sh          # every policy gate
 bash ci/self_test.sh          # prove the gates catch violations
 ```
 
-16 gates enforce 19 of 28 ADRs. `artifacts` is red by design until every artifact digest
-is pinned. An architectural rule with no test is a preference.
+An architectural rule with no test is a preference. The live counts — gates, rules,
+workflow jobs — are in [CI_Inventory.md](CI_Inventory.md), which is generated from the
+pipeline rather than written by hand.
+
+They are not repeated here on purpose. Every number this file used to state had gone
+stale, including the status above; `doc-claims` (ADR-0033) measures count-shaped claims
+in three registered documents, and this was not one of them.
+
+```bash
+bash scripts/check_env.sh     # is THIS machine ready? (the host, not the repo)
+```

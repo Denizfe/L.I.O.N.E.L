@@ -8,7 +8,7 @@
 
 > **An architectural rule with no test is a preference.**
 
-L.I.O.N.E.L has 28 ADRs. Without machine enforcement, every one of them survives only as
+L.I.O.N.E.L has 33 ADRs. Without machine enforcement, every one of them survives only as
 long as everyone remembers it — which in practice means until the first deadline. The
 decisions that erode first are the ones that cost something today and pay off later:
 offline operation, the absence of a shell capability, trust propagation. Exactly the ones
@@ -172,7 +172,7 @@ Runtime dependencies of the *project* are irrelevant to CI: `pyyaml` for policy,
 
 ## 6. Coverage and its limits
 
-19 of 28 ADRs have an executable test today. The other 9 need running code and each names
+Not every ADR has an executable test yet, and the ratio is not stated here: it was written as `19 of 28` and went stale twice over, which is the failure this section is about. `CI_Inventory.md` §2 is generated and carries the current mapping. The other 9 need running code and each names
 the gate that will cover it — see [CI_Inventory.md](CI_Inventory.md) §2.
 
 **Where the pipeline is genuinely weak, stated plainly:**

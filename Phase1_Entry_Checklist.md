@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Gate | G0 → G1 |
-| Status | **COMPLETE** — architecture 1.6.0, Phase 1 open |
+| Status | **COMPLETE** — Phase 1 opened at architecture 1.6.0, 2026-08-24 |
 | Items | 9 |
 | Done | **9 of 9** |
 | Blocking | 0 |
@@ -175,15 +175,15 @@ The three pushes before the freeze commit are red in the same history. That is t
 
 | | |
 |---|---|
-| ✅ 28 ADRs, no contradictions, all cross-references resolve |
+| ✅ 33 ADRs, no contradictions, all cross-references resolve |
 | ✅ Contract set 1.1.0 — 27 schemas + 3 protobuf, all valid, 45 examples validate |
 | ✅ Capability registry — 5 capabilities, all governance fields, consistent with ADR-0007 |
 | ✅ Artifact lock — 13/13 resolved, tiers declared, digest matches registry |
 | ✅ Trust model — vocabularies identical across contracts and registry |
-| ✅ **22 gates, 145 rules, 26 workflow jobs**, 0 stubs |
-| ✅ **Gate coverage 22/22**, 25 assertions — every gate has rejected a planted violation |
+| ✅ **22 gates, 146 rules, 26 workflow jobs**, 0 stubs |
+| ✅ **Gate coverage 22/22**, 28 assertions — every gate has rejected a planted violation |
 | ✅ **The pipeline enforces its own invariants** — checksum, generated docs, gate coverage |
-| ✅ Repository hygiene — 0 CRLF, 0 runtime `.py`, ignore rules exercised |
+| ✅ Repository hygiene — 0 CRLF, ignore rules exercised. (`0 runtime .py` was true at entry; `STRUCT-004` was lifted the same day.) |
 | ✅ Security assumptions documented — ADR-0011, 0012, 0015, 0022 |
 | ✅ Ownership defined for every contract and capability |
 | ✅ Architecture checksum reproducible from a clean clone on Windows and Linux |

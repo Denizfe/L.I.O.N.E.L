@@ -50,6 +50,7 @@ fi
 
 blocking_failures=0
 later_missing=0
+live_skipped=0
 
 row() { printf '  %s%-5s%s %-10s %-12s %s\n' "$2" "$1" "$Z" "$3" "$4" "$5"; }
 
@@ -121,7 +122,9 @@ done <<< "$TOOLS"
 # ---- Phase 2: the python packages the gates import ---------------------------
 echo
 echo "  ${D}Python packages${Z}"
-PKGS="$(python3 "$ROOT/scripts/_preflight_table.py" packages)"
+if ! PKGS="$(python3 "$ROOT/scripts/_preflight_table.py" packages)"; then
+  echo "  ${R}BROKEN${Z}  could not read \`preflight.python_packages\`."; exit 2
+fi
 while IFS=$'\t' read -r mod dist required_at why; do
   [[ -z "$mod" ]] && continue
   if python3 -c "import $mod" >/dev/null 2>&1; then
@@ -143,7 +146,9 @@ done <<< "$PKGS"
 # pointed at Desktop/L.I.O.N.E.L while the repository lived in Projects/.
 echo
 echo "  ${D}declared host paths${Z}"
-ROOTS="$(python3 "$ROOT/scripts/_preflight_table.py" roots)"
+if ! ROOTS="$(python3 "$ROOT/scripts/_preflight_table.py" roots)"; then
+  echo "  ${R}BROKEN${Z}  could not read the declared host paths."; exit 2
+fi
 if [[ -z "$ROOTS" ]]; then
   row "ok" "$G" "roots" "none" "${D}no capability declares a host path${Z}"
 else
@@ -185,7 +190,9 @@ done <<< "$(python3 "$ROOT/scripts/_preflight_table.py" hazards)"
 # HAZ-DOCKER-BACKEND, executed. `docker --version` answers about the CLI and says
 # nothing about whether a daemon is running — this preflight reported a green Docker
 # row on a machine where nothing could actually be launched.
-backend="$(python3 "$ROOT/scripts/_preflight_table.py" docker-backend)"
+if ! backend="$(python3 "$ROOT/scripts/_preflight_table.py" docker-backend)"; then
+  backend="unreachable"
+fi
 case "${backend%%$'\t'*}" in
   wsl2)
     row "ok" "$G" "HAZ-DOCKER-BACKEND" "wsl2" "${D}${backend#*$'\t'}${Z}" ;;
@@ -219,13 +226,20 @@ else
   #   skip    it could not be attempted, and the detail says what to do
   #   broken  the check itself could not run — exit 2, not 1
   live_check() {
-    local label="$1" out verdict detail rc
-    out="$(PYTHONPATH="$ROOT/src" python3 "$ROOT/scripts/_preflight_table.py" "$2" 2>&1)"
-    rc=$?
+    local label="$1" out verdict detail
+    # `out="$(cmd)"` under `set -e` ABORTS THE SCRIPT when cmd exits non-zero, before
+    # the next line can look at $?. Every branch below except `pass` is reached by a
+    # non-zero exit, so all three — skip, fail, broken — were unreachable, and a
+    # failing check killed the preflight silently instead of reporting. The `if`
+    # suspends `set -e` for the assignment, which is the whole fix.
+    if ! out="$(PYTHONPATH="$ROOT/src" python3 "$ROOT/scripts/_preflight_table.py" "$2" 2>&1)"; then
+      :
+    fi
     verdict="${out%%$'\t'*}"; detail="${out#*$'\t'}"
     case "$verdict" in
       pass)   row "ok"   "$G" "$label" "verified" "${D}${detail}${Z}" ;;
-      skip)   row "skip" "$Y" "$label" "not run"  "$detail" ;;
+      skip)   row "skip" "$Y" "$label" "not run"  "$detail"
+              live_skipped=$((live_skipped + 1)) ;;
       broken) row "BRK"  "$R" "$label" "broken"   "$detail"; exit 2 ;;
       *)      row "FAIL" "$R" "$label" "failed"   "${detail:-$out}"
               blocking_failures=$((blocking_failures + 1)) ;;
@@ -240,6 +254,7 @@ else
   # credential failure.
   if [[ "${backend%%$'\t'*}" == "unreachable" ]]; then
     row "skip" "$Y" "github" "not run" "no Docker daemon — start Docker Desktop and re-run"
+    live_skipped=$((live_skipped + 1))
   else
     live_check "github" live-github
   fi
@@ -251,10 +266,14 @@ if [[ "$blocking_failures" -gt 0 ]]; then
   echo "  ${R}FAIL${Z}  $blocking_failures required item(s) missing. The environment is not ready."
   exit 1
 fi
+echo "  ${G}PASS${Z}  everything required now is present."
 if [[ "$later_missing" -gt 0 ]]; then
-  echo "  ${G}PASS${Z}  everything required now is present."
   echo "  ${Y}note${Z}  $later_missing item(s) are needed at a later gate, not yet."
-else
-  echo "  ${G}PASS${Z}  every row in the preflight table is satisfied."
+fi
+# A skip is not a pass. Two of these rows ARE v1.0's Phase 1 DoD, so a run that
+# could not execute them must not read as one that verified them.
+if [[ "$live_skipped" -gt 0 ]]; then
+  echo "  ${Y}note${Z}  $live_skipped live check(s) did NOT run. PASS above means the"
+  echo "        environment is ready, not that those clauses were verified."
 fi
 exit 0

@@ -299,7 +299,7 @@ audited.
 ### 8.2 Reproducing the freeze
 
 ```bash
-git clone https://github.com/Denizfe/L.I.O.N.E.L.git && cd L.I.O.N.E.L
+git clone https://github.com/denizefekaracakaya/L.I.O.N.E.L.git && cd L.I.O.N.E.L
 git checkout architecture-1.0.0
 pip install pyyaml jsonschema grpcio-tools
 bash ci/run_gates.sh          # expect 17/17, 0 broken
@@ -923,6 +923,27 @@ lists it successfully, and refuses a read outside it"* — has been owed since 2
 is now satisfied, on the host, by the ADR's own terms.
 
 Gates **22/22**, 0 broken. Self-test **28/28**. Tests **111**, 1 skipped.
+
+> **Erratum — 2026-08-25: the three-way diagnosis above did not work either.**
+>
+> The sentence *"401, 403 and silence are now three different reports"* described the
+> intent. `check_env.sh` runs under `set -euo pipefail`, and the driver captured the
+> check's output with a bare `out="$(...)"`. Under `set -e` that **aborts the script**
+> when the command exits non-zero, before the next line can read `$?` — so every branch
+> reached by a failure was unreachable. `skip`, `fail` and `broken`: all three. A failing
+> live check killed the preflight silently, printing nothing at all, and the only outcome
+> `live_check` could ever report was `pass`.
+>
+> Third time in this script that the bug was *a check that could not fail*. The evidence
+> recorded above stands — it came from the passing path, on the host — but it is the only
+> path that had ever been exercised. The fix is `if ! out="$(...)"`, which suspends
+> `set -e` for the assignment. Verified by forcing the skip path: with no `GITHUB_PAT`
+> resolvable, the run now prints `skip github not run — secret://env/GITHUB_PAT does not
+> resolve (SecretNotFound)` and continues to its verdict.
+>
+> A test now flags any bare assignment capturing a helper that signals by exit code, and
+> the verdict counts un-run live checks so `PASS` cannot be read as "the DoD clauses were
+> verified". Found by a sign-off audit, which is what a sign-off audit is for.
 
 ---
 

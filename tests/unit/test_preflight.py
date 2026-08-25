@@ -203,6 +203,49 @@ class TestScriptAndTableAgree(unittest.TestCase):
             with self.subTest(command=cmd):
                 self.assertIn(cmd, helper.COMMANDS)
 
+    def test_no_bare_assignment_captures_a_command_that_can_fail(self):
+        """`set -e` + `out="$(cmd)"` kills the script when cmd exits non-zero.
+
+        It aborts BEFORE the next line can read `$?`, so every branch downstream that
+        is reached by a failure is unreachable. In `live_check` that was skip, fail
+        AND broken — the entire three-way diagnosis the preflight documents. A failing
+        live check killed the run silently rather than reporting, and the only outcome
+        it could ever print was `pass`.
+
+        Twice now the bug has been that a check could not fail. The rule is: capture a
+        helper's output inside an `if`, which suspends `set -e` for the assignment, or
+        append `|| true` where a non-zero exit is genuinely uninteresting.
+
+        Scoped to the helper calls, deliberately. `ROOT="$(cd ... && pwd)"` is also a
+        bare assignment and should stay one — if that fails the script genuinely
+        cannot continue, and aborting is the right answer. The rule applies where a
+        non-zero exit is a MESSAGE, and `_preflight_table.py` is the thing in this
+        script that signals by exit code.
+        """
+        offenders = []
+        for i, line in enumerate(self.script.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("#") or "_preflight_table.py" not in stripped:
+                continue
+            if not re.match(r'^(?:local\s+)?[A-Za-z_][A-Za-z0-9_]*="\$\(', stripped):
+                continue          # already `if !`-guarded, or not an assignment
+            if "||" in stripped:
+                continue          # an explicit fallback inside the substitution
+            offenders.append(f"{i}: {stripped[:70]}")
+        self.assertEqual(
+            [], offenders,
+            "these capture a command's output with a bare assignment under `set -e`; "
+            "a non-zero exit aborts the script before the result can be inspected. "
+            "Wrap in `if ! VAR=\"$(...)\"; then` or append `|| true`.")
+
+    def test_a_skipped_live_check_is_not_reported_as_a_pass(self):
+        """Two live rows ARE v1.0's Phase 1 DoD, so `PASS` must not absorb a skip."""
+        self.assertIn("live_skipped", self.script)
+        self.assertRegex(
+            self.script, r"live check\(s\) did NOT run",
+            "the verdict does not distinguish a run that verified the live clauses "
+            "from one that could not attempt them")
+
     def test_the_helper_refuses_an_unknown_command_with_exit_3(self):
         """3 means 'the table or this reader is wrong', which check_env.sh turns into
         its own exit 2. A helper that exited 1 would be reported as a bad machine."""
