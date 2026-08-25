@@ -32,6 +32,7 @@ not the product.
 | **R-A17** | Embedding model changed; vectors silently invalid | Low | **High** | Minor | G2 | memory | MITIGATED |
 | **R-A18** | Cancellation incomplete at L2; orphaned cluster work | Med | Med | Minor | G7 | core-orchestration | DESIGNED |
 | **R-A19** | Eleven-phase plan outlasts motivation | Med | Med | **Informational** | — | Efe | **NEWLY RAISED** |
+| **R-A20** | Host fact unverifiable by CI; stale filesystem root undetected | **High** | Med | **Moderate** | — | platform | **MITIGATED 2026-08-25** |
 
 \* ~~Likelihood Low **only while use stays personal**~~ — superseded 2026-08-10. The condition was not the artifact anyone was watching. See R-A15.
 
@@ -190,6 +191,34 @@ Turkish is not a nice-to-have here; it is half the product.
 *Mitigation:* pull the quality judgement forward. A five-minute listening test on
 `tr_TR-dfki-medium` samples, done **now**, converts a G6c surprise into a Phase 0 decision.
 The samples are published in the same HF repo already pinned.
+
+### R-A20 — A host fact cannot be checked by CI, and CI is where checking happens · **Moderate** *(raised 2026-08-25)*
+
+`config/capabilities.registry.json` scoped the `filesystem` capability to
+`C:/Users/deniz/Desktop/L.I.O.N.E.L` — the allowed root the server "cannot escape", and
+therefore the one thing standing between a prompt going sideways and `C:\Windows`. The
+repository is at `Projects/`. The directory had not existed for an undatable stretch, the
+same path was written in `config/lionel.toml` as well, and **all twenty-two gates were
+green the entire time.**
+
+No gate was wrong. Every gate checked the file's *shape*, which is all a gate can do:
+gates run on CI runners, CI runners are a different machine, and whether `C:/Users/deniz/...`
+exists is a fact about Efe's laptop. The class is **any invariant whose truth lives on the
+host** — declared paths, an installed toolchain, a Docker backend, a running daemon.
+
+*Mitigated, not closed.* `scripts/check_env.sh` (1.7.0) verifies every declared host path
+exists and belongs to this checkout, scanning both declaring files, and 1.8.0 added the
+Docker daemon and backend. `tests/unit/test_preflight.py` checks the table's shape in CI,
+which is the portable half. **The residual risk is that nothing forces the preflight to
+run.** It is exactly the shape of the finding that produced ADR-0030 — a rule stated in
+one place and enforced in none — except that here the enforcement is genuinely impossible
+from CI, so the honest mitigation is a habit rather than a gate.
+
+*Route to closure:* make `check_env.sh` a documented step of the G-gate sign-off ritual, so
+each phase boundary runs it once on the host and records the output. A gate cannot own
+this; a checklist can.
+
+*Owner:* platform. *Revisit:* G2, when a running Docker daemon stops being optional.
 
 ### R-A15 — NC licence blocks distribution · **Major** *(escalated 2026-08-10)*
 

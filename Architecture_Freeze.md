@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.7.0** |
+| Architecture version | **1.8.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.7.0`** |
+| Tag | **`architecture-1.8.0`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Previous versions | **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **0 ADRs pending.** ADR-0033 and ADR-0032 both accepted 2026-08-24 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -28,6 +28,12 @@
 ---
 
 ## 1. Architecture version
+
+**1.8.0** — MINOR over 1.7.0: the four items 1.7.0 left open are closed, and one of them
+turned out to be a false claim in §9.11 rather than a deferral. ADR-0002 carries an Erratum
+(the root moved to `Projects/`), the seven-row hazard table becomes a registry with four
+rows now enforced by gates, `ARCH-017` lands, and the `--live` filesystem check ran on the
+host. No ADR was added and no decision changed. §9.12.
 
 **1.7.0** — MINOR over 1.6.0: v1.0's Phase 1 preflight table becomes executable, and the
 two statically checkable rows of its Git Bash hazard table become gate rules. No ADR was
@@ -79,12 +85,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.7.0
-sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
+ARCHITECTURE CHECKSUM                                          architecture 1.8.0
+sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea
 
-  ADRs         33 files   sha256:20888f57f60d14ad15267a754f793c3c…
-  contracts    31 files   sha256:222451c587f1c1ca1f2c29d1c908e989…
-  policy        8 files   sha256:9a0f7be61f24c45d40bfb53cdde8326d…
+  ADRs         33 files   sha256:58f939c1796f926cfd8ea3ded7028074…
+  contracts    31 files   sha256:ed9dea767311ffa3d1ba0aa7e14d2345…
+  policy        8 files   sha256:a7e31dee3cf9a25161f1bd80396ebf10…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -94,6 +100,8 @@ sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.7.0   sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
+                     74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.6.0   sha256:e279470a2d42ce319437f5fd16593accf0870aca88c28ebc07ee1ed4e8aed1ba
                      74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.5.0   sha256:e5dbceda15533d681589400ec455677592307877d787cd780350bf90dd791818
@@ -119,7 +127,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
+python3 scripts/architecture_checksum.py --verify sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -174,7 +182,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 20 configuration sections (`preflight` added at 1.7.0), and the count is now measured by `doc-claims` |
-| **CI gates** | **22 gates, 145 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 27/27, gate coverage 22/22 |
+| **CI gates** | **22 gates, 146 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 28/28, gate coverage 22/22 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -751,10 +759,93 @@ CRLF in scripts — the last already enforced as `SH-CRLF`) describe what an ope
 a terminal and cannot be checked from a file; they are recorded in `check_env.sh` where the
 operator will read them.
 
+> **Corrected at 1.8.0 — this last sentence was not true when it was written.** Nothing was
+> recorded in `check_env.sh`. The sentence is left standing rather than edited, because it
+> is the record of what 1.7.0 claimed; §9.12 says what was actually there and what made the
+> claim true. Two of the five rows were also checkable after all.
+
 Self-test **27/27**. Gates **22/22**, 0 broken. Tests **102**, 1 skipped (a POSIX-only
 kill-tree case). `scripts/`, `src/`, `tests/` and `CLAUDE.md` remain outside the checksum
 set; the version moves because `ci/policy/policy.yaml`, `config/lionel.toml` and
 `config/capabilities.registry.json` are in it.
+
+---
+
+### 9.12 Version 1.8.0 — the four things 1.7.0 left, and a claim that was not true
+
+1.7.0 closed with a list of what it had deliberately not done. Working that list turned up
+one item that was not a deferral at all.
+
+**§9.11 said something that was false.** It reported that the five unenforceable hazard rows
+were *"recorded in `check_env.sh` where the operator will read them"*, and the 1.7.0 commit
+message said the same. They were not in `check_env.sh`. Nothing was. The sentence described
+an intention, written at the point in the work where intention and completion feel identical
+— and it went into the frozen record.
+
+This is the failure `doc-claims` exists to catch, in the one shape it cannot catch: not a
+count, a claim about what a file contains. Nothing checks those. `ADR-0033`'s Costs section
+already records that gap; it now has an instance with a date on it.
+
+The correction is not an edit. The claim is made true instead: all seven rows are a registry
+in `ci/policy/policy.yaml` → `preflight.hazards`, `check_env.sh` prints them, and
+`tests/unit/test_preflight.py` asserts all seven are present, that a row naming an enforcing
+rule names one that a gate actually emits, and that the `operator` label stays capped.
+
+**`ARCH-017` — the seventh row stopped being unenforceable.** HAZ-BACKSLASH was labelled
+`operator` on the reasoning that config style is a matter of discipline. It is not: config
+files are in the repository and portable, so a gate can read them. `ARCH-017` fails any
+`"C:\..."` value under `config/`. The failure it prevents is silent by construction — Bash
+consumes the backslash as an escape, `C:\Users\deniz` arrives as `C:Usersdeniz`, nothing
+errors, and the filesystem capability is scoped to a root that does not exist. Which is very
+nearly what had already happened by another route.
+
+Four of seven rows are now gate rules, one is executed by the preflight, and two genuinely
+describe what a person types at a terminal. The registry comment caps `operator` at two, and
+a test enforces the cap — `operator` is the one label in this repository carrying neither an
+owner nor a route to removal, so it is bounded instead.
+
+**`docker --version` was answering the wrong question.** The 1.7.0 preflight reported a green
+Docker row on a machine where no daemon was running and nothing could be launched. The CLI
+being installed is not the fact anyone needs. `HAZ-DOCKER-BACKEND` now asks the daemon, and
+distinguishes three answers: WSL2 (what MASTER_PLAN_v1 §2 requires), another backend, and
+unreachable. The `--live` GitHub check consults it first, because "start Docker Desktop" and
+"issue a PAT" are different jobs and reporting the first as an authentication failure sends
+the reader to debug something that is not broken.
+
+**ADR-0002 carries an Erratum.** Its title and Decision named `Desktop\L.I.O.N.E.L`. The
+mechanism is an Erratum rather than a supersession, and the ADR's own Context is what settles
+it: the rule applied there was *"The directory that actually exists, and that tooling has
+access to"*, which is unchanged and still selects exactly one answer — only the answer moved.
+A supersession would be right for a different decision, such as making the root
+configurable, and that alternative stays rejected for the reason already recorded.
+
+The ADR also predicted this. Its Context: *"An unresolved path ambiguity is not cosmetic — it
+silently produces two divergent trees, half-written config, and MCP filesystem roots that
+point at nothing."* That happened, to this ADR, in this repository, with all twenty-two gates
+green. Raised as **R-A20**, Moderate, mitigated rather than closed: the residual risk is that
+nothing forces the preflight to run, and nothing can — a host fact is not checkable from a
+CI runner. The route to closure is a checklist step at each gate sign-off, not a gate.
+
+**The `--live` checks ran, and one of them passed for real.** ADR-0002's Verification clause
+— *"The MCP filesystem server starts scoped to this root, lists it successfully, and refuses
+a read outside it"* — has been owed since 2026-08-01. On the host:
+
+```
+read C:/Users/deniz/Projects/L.I.O.N.E.L/.python-version   ->  "3.11"
+read C:/Windows/System32/drivers/etc/hosts                 ->  isError: true
+                     Access denied - path outside allowed directories
+```
+
+Both halves, because either alone proves nothing: a server that refuses everything also
+refuses the escape, and a server that allows everything also lists the root. `github-identity`
+did not run — no daemon was reachable — and is reported as a skip naming that reason, not as
+a pass and not as a failed login. **It is still owed.**
+
+Self-test **28/28**. Gates **22/22**, 0 broken. Tests **106**, 1 skipped. The contract example
+in `capabilities-registry.schema.json` was corrected too: it is illustrative rather than
+stable surface, and an example that points somewhere non-existent is a trap for whoever
+copies it. `MASTER_PLAN_v1.md` and `Phase0_Blockers.md` keep the old path — frozen historical
+records, preserved verbatim by decision.
 
 ---
 

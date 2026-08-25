@@ -109,6 +109,71 @@ class TestTableShape(unittest.TestCase):
                     self.assertNotIn(reaching, t["probe"])
 
 
+@unittest.skipIf(yaml is None, "pyyaml not installed (pyproject `ci` extra)")
+class TestHazardTable(unittest.TestCase):
+    """MASTER_PLAN_v1 §2, and the one label that must never be a hiding place.
+
+    Every row says who enforces it. `operator` is the honest word for "nothing can
+    check this from a file" — and it is exactly the word a row drifts into when
+    writing the check turns out to be work. So `operator` is capped, and a row that
+    claims a rule enforces it has to name a rule that exists.
+    """
+
+    # The seven rows of MASTER_PLAN_v1 §2. Named here so the table cannot shrink:
+    # a hazard silently dropped is a hazard that bites on every phase, unrecorded.
+    V1_HAZARDS = {"HAZ-MSYS-PATH", "HAZ-STORE-PYTHON", "HAZ-CRLF-SH",
+                  "HAZ-DOCKER-BACKEND", "HAZ-HOST-MOUNT", "HAZ-TTY", "HAZ-BACKSLASH"}
+
+    def setUp(self):
+        doc = yaml.safe_load((ROOT / "ci" / "policy" / "policy.yaml").read_text(
+            encoding="utf-8"))
+        self.pre = doc["preflight"]
+        self.hazards = self.pre["hazards"]
+
+    def test_all_seven_rows_are_present(self):
+        self.assertEqual(self.V1_HAZARDS, {h["id"] for h in self.hazards})
+
+    def test_every_row_names_its_enforcer(self):
+        for h in self.hazards:
+            with self.subTest(hazard=h["id"]):
+                self.assertIn("hazard", h)
+                self.assertIn("rule", h)
+                self.assertTrue(h.get("enforced_by"))
+
+    def test_a_named_rule_id_actually_exists(self):
+        """The drift: a row claims `SH-WHATEVER` enforces it, and nothing does.
+
+        That reads as covered on every future audit, which is worse than reading as
+        uncovered — an `operator` row at least tells the truth about itself.
+        """
+        known = {p["id"] for p in
+                 yaml.safe_load((ROOT / "ci" / "policy" / "policy.yaml").read_text(
+                     encoding="utf-8"))["shell"]["forbid_patterns"]}
+        known.add("SH-CRLF")
+        for gate in (ROOT / "ci" / "gates").glob("gate_*.py"):
+            known.update(re.findall(r'g\.fail\(\s*"([A-Z0-9-]+)"', gate.read_text(
+                encoding="utf-8")))
+        for h in self.hazards:
+            enforcer = h["enforced_by"]
+            if enforcer in ("operator", "check_env"):
+                continue
+            with self.subTest(hazard=h["id"]):
+                self.assertIn(enforcer, known,
+                              f"{h['id']} claims `{enforcer}` enforces it, but no gate "
+                              f"emits that rule id")
+
+    def test_operator_rows_are_capped(self):
+        """Four of seven were `operator` at 1.7.0; two remain, and both genuinely
+        describe what a person types at a terminal. If this number grows, a check
+        that could have been written was labelled unwritable instead."""
+        operator_rows = [h["id"] for h in self.hazards if h["enforced_by"] == "operator"]
+        self.assertLessEqual(
+            len(operator_rows), 2,
+            f"{operator_rows} are labelled `operator`. Every exemption in this "
+            f"repository carries an owner and a route to removal; `operator` is the "
+            f"one label with neither, so it is capped instead.")
+
+
 class TestScriptAndTableAgree(unittest.TestCase):
     """The three files ship together, so they are checked together."""
 

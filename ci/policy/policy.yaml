@@ -608,3 +608,73 @@ preflight:
         v1.0 Phase 1 DoD: the digest-pinned GitHub MCP container starts and `get_me`
         returns Efe's login. Needs a fine-grained PAT resolved through ADR-0015,
         which is why it can never be part of an offline run.
+  # ── The Git Bash / Windows hazard table ─────────────────────────────────────
+  # MASTER_PLAN_v1 §2, seven rows, carried forward by MASTER_PLAN_v2's Phase 1
+  # alongside the tooling table above. v1 introduces them with: "These bite on
+  # every phase. Encoding them once here prevents four separate debugging
+  # sessions." They were encoded once, in prose, in a superseded plan.
+  #
+  # Every row carries `enforced_by`, and there are only three legal values:
+  #   <RULE-ID>   a gate rejects it and ci/self_test.sh proves the rule bites
+  #   check_env   this preflight executes it against the host
+  #   operator    it describes what a person types at a terminal. Nothing can
+  #               check that from a file — so the row is PRINTED, at the moment
+  #               the operator is setting the machine up and can act on it.
+  #
+  # `operator` is the honest label for "unenforceable", and it is capped: a row
+  # that could be checked and is merely labelled `operator` is a silently lowered
+  # standard. Two rows moved off it at 1.7.0 and two more at 1.8.0.
+  hazards:
+    - id: HAZ-MSYS-PATH
+      hazard: >-
+        Git Bash rewrites a container-side absolute path before Docker sees it:
+        /qdrant/storage becomes C:/Program Files/Git/qdrant/storage, the mount
+        lands somewhere else, and the container comes up empty rather than failing.
+      rule: >-
+        Prefix with MSYS_NO_PATHCONV=1, or double the leading slash (//qdrant/storage).
+      enforced_by: SH-MSYS-DOCKER
+    - id: HAZ-STORE-PYTHON
+      hazard: >-
+        On Windows the bare interpreter name resolves to the Microsoft Store stub,
+        which exits 9009 and opens the Store instead of running anything.
+      rule: >-
+        Call python3, or use uv run and let uv own the interpreter.
+      enforced_by: SH-BARE-PYTHON
+    - id: HAZ-CRLF-SH
+      hazard: >-
+        A CRLF-terminated .sh fails on Linux with the cryptic message about \r not
+        being a command, naming a line that looks perfectly correct.
+      rule: >-
+        .gitattributes pins * text=auto eol=lf. Never write a .sh with os.linesep.
+      enforced_by: SH-CRLF
+    - id: HAZ-DOCKER-BACKEND
+      hazard: >-
+        Docker Desktop on the Hyper-V backend gives unreliable bind-mount
+        performance on the Qdrant volume, which surfaces at G2 as intermittent
+        slowness rather than as an error anyone can act on.
+      rule: >-
+        Use the WSL2 backend. Checked against docker info KernelVersion.
+      enforced_by: check_env
+    - id: HAZ-HOST-MOUNT
+      hazard: >-
+        A host path in a volume mount needs a Windows-native form, and Bash will
+        not produce one on its own.
+      rule: >-
+        Use $(pwd -W), or rely on docker-compose relative paths — Compose does the
+        translation itself, which is why Compose is preferred over raw docker run.
+      enforced_by: operator
+    - id: HAZ-TTY
+      hazard: >-
+        Anything that prompts hangs with no output under Git Bash, because there is
+        no console attached the way the program expects.
+      rule: >-
+        Prefix with winpty, e.g. winpty docker exec -it.
+      enforced_by: operator
+    - id: HAZ-BACKSLASH
+      hazard: >-
+        A backslash in a config or .env value is eaten by Bash as an escape, and the
+        value that reaches the program is silently a different string.
+      rule: >-
+        Write Windows paths with forward slashes everywhere (ADR-0002). Python and
+        Docker both accept them.
+      enforced_by: ARCH-017

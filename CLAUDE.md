@@ -5,7 +5,7 @@ A local-first voice assistant whose defining constraint is an **offline autonomy
 
 **Right now this repository contains no runtime code.** It is an architecture — 33 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
-enforces them: 22 gates, 145 rules, 26 CI jobs.
+enforces them: 22 gates, 146 rules, 26 CI jobs.
 
 ---
 
@@ -83,7 +83,7 @@ it — no fixed point to chase. Record it **last**.
 ```bash
 bash ci/run_gates.sh                    # 22/22, 0 broken
 bash ci/run_gates.sh <gate>             # one gate
-bash ci/self_test.sh                    # 27/27 assertions, 22/22 gates covered
+bash ci/self_test.sh                    # 28/28 assertions, 22/22 gates covered
 python3 scripts/architecture_checksum.py --verify
 python3 scripts/generate_ci_docs.py --check
 bash scripts/check_env.sh               # the host, not the repository
@@ -136,14 +136,26 @@ MASTER_PLAN_v2 carries forward in full, is executable too as of 1.7.0: `bash
 scripts/check_env.sh` runs the tooling preflight table, and two of the seven Git Bash hazard
 rows became `SH-BARE-PYTHON` and `SH-MSYS-DOCKER`.
 
-**Two of its clauses need `--live`** — the filesystem server refusing to escape its root, and
-`get_me` returning Efe's login. Both need the network and a credential, so they are opt-in;
-an offline default is not laziness here, it is ADR-0007. **They have not been run.** G1
-sign-off wants one `--live` run on Efe's machine and the output recorded.
+**Two of its clauses need `--live`** — both need the network or a credential, so they are
+opt-in; an offline default is not laziness here, it is ADR-0007.
+
+| `--live` check | State |
+|---|---|
+| filesystem refuses a read outside its root | **passed on the host 2026-08-25**, both halves: `.python-version` reads, `C:/Windows/.../hosts` is denied. §9.12 |
+| `get_me` returns Efe's login | **still owed** — no Docker daemon was reachable. Reported as a skip naming that reason, never as a pass |
 
 The preflight's first run found the `filesystem` capability rooted at a directory that does
 not exist (`Desktop/`, not `Projects/`), written identically in two config files, with all
 22 gates green — a host fact, and nothing that runs on another machine can check one.
+ADR-0002 carries the Erratum; **R-A20** carries the residual risk, which is that nothing
+forces the preflight to run and nothing can.
+
+**The seven-row Git Bash hazard table** is `ci/policy/policy.yaml` → `preflight.hazards`.
+Four rows are gate rules (`SH-MSYS-DOCKER`, `SH-BARE-PYTHON`, `SH-CRLF`, `ARCH-017`), one is
+executed by the preflight (`HAZ-DOCKER-BACKEND`, which asks the daemon — `docker --version`
+answers about the CLI and says nothing about whether anything can be launched), and two are
+`operator`. **`operator` is capped at two by a test**: it is the one label here carrying
+neither an owner nor a route to removal, so it is bounded rather than trusted.
 
 Three traps in what is already there:
 

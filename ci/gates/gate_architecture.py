@@ -217,6 +217,30 @@ def main():
                 "find when they need it, which defeats the point of writing it down.",
                 "Add the entries to docs/decisions/README.md.", rel(idx))
 
+    # ── ADR-0002: Windows paths in config use forward slashes ────────────────
+    # MASTER_PLAN_v1 §2 (HAZ-BACKSLASH) and ADR-0002 both say it, and neither was
+    # enforced. The failure is silent by construction: Bash consumes a backslash as
+    # an escape, so the value that reaches the program is a DIFFERENT STRING that
+    # nothing reports. `C:\Users\deniz` arrives as `C:Usersdeniz`, the filesystem
+    # server is scoped to a root that does not exist, and the first symptom is a
+    # capability that mysteriously returns nothing.
+    for f in sorted((ROOT / "config").rglob("*")):
+        if f.suffix not in {".toml", ".json"} or not f.is_file():
+            continue
+        for i, line in enumerate(read_text(f).splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
+            g.check()
+            m = re.search(r"[\"']([A-Za-z]:\\[^\"']*)[\"']", line)
+            if m:
+                g.fail("ARCH-017", f"backslashed Windows path `{m.group(1)}` in config",
+                    "ADR-0002: config values carrying Windows paths use FORWARD slashes, "
+                    "because Bash consumes a backslash as an escape and the value that "
+                    "reaches the program is silently a different string. Nothing errors; "
+                    "the path simply points somewhere else.",
+                    "Rewrite with forward slashes. Python, Docker and Git Bash all accept "
+                    "them on Windows.", rel(f), i)
+
     g.report_and_exit()
 
 if __name__ == "__main__": main()

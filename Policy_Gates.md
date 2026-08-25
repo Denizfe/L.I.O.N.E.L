@@ -9,7 +9,7 @@ Every rule below is enforced by a gate that runs on every push and every pull re
 
 | | |
 |---|---|
-| Rules | **145** |
+| Rules | **146** |
 | Gates | **22** |
 | Severity | **All rules are blocking.** There is no warnings-only tier |
 | Exit codes | `0` pass · `1` violation · `2` gate itself broken |
@@ -315,8 +315,9 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 | `ARCH-014` | English-only `.en` whisper model referenced |
 | `ARCH-015` | `src/lionel/host/loop.py` exists |
 | `ARCH-016` | ADR(s) not listed in the index: {sorted(missing)} |
+| `ARCH-017` | backslashed Windows path `{m.group(1)}` in config |
 
-**16 rules.**
+**17 rules.**
 
 ## `l0-conformance` — L0 offline conformance
 
@@ -454,7 +455,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 27 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 28 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -465,6 +466,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a PENDING placeholder | `no-pending` | PLACEHOLDER-001 |
 | a resurrected shell capability | `architecture` | ARCH-001 |
 | a path whose absence is a recorded decision | `structure` | STRUCT-003 |
+| a backslashed Windows path in config | `architecture` | ARCH-017 |
 | an unregistered TODO | `no-todo` | TODO-001 |
 | a script without strict mode | `shell` | SH-STRICT |
 | a bare interpreter name (the Store stub) | `shell` | SH-BARE-PYTHON |
@@ -486,7 +488,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 | a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
 
-**27/27 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**28/28 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

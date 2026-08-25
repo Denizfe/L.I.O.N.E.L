@@ -164,7 +164,40 @@ else
   done <<< "$ROOTS"
 fi
 
-# ---- Phase 4: live checks, opt-in --------------------------------------------
+# ---- Phase 4: the Git Bash hazard table --------------------------------------
+# MASTER_PLAN_v1 §2 opens with: "These bite on every phase. Encoding them once here
+# prevents four separate debugging sessions." They were encoded once, in prose, in a
+# plan that was later superseded — and nobody opens a superseded plan while setting a
+# machine up. Four of the seven are now gate rules; one is checked here; the last two
+# describe what a person types at a terminal and can only be printed. So they are
+# printed, at the one moment the operator can act on them.
+echo
+echo "  ${D}Git Bash hazards (MASTER_PLAN_v1 §2)${Z}"
+while IFS=$'\t' read -r hid enforced rule; do
+  [[ -z "$hid" ]] && continue
+  case "$enforced" in
+    operator)  row "read" "$Y" "$hid" "operator" "$rule" ;;
+    check_env) : ;;   # executed below, reported there
+    *)         row "gate" "$G" "$hid" "$enforced" "${D}enforced on every push${Z}" ;;
+  esac
+done <<< "$(python3 "$ROOT/scripts/_preflight_table.py" hazards)"
+
+# HAZ-DOCKER-BACKEND, executed. `docker --version` answers about the CLI and says
+# nothing about whether a daemon is running — this preflight reported a green Docker
+# row on a machine where nothing could actually be launched.
+backend="$(python3 "$ROOT/scripts/_preflight_table.py" docker-backend)"
+case "${backend%%$'\t'*}" in
+  wsl2)
+    row "ok" "$G" "HAZ-DOCKER-BACKEND" "wsl2" "${D}${backend#*$'\t'}${Z}" ;;
+  other)
+    row "WARN" "$Y" "HAZ-DOCKER-BACKEND" "not wsl2" \
+        "Hyper-V backend: unreliable bind-mount performance on the Qdrant volume at G2" ;;
+  *)
+    row "WARN" "$Y" "HAZ-DOCKER-BACKEND" "no daemon" \
+        "docker CLI is installed but no daemon answers; nothing can be launched" ;;
+esac
+
+# ---- Phase 5: live checks, opt-in --------------------------------------------
 echo
 echo "  ${D}live checks${Z}"
 if [[ "$LIVE" -eq 0 ]]; then
@@ -191,7 +224,13 @@ else
   # github-identity: resolve the credential through ADR-0015's resolver rather than
   # reading the variable here, so the preflight takes the same path the runtime does
   # and the value stays wrapped in a SecretStr that cannot be printed by accident.
-  if PYTHONPATH="$ROOT/src" python3 "$ROOT/scripts/_preflight_table.py" pat-resolves; then
+  # A skip is not a pass, and the two reasons a skip can happen are different jobs:
+  # "start Docker Desktop" and "issue a fine-grained PAT". Reporting either as
+  # "no login" would send the reader to debug an authentication problem that is not
+  # there — which is the failure `check_env.sh` exists to prevent, one level up.
+  if [[ "${backend%%$'\t'*}" == "unreachable" ]]; then
+    row "skip" "$Y" "github" "no daemon" "start Docker Desktop and re-run with --live"
+  elif PYTHONPATH="$ROOT/src" python3 "$ROOT/scripts/_preflight_table.py" pat-resolves; then
     GH_IMG="$(python3 "$ROOT/scripts/_preflight_table.py" gh-image)"
     GETME='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_me","arguments":{}}}'
     gh_out="$(printf '%s\n%s\n%s\n' "$INIT" "$READY" "$GETME" \

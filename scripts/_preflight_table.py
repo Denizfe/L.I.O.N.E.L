@@ -115,6 +115,42 @@ def cmd_packages() -> None:
                          _flat(p["why"])]))
 
 
+def cmd_hazards() -> None:
+    """The seven-row Git Bash hazard table, each row with who enforces it.
+
+    Printed rather than merely stored. Five of the seven were prose in a superseded
+    plan for the whole of Phase 0, and prose in a plan nobody opens during setup is
+    the same as no rule at all — MASTER_PLAN_v1 §2 opens by saying these "bite on
+    every phase" and that "encoding them once here prevents four separate debugging
+    sessions". They were encoded once. Nothing read them.
+    """
+    for h in _preflight().get("hazards", []):
+        print("\t".join([h["id"], h["enforced_by"], _flat(h["rule"])]))
+
+
+def cmd_docker_backend() -> None:
+    """HAZ-DOCKER-BACKEND. Prints one of: wsl2 / other / unreachable.
+
+    `docker --version` answers about the CLI and says nothing about whether a daemon
+    is running — the preflight reported a green Docker row on a machine where nothing
+    could actually be launched. This asks the daemon.
+    """
+    import subprocess
+    try:
+        r = subprocess.run(["docker", "info", "--format", "{{.KernelVersion}}"],
+                           capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        print("unreachable")
+        return
+    kernel = (r.stdout or "").strip()
+    if r.returncode != 0 or not kernel:
+        print("unreachable")
+    elif "wsl" in kernel.lower() or "microsoft" in kernel.lower():
+        print(f"wsl2\t{kernel}")
+    else:
+        print(f"other\t{kernel}")
+
+
 def cmd_live() -> None:
     for c in _preflight().get("live_checks", []):
         why = _flat(c["why"])
@@ -158,6 +194,8 @@ COMMANDS = {
     "tools": cmd_tools,
     "packages": cmd_packages,
     "live": cmd_live,
+    "hazards": cmd_hazards,
+    "docker-backend": cmd_docker_backend,
     "roots": cmd_roots,
     "fs-root": cmd_fs_root,
     "gh-image": cmd_gh_image,

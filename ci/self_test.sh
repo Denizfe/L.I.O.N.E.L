@@ -110,6 +110,17 @@ expect_violation architecture "ARCH-001" "a resurrected shell capability"
 expect_violation structure "STRUCT-003" "a path whose absence is a recorded decision"
 rmdir src/lionel/capabilities/shell
 
+# 4b. ADR-0002 / HAZ-BACKSLASH: a Windows path written with backslashes in config.
+#     Silent by construction — Bash eats the backslash as an escape, so the value
+#     that reaches the program is a DIFFERENT STRING and nothing errors. The
+#     filesystem capability ends up scoped to a root that does not exist, and the
+#     first symptom is a tool that mysteriously returns nothing. This is the hazard
+#     table's seventh row, and it was `operator` (i.e. unenforced) until 1.8.0.
+B_TOML="$(plant_in config/lionel.toml)"
+printf '\n[selftest]\nroot = "C:\\Users\\deniz\\nowhere"\n' >> config/lionel.toml
+expect_violation architecture "ARCH-017" "a backslashed Windows path in config"
+unplant config/lionel.toml "$B_TOML"
+
 # 5. STRUCT-004 — no runtime code — was LIFTED at architecture 1.6.0, when Phase 1 opened
 #    and `repository.runtime_code_forbidden_until` went to null. The rule cannot fire, so
 #    an assertion against it would fail for the right reason and still leave a red suite.
