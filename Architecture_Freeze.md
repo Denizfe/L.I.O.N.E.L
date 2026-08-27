@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.9.0** |
+| Architecture version | **1.9.1** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.9.0`** |
+| Tag | **`architecture-1.9.1`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Previous versions | **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **1 ADR pending — ADR-0034**, awaiting Efe. ADR-0033 and ADR-0032 both accepted 2026-08-24 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -31,6 +31,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.9.1** — PATCH over 1.9.0: errata only. ADR-0034 and §9.14 both misquoted the rule they
+are about, omitting its `match.any = true` line and arguing from an absent `match`. The
+finding is unchanged and the corrected quote sharpens it; no decision was added or changed.
+§9.15.
 
 **1.9.0** — MINOR over 1.8.0: ADR-0034 added, `Proposed`. No decision in force changed,
 and nothing it describes is implemented while it waits — §1's own definition of MINOR is
@@ -93,10 +98,10 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.9.0
-sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
+ARCHITECTURE CHECKSUM                                          architecture 1.9.1
+sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
 
-  ADRs         34 files   sha256:a7e1ded966dcedcb8ad3a11850c7033b…
+  ADRs         34 files   sha256:a38a1347c002cd14241b7d1d92640843…
   contracts    31 files   sha256:ed9dea767311ffa3d1ba0aa7e14d2345…
   policy        8 files   sha256:17e8bab5b3056e9c17a709697a6083a2…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
@@ -108,6 +113,8 @@ sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.9.0   sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
+                     75 files — ADRs 34 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.8.0   sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea
                      74 files — ADRs 33 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.7.0   sha256:cd24b87f508ebcbbaf7ec588a9a4c1fe8ad9ea6b455f8cb6ffce1bb90eeb6057
@@ -137,7 +144,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
+python3 scripts/architecture_checksum.py --verify sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -1018,6 +1025,78 @@ nowhere, and a live check that could not fail. None of the three was caught by a
 `docs/decisions/README.md` records **1 ADR pending**. The version moves because
 `docs/decisions/ADR-*.md` and `ci/policy/policy.yaml` are both in the checksum set: 74 files
 becomes 75.
+
+---
+
+> **Correction, 2026-08-27 — the TOML quoted above is not what the file contains.** The
+> shipped rule carries `match.any = true`; the block in this section and in ADR-0034's
+> Context both omitted that line and both argued from "no `match`". §9.15 records the
+> correction and what survives it, which is the whole finding.
+
+---
+
+### 9.15 Version 1.9.1 — the fourth instance, inside the ADR about the third
+
+An erratum, no new decision, nothing implemented. PATCH by §1: text corrected to state a
+decision already in force.
+
+**What was wrong.** ADR-0034 and §9.14 both quoted the last rule of
+`config/policy/default.toml` as:
+
+```toml
+[[rule]]
+name = "runaway containment"
+
+max_calls_per_turn = 40
+on_exceeded = "halt_turn"
+```
+
+The file says:
+
+```toml
+[[rule]]
+name = "runaway containment"
+match.any = true
+max_calls_per_turn = 40
+on_exceeded = "halt_turn"
+```
+
+Both then argued *"no `match`, so by the wildcard rule it matches everything"*. The rule has
+a `match`. The argument reached the right conclusion through a premise the file does not
+support.
+
+**What survives, and why it is now stronger.** The defect is unchanged: the rule carries no
+`decision`, it is last, and `reads are broadly permitted` matches any read before evaluation
+reaches it. If evaluation did reach it, it "wins" carrying no decision, and the contract has
+no account of that state. Nothing in ADR-0034's Decision, Consequences or Alternatives
+depended on the missing line.
+
+It is stronger because `match.any` is not an accident of omission. The schema documents it
+as *"Matches everything. Use only for a terminal containment rule."* The contract has a
+dedicated affordance for precisely this rule shape — and still says nothing about what such
+a rule does without a `decision`. The gap was designed around, not stumbled into.
+
+**How it was corrected.** ADR-0034 is `Proposed`, so ADR-0029's append-only rule does not
+bind it: a Proposed ADR's body is editable in place, and an Erratum on a decision not yet in
+force would be recording a correction to something no one has agreed to. The Context block
+was rewritten. §9.14 keeps its text and carries a forward-pointing note, which is the
+practice §9.12 established for this document.
+
+**The shape, a fourth time.** The G1 sign-off audit named three defects whose shape was
+*something that could not do its job while appearing to*, and named the residual gap that
+let all three through: **a claim about what a file contains is checked by nobody.**
+`doc-claims` measures count-shaped claims in three registered documents; a quoted code block
+is not a count. This is the fourth instance, and it is in the ADR written about the third —
+found the same way the other three were, by opening the file the claim was about.
+
+`gate_checksum` does not help here. It proves the architecture has not drifted since the
+recorded value; it cannot know that a document *describing* the architecture describes it
+wrongly. A gate that verified fenced blocks against the files they quote would have caught
+this one, and it needs an ADR — `CI_Architecture.md` §7 step 1 — so it is not in this
+version.
+
+The version moves because `docs/decisions/ADR-*.md` is in the checksum set. The file count
+stays at 75; only the ADRs group digest changes.
 
 ---
 

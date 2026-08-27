@@ -17,25 +17,28 @@ And `Match`:
 
 > All present conditions must hold (AND). **An absent condition is a wildcard.**
 
-`config/policy/default.toml` ends with a rule that fits neither statement:
+`config/policy/default.toml` ends with a rule that neither statement accounts for:
 
 ```toml
 [[rule]]
 name = "runaway containment"
-
+match.any = true
 max_calls_per_turn = 40
 on_exceeded = "halt_turn"
 ```
 
-No `match`, no `decision`. The schema permits it — `Rule` requires only `name`, and
-`decision` is optional — so the file validates and every gate is green. What the contract
-does not say is what such a rule *does*.
+A `match`, and no `decision`. The schema does not merely permit this — `Rule` requires only
+`name`, and `decision` is optional — it carries a dedicated affordance for exactly this
+shape. `match.any` is documented as *"Matches everything. Use only for a terminal
+containment rule."* So the contract anticipated a terminal catch-all, and still says nothing
+about what a terminal catch-all carrying no `decision` **does**. The file validates and every
+gate is green.
 
 Read strictly, it does nothing, in both directions at once:
 
-- It has no `match`, so by the wildcard rule it matches **everything**. But it is last, and
-  `reads are broadly permitted` matches any read first. For every tool the policy actually
-  allows, evaluation stops before reaching it.
+- `match.any = true` matches **everything**. But it is last, and `reads are broadly
+  permitted` matches any read first. For every tool the policy actually allows, evaluation
+  stops before reaching it.
 - If evaluation *did* reach it — a tool matching no earlier rule — it "wins" while carrying
   no `decision`. The contract has no account of that state. Falling through to
   `defaults.decision` is the only sensible reading, and that path discards
