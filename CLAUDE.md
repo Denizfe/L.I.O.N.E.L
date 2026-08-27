@@ -1,9 +1,11 @@
 # L.I.O.N.E.L — working rules
 
 A local-first voice assistant whose defining constraint is an **offline autonomy guarantee**
-(ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. Phase 1 may begin.
+(ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. **Phase 1's work is
+done and its sign-off is prepared but unsigned** — `Phase1_Final_Signoff.md` §7 is Efe's,
+and G2 does not open until it carries a signature.
 
-**Right now this repository contains no runtime code.** It is an architecture — 34 ADRs, 27
+**This repository is an architecture first, and runtime code second.** 35 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
 enforces them: 22 gates, 146 rules, 26 CI jobs.
 
@@ -240,7 +242,7 @@ its checks.
 ## Where things are
 
 ```
-docs/decisions/          34 ADRs + README index (ARCH-016 requires the index be complete)
+docs/decisions/          35 ADRs + README index (ARCH-016 requires the index be complete)
 contracts/               27 JSON Schemas + 3 protobuf, 5 planes, MANIFEST.json
 ci/gates/                22 gates + _lib.py (Finding, exit codes) + _checksum.py
 ci/policy/policy.yaml    ALL thresholds, allowlists and registries

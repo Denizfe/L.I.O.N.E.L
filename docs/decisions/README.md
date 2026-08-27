@@ -64,8 +64,13 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0032](ADR-0032-dev-tooling-mcp-servers.md) | Developer-tooling MCP servers are declared, pinned, and disclosed | Accepted | 1 |
 | [0033](ADR-0033-hand-written-claim-checking.md) | Count-shaped claims in hand-written documents are measured, not remembered | Accepted | 0 |
 | [0034](ADR-0034-constraint-only-policy-rules.md) | A policy rule may constrain without deciding | Accepted | 0 |
+| [0035](ADR-0035-verified-file-quotes.md) | A document that quotes a file is checked against that file | **Proposed** | 0 |
 
-**0 ADRs pending.** ADR-0034 was accepted 2026-08-27 and implemented in the same version
+**1 ADR pending — ADR-0035**, awaiting Efe under `Architecture_Freeze.md` §5 step 4. It adds
+a gate, so §4 requires the approval before the gate exists rather than after:
+`gate_doc_quotes.py` is deliberately **not** in the repository while it is `Proposed`.
+
+ADR-0034 was accepted 2026-08-27 and implemented in the same version
 (architecture 1.10.0): `policy-ruleset.schema.json` is 1.1.0, `$defs.Rule` requires a
 decision or a constraint, and `PolicyEngine._validate()` refuses a rule carrying neither.
 Its Erratum of that date discharges the paragraph saying the change would be withheld —

@@ -2,19 +2,23 @@
 
 | | |
 |---|---|
-| Architecture version | **1.10.0** |
+| Architecture version | **1.11.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.10.0`** |
+| Tag | **`architecture-1.11.0`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **0 ADRs pending.** ADR-0034 accepted 2026-08-27 and in force. ADR-0033 and ADR-0032 accepted 2026-08-24 |
+| Previous versions | **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **1 ADR pending — ADR-0035**, awaiting Efe. ADR-0034 accepted 2026-08-27 and in force |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **All 34 ADRs are in force.** ADR-0034 (2026-08-25) was accepted 2026-08-27 and
+> **34 of 35 ADRs are in force.** ADR-0035 (2026-08-27) is `Proposed`: it adds a gate, so §4
+> requires Efe's approval before the gate exists rather than after, and `gate_doc_quotes.py`
+> is deliberately not in the repository. §9.17.
+>
+> ADR-0034 (2026-08-25) was accepted 2026-08-27 and
 > implemented in the same version. It changes `policy-ruleset.schema.json`'s stable surface,
 > so §4 required Efe's approval before the change rather than after — and for the two days it
 > was `Proposed`, the schema edit it describes was deliberately absent from the repository.
@@ -32,6 +36,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.11.0** — MINOR over 1.10.0: ADR-0035 added, `Proposed`. No decision in force changed,
+and nothing it describes is implemented while it waits — §1's own definition of MINOR, and
+the fifth time the implementation has been withheld from its own proposal. §9.17.
 
 **1.10.0** — MINOR over 1.9.1: ADR-0034 accepted, so a pending decision comes into force,
 which §1 defines as MINOR. `policy-ruleset.schema.json` goes to 1.1.0 — the first change to a
@@ -104,21 +112,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.10.0
-sha256:11d2685e902fe03eb4d5636b81b76ab235363915289274e8ee72daebea442ff5
+ARCHITECTURE CHECKSUM                                          architecture 1.11.0
+sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
 
-  ADRs         34 files   sha256:f263007a6273996a6af236bf730223d4…
+  ADRs         35 files   sha256:7e832aefe1f2c85c1de8141b3d1e9a13…
   contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
-  policy        8 files   sha256:17e8bab5b3056e9c17a709697a6083a2…
+  policy        8 files   sha256:1b4885c1f8a57499151eb009a552d07c…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
-  75 files hashed
+  76 files hashed
 ```
 
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.10.0  sha256:11d2685e902fe03eb4d5636b81b76ab235363915289274e8ee72daebea442ff5
+                     75 files — ADRs 34 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.9.1   sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
                      75 files — ADRs 34 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.9.0   sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
@@ -152,7 +162,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:11d2685e902fe03eb4d5636b81b76ab235363915289274e8ee72daebea442ff5
+python3 scripts/architecture_checksum.py --verify sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -199,7 +209,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **34 ADRs, 0001–0034** — 33 Accepted or Superseded, **1 pending: ADR-0034**, which changes a contract's stable surface and so waits for Efe |
+| **Architecture decisions** | **35 ADRs, 0001–0035** — 34 Accepted or Superseded, **1 pending: ADR-0035**, which adds a gate and so waits for Efe |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -1164,6 +1174,57 @@ that claim was wrong once. It is now checked.
 
 The version moves because `contracts/**` and `docs/decisions/ADR-*.md` are both in the
 checksum set. 75 files, unchanged in count.
+
+---
+
+### 9.17 Version 1.11.0 — ADR-0035, and the other half of a gap named four times
+
+One ADR, `Proposed`, and none of what it describes. The fifth time this repository has
+withheld the implementation of its own proposal, and the second time in three days.
+
+**What it is for.** ADR-0033 closed count-shaped claims. Its Costs section named what it did
+not close, and §9.16 named the same thing again from the other end: *"a gate that verified
+fenced blocks against the files they quote would have caught this one, and it needs an ADR."*
+This is that ADR.
+
+The gap has cost twice, four days apart, with every gate green both times:
+
+| | The claim | What was there |
+|---|---|---|
+| 2026-08-24 | §9.11: five hazard rows *"recorded in `check_env.sh`"* | nothing |
+| 2026-08-25 | ADR-0034 and §9.14 quoted `default.toml`'s last rule | the rule has a `match.any = true` line; both omitted it, and both argued from its absence |
+
+**The decision is deliberately half a fix, and says so.** A fenced block in a configuration
+language must appear verbatim in a repository file, or carry a marker saying it is not a
+quotation. Prose claims — the first row above — stay uncaught. Half a gap closed
+mechanically beats a whole gap closed by intention, and the ADR's Consequences section names
+the surviving half rather than leaving it to be discovered a third time.
+
+The reason to take the fenced half first is not that it is easier. **A prose claim is read
+as a summary; a fenced block is read as the file.** Nobody re-opens a file to check a block
+that is right there on the page — that is the entire reason to paste one. A wrong block is
+believed more readily than a wrong sentence, and by the readers who are reading the document
+*instead of* the repository.
+
+**Measured before proposing.** A throwaway scan, run outside the repository, found five
+config-language blocks of two or more lines across all 34 ADRs and this document. Three
+match a file. Two do not — the deliberately wrong TOML in §9.14 and §9.15, which is correct
+behaviour, since §9.15 exists to quote what was wrong. **The rollout cost is two markers.**
+One of the three matches only because the comparison is dedent-normalised: ADR-0031 quotes
+`ci/policy/policy.yaml` at a shallower indent than the file uses, which is a real excerpt
+and must not be a finding.
+
+Five blocks is a small corpus, and that is part of the argument. The mechanism is being
+installed while it is cheap. Every version adds documents and every document adds
+quotations, so there is no later phase in which this gets easier.
+
+**Nothing was changed.** `ci/gates/gate_doc_quotes.py` does not exist, `ci/policy/policy.yaml`
+gains no `doc_quotes` section, `ORDER` is unchanged, and the two markers §9.14 and §9.15 will
+need are not written. `CI_Architecture.md` §7 step 1 puts the ADR before the gate, and §4
+requires Efe's approval before a new gate exists. The gates count stays at **22**.
+
+The version moves because `docs/decisions/ADR-*.md` and `ci/policy/policy.yaml` are both in
+the checksum set: 75 files becomes 76.
 
 ---
 
