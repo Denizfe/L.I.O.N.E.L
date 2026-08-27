@@ -235,6 +235,18 @@ class PolicyEngine:
                     f"confirmation_scope={scope!r}; only `per_invocation` is permitted. A "
                     f"session-wide \"yes to all\" is how confirmation prompts become rubber "
                     f"stamps, which is the failure confirmation exists to avoid.")
+            # ADR-0034 rule 4. A rule must decide or constrain. A rule with neither
+            # validated under policy-ruleset 1.0.0 and did nothing at all — silently,
+            # while reading in the file as though it did something. That is the defect
+            # ADR-0034 was written about, so it is refused at load rather than at
+            # review.
+            if "decision" not in r and not any(
+                    k in r for k in ("max_calls_per_turn", "rate_limit_per_minute")):
+                raise MalformedRuleset(
+                    f"rule {r['name']!r} carries neither a `decision` nor a constraint "
+                    f"(`max_calls_per_turn` or `rate_limit_per_minute`). Such a rule does "
+                    f"nothing, and reads in the file as though it does something. "
+                    f"policy-ruleset.schema.json 1.1.0, ADR-0034 rule 4.")
 
     # -- evaluation --------------------------------------------------------------
     def evaluate(self, *, tool_name: str, trust: TrustContext, call_id: str = "",

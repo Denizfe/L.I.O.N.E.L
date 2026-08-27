@@ -198,6 +198,88 @@ class TestLimits(unittest.TestCase):
                        trust=turn(turn_id="turn-2")).allowed)
 
 
+class TestConstraintRules(unittest.TestCase):
+    """ADR-0034. A rule may constrain without deciding, and position must not silence it.
+
+    The defect this class exists to prevent: `config/policy/default.toml` ships a
+    containment rule that is last and carries no `decision`. Under strict first-match-wins
+    every read matches an earlier rule, evaluation never reaches the bound, and the loop it
+    names runs free — while the file reads as though it is bounded. ADR-0034 makes the
+    constraint pass part of the contract; these assert it against the engine.
+    """
+
+    def test_a_constraint_rule_below_an_allowing_rule_still_bounds(self):
+        clock = [0.0]
+        e = PolicyEngine(
+            {"defaults": {"decision": "deny"},
+             "rule": [{"name": "reads allowed", "match": {"side_effect": "read"},
+                       "decision": "allow"},
+                      {"name": "containment", "match": {"any": True},
+                       "max_calls_per_turn": 3, "on_exceeded": "halt_turn"}]},
+            registry=registry(), clock=lambda: clock[0])
+        t = turn()
+        for _ in range(3):
+            self.assertTrue(e.evaluate(tool_name="filesystem.read_file", trust=t).allowed)
+            clock[0] += 1.0
+        d = e.evaluate(tool_name="filesystem.read_file", trust=t)
+        self.assertEqual(d.decision, Decision.DENY)
+        self.assertEqual(d.rule_name, "containment",
+                         "the audit must name the rule that stopped the call, or an "
+                         "incident review cannot find the bound that fired")
+
+    def test_a_constraint_rule_cannot_turn_a_denial_into_an_allowance(self):
+        """The asymmetry that makes an out-of-order pass safe (ADR-0034, Decision)."""
+        e = PolicyEngine(
+            {"defaults": {"decision": "deny"},
+             "rule": [{"name": "containment", "match": {"any": True},
+                       "max_calls_per_turn": 100},
+                      {"name": "reads denied", "match": {"side_effect": "read"},
+                       "decision": "deny", "reason": "test"}]},
+            registry=registry())
+        d = e.evaluate(tool_name="filesystem.read_file", trust=turn())
+        self.assertEqual(d.decision, Decision.DENY)
+        self.assertEqual(d.rule_name, "reads denied",
+                         "a constraint rule matched first and must not have decided")
+
+    def test_a_constraint_rule_does_not_shadow_the_deciding_pass(self):
+        """Matching everything in pass 1 must leave pass 2 exactly as it was."""
+        e = PolicyEngine(
+            {"defaults": {"decision": "deny"},
+             "rule": [{"name": "containment", "match": {"any": True},
+                       "max_calls_per_turn": 100},
+                      {"name": "reads allowed", "match": {"side_effect": "read"},
+                       "decision": "allow"}]},
+            registry=registry())
+        d = e.evaluate(tool_name="filesystem.read_file", trust=turn())
+        self.assertTrue(d.allowed)
+        self.assertEqual(d.rule_name, "reads allowed")
+
+    def test_a_rule_that_neither_decides_nor_constrains_is_refused(self):
+        """ADR-0034 rule 4. Under schema 1.0.0 this validated and did nothing."""
+        with self.assertRaises(MalformedRuleset) as cm:
+            PolicyEngine({"defaults": {"decision": "deny"},
+                          "rule": [{"name": "inert", "match": {"any": True}}]})
+        self.assertIn("inert", str(cm.exception))
+        self.assertIn("neither", str(cm.exception))
+
+    def test_the_shipped_containment_rule_still_has_the_shape_adr_0034_is_about(self):
+        """A claim about what a file contains, checked.
+
+        ADR-0034's whole argument rests on the last rule of `config/policy/default.toml`
+        being a terminal catch-all with no `decision`. The ADR quoted that rule wrongly
+        once already (Architecture_Freeze.md §9.15). If the file changes shape, the ADR
+        should stop being true out loud rather than quietly.
+        """
+        import tomllib
+        rules = tomllib.loads(POLICY_PATH.read_text(encoding="utf-8"))["rule"]
+        last = rules[-1]
+        self.assertEqual(last["name"], "runaway containment")
+        self.assertEqual(last.get("match"), {"any": True})
+        self.assertNotIn("decision", last)
+        self.assertEqual(last["max_calls_per_turn"], 40)
+        self.assertEqual(last["on_exceeded"], "halt_turn")
+
+
 class TestRulesetValidation(unittest.TestCase):
     """The schema pins default-deny. The engine refuses to run a ruleset that does not."""
 

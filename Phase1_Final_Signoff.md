@@ -136,7 +136,7 @@ carrying neither an owner nor a route to removal.
 |---|---|---|
 | **Turkish TTS is personal-use only.** `tr_TR-dfki-medium` is CC-BY-NC-SA-4.0 and is the only Turkish voice. Blocks distribution, not Phase 1. Replacing it needs an ADR amending ADR-0017 — **Efe's call**, R-A15 | Major | sensory · G6c |
 | **A host fact cannot be checked from CI.** Mitigated by `check_env.sh`; the residual risk is that nothing forces it to run, and nothing can. Route to closure is a checklist step at each gate, R-A20 | Moderate | platform · G2 |
-| **Constraint-only policy rules contradict the contract.** `policy-ruleset.schema.json` says "FIRST MATCH WINS" and never mentions rules without a `decision`; `config/policy/default.toml` ships one, and `PolicyEngine` evaluates it in a pass of its own. Under strict positional matching the shipped containment rule is unreachable and the loop it bounds runs free. **Resolving this changes a contract, so it needs an ADR** | Moderate | core-orchestration |
+| ~~**Constraint-only policy rules contradict the contract.**~~ **Closed 2026-08-27.** ADR-0034 accepted; `policy-ruleset.schema.json` is 1.1.0 and states both passes, and a rule that neither decides nor constrains is now a load error. Architecture 1.10.0, §9.16 | — | closed |
 | **ADR-0029 rule 1 has no gate.** Append-only is enforced by a `PreToolUse` hook that sees `Edit`/`Write` but not `sed` through `Bash`. A guardrail, not a proof | Minor | architecture |
 | **Claims about what a file contains are unchecked.** `doc-claims` measures count-shaped claims in three registered documents. The three defects in §1 were none of those shapes | Minor | architecture |
 

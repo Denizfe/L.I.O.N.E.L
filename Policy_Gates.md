@@ -455,7 +455,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 28 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 29 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -477,6 +477,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | an Erratum with no ISO date | `adr` | ADR-009 |
 | a contract with no x-lionel block | `contracts` | CONTRACT-001 |
 | an example that fails its own schema | `jsonschema` | JSON-004 |
+| a policy rule that neither decides nor constrains | `jsonschema` | JSON-004 |
 | a .proto that does not compile | `protobuf` | PROTO-001 |
 | an unresolved artifact in the lockfile | `artifacts` | ART-000 |
 | a tagged image with no digest | `docker-digests` | DOCKER-006 |
@@ -488,7 +489,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 | a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
 
-**28/28 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**29/29 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

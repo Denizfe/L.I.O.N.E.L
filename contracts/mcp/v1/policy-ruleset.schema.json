@@ -4,7 +4,7 @@
   "title": "PolicyRuleset",
   "description": "Schema for the parsed form of config/policy/*.toml (ADR-0012). Rules are DECLARATIVE, not code, so authorization is reviewable as a diff and testable without running the agent.",
   "x-lionel": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "adr": [
       "ADR-0012",
       "ADR-0026",
@@ -22,7 +22,10 @@
     "compatibility": {
       "since": "1.0.0",
       "breaking_changes": [],
-      "notes": "Config schema: additionalProperties is FALSE throughout (ADR-0015). Changing rule EVALUATION ORDER is MAJOR even with no schema change — order determines which rule matches, and a reordering silently alters every decision. The order is: first match wins, evaluated top to bottom, with defaults.decision as the fallthrough."
+      "minor_changes": [
+        "1.1.0 (ADR-0034): a rule may carry constraints without a decision; such rules are evaluated in a pass of their own, before the deciding pass. A rule carrying neither a decision nor a constraint is now a schema error — under 1.0.0 it validated and did nothing."
+      ],
+      "notes": "Config schema: additionalProperties is FALSE throughout (ADR-0015). Changing rule EVALUATION ORDER is MAJOR even with no schema change — order determines which rule matches, and a reordering silently alters every decision. Evaluation is TWO PASSES (ADR-0034, 1.1.0): constraint rules first, all of them, regardless of position; then deciding rules, first match wins, top to bottom, with defaults.decision as the fallthrough. The DECIDING order is unchanged from 1.0.0, which is why this is MINOR and not MAJOR — a constraint rule can only stop a call, never turn a denial into an allowance, so no ruleset's decisions move."
     }
   },
   "type": "object",
@@ -53,7 +56,7 @@
     "rule": {
       "type": "array",
       "minItems": 1,
-      "description": "Evaluated top to bottom. FIRST MATCH WINS. Falls through to defaults.decision.",
+      "description": "TWO PASSES (ADR-0034). Pass 1: every CONSTRAINT rule — a rule with a limit and no decision — applies to every call its match selects, regardless of the rule's position; exceeding a limit produces on_exceeded and evaluation stops. Pass 2: DECIDING rules, evaluated top to bottom, FIRST MATCH WINS, falling through to defaults.decision. Constraints bound; they do not authorise.",
       "items": {
         "$ref": "#/$defs/Rule"
       }
@@ -112,7 +115,25 @@
           "default": "deny_call"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "decision"
+          ]
+        },
+        {
+          "required": [
+            "max_calls_per_turn"
+          ]
+        },
+        {
+          "required": [
+            "rate_limit_per_minute"
+          ]
+        }
+      ],
+      "$comment": "ADR-0034 rule 4: a rule must decide or constrain. A rule with neither is a load error, not a rule that silently does nothing — that shape validated under 1.0.0 and is the defect ADR-0034 was written about."
     },
     "Match": {
       "type": "object",

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Proposed** — awaiting Efe. `Architecture_Freeze.md` §4 and §5 step 4 |
+| Status | **Accepted** — Efe, 2026-08-27. In force. See the Erratum |
 | Date | 2026-08-25 |
 | Phase | 1 |
 | Related | [ADR-0012](ADR-0012-policy-engine.md), [ADR-0008](ADR-0008-coordinator-decomposition.md), [ADR-0029](ADR-0029-adr-errata-provision.md) |
@@ -152,3 +152,45 @@ On acceptance:
 
 Gate **G4**, where dispatch makes the bound load-bearing. The failure this prevents has no
 symptom before then, and every symptom after.
+
+
+## Erratum — 2026-08-27: Accepted; the withholding it describes has been discharged
+
+This ADR was written while `Proposed`, and its Verification section describes that pending
+state as ongoing. Efe accepted it on 2026-08-27. The decision is unchanged — what follows
+corrects text that has stopped being true, per ADR-0029 rule 2.
+
+The Verification section opened:
+
+> **Withheld until this ADR is Accepted.** The schema change and the load error in rule 4 are
+> not made while this is `Proposed` — `Architecture_Freeze.md` §4 requires an ADR *and* Efe's
+> approval before a contract's stable surface moves, and shipping the change alongside the
+> proposal would make the approval ceremonial. This is the same withholding ADR-0029, ADR-0032
+> and ADR-0033 each practised.
+
+and continued:
+
+> The engine's existing two-pass behaviour stays as it is in the meantime. It is the safer of
+> the two readings — a bound that applies is strictly better than one that does not — and
+> reverting it to match a contract that may be about to change would be churn in the direction
+> of the more dangerous state.
+
+Both were true and are now discharged. As of architecture 1.10.0:
+
+- `contracts/mcp/v1/policy-ruleset.schema.json` is **1.1.0**. The `rule` description states
+  both passes; `compatibility.notes` records that the *deciding* order is unchanged, which is
+  why this is MINOR against a schema whose own note calls an evaluation-order change MAJOR.
+- `$defs.Rule` carries an `anyOf` requiring `decision`, `max_calls_per_turn` or
+  `rate_limit_per_minute`. Rule 4 is now a schema error rather than a review question.
+- `PolicyEngine._validate()` refuses such a rule at load, naming it.
+- `tests/unit/test_policy_engine.py` holds the three cases this section named, and one more:
+  the *shipped* `config/policy/default.toml` is asserted to bound a runaway loop, so the
+  bound is proved on the file the runtime actually loads rather than on a fixture.
+- `ci/self_test.sh` plants a decisionless, constraintless rule in the schema's own `examples`
+  and asserts `JSON-004`.
+
+**One thing this Erratum does not discharge.** The Context above quoted the shipped rule
+without its `match.any = true` line and argued from an absent `match`. That was corrected in
+place at architecture 1.9.1, while this ADR was still `Proposed` and its body still editable.
+`Architecture_Freeze.md` §9.15 records it. The finding was unaffected; the premise was not in
+the file.

@@ -83,7 +83,7 @@ it — no fixed point to chase. Record it **last**.
 ```bash
 bash ci/run_gates.sh                    # 22/22, 0 broken
 bash ci/run_gates.sh <gate>             # one gate
-bash ci/self_test.sh                    # 28/28 assertions, 22/22 gates covered
+bash ci/self_test.sh                    # 29/29 assertions, 22/22 gates covered
 python3 scripts/architecture_checksum.py --verify
 python3 scripts/generate_ci_docs.py --check
 bash scripts/check_env.sh               # the host, not the repository
@@ -167,9 +167,10 @@ neither an owner nor a route to removal, so it is bounded rather than trusted.
 Three traps in what is already there:
 
 - `PolicyEngine` evaluates **constraint rules** — limits with no `decision` — in a pass of
-  their own, before first-match-wins. Under strict positional matching the shipped
-  `runaway containment` rule is unreachable and the loop it bounds runs free. The contract
-  does not describe constraint-only rules; resolving that needs an ADR.
+  their own, before first-match-wins. This is now the contract: ADR-0034, accepted
+  2026-08-27, and `policy-ruleset.schema.json` **1.1.0**. A rule that neither decides nor
+  constrains is a load error, not a rule that silently does nothing. Constraints bound; they
+  never authorise, which is why an out-of-order pass is safe.
 - `TrustContext.level` is recomputed from `sources` on every read rather than cached, so no
   code path can forget to lower it.
 - The four stateless coordinators are **frozen dataclasses**. That is ADR-0008's

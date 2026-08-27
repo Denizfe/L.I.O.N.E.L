@@ -260,6 +260,30 @@ SCHEMA
 expect_violation jsonschema "JSON-004" "an example that fails its own schema"
 rm -f contracts/core/v1/_selftest.schema.json
 
+# 12b. ADR-0034 rule 4: a rule must decide or constrain. A rule with neither validated
+#      under policy-ruleset 1.0.0 and did nothing at all — silently, while reading in the
+#      file as though it did something. That is the defect ADR-0034 was written about, so
+#      the schema must now reject the shape rather than the reviewer having to spot it.
+#      Planted in the real schema's own examples, because a plant in a throwaway file
+#      would prove the plant and not the contract. It is in the checksum set: byte-exact
+#      backup, verified restore.
+PR_SCHEMA="contracts/mcp/v1/policy-ruleset.schema.json"
+PR_BAK="$(plant_in "$PR_SCHEMA")"
+python3 - "$PR_SCHEMA" <<'PLANT'
+import json, sys
+p = sys.argv[1]
+with open(p, encoding="utf-8", newline="") as f:
+    raw = f.read()
+d = json.loads(raw)
+d["examples"][0]["rule"].append({"name": "inert", "match": {"any": True}})
+with open(p, "w", encoding="utf-8", newline="") as f:
+    # chr(10), not a backslash escape. This block is written into a heredoc, and a
+    # backslash-n here becomes a real newline before python ever sees it.
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + chr(10))
+PLANT
+expect_violation jsonschema "JSON-004" "a policy rule that neither decides nor constrains"
+unplant "$PR_SCHEMA" "$PR_BAK"
+
 # 13. Protobuf must compile. A .proto that does not is a data plane that does not exist.
 cat > contracts/grpc/v1/_selftest.proto <<'PROTO'
 syntax = "proto3";

@@ -2,22 +2,23 @@
 
 | | |
 |---|---|
-| Architecture version | **1.9.1** |
+| Architecture version | **1.10.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.9.1`** |
+| Tag | **`architecture-1.10.0`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **1 ADR pending — ADR-0034**, awaiting Efe. ADR-0033 and ADR-0032 both accepted 2026-08-24 |
+| Previous versions | **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** ADR-0034 accepted 2026-08-27 and in force. ADR-0033 and ADR-0032 accepted 2026-08-24 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **33 of 34 ADRs are in force.** ADR-0034 (2026-08-25) is `Proposed`: it changes
-> `policy-ruleset.schema.json`'s stable surface, so §4 requires Efe's approval before the
-> change rather than after, and the schema edit it describes is deliberately not in the
-> repository. ADR-0033 was accepted 2026-08-24 and implemented in the
+> **All 34 ADRs are in force.** ADR-0034 (2026-08-25) was accepted 2026-08-27 and
+> implemented in the same version. It changes `policy-ruleset.schema.json`'s stable surface,
+> so §4 required Efe's approval before the change rather than after — and for the two days it
+> was `Proposed`, the schema edit it describes was deliberately absent from the repository.
+> §9.16. ADR-0033 was accepted 2026-08-24 and implemented in the
 > same version — but only after the working gate was removed from the repository so the
 > decision could be made in writing rather than by having shipped. §9.9.
 >
@@ -31,6 +32,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.10.0** — MINOR over 1.9.1: ADR-0034 accepted, so a pending decision comes into force,
+which §1 defines as MINOR. `policy-ruleset.schema.json` goes to 1.1.0 — the first change to a
+`stable` contract since the freeze. Nothing already in force changed: the deciding order is
+untouched, and a constraint rule can only stop a call, never authorise one. §9.16.
 
 **1.9.1** — PATCH over 1.9.0: errata only. ADR-0034 and §9.14 both misquoted the rule they
 are about, omitting its `match.any = true` line and arguing from an absent `match`. The
@@ -98,11 +104,11 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.9.1
-sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
+ARCHITECTURE CHECKSUM                                          architecture 1.10.0
+sha256:11d2685e902fe03eb4d5636b81b76ab235363915289274e8ee72daebea442ff5
 
-  ADRs         34 files   sha256:a38a1347c002cd14241b7d1d92640843…
-  contracts    31 files   sha256:ed9dea767311ffa3d1ba0aa7e14d2345…
+  ADRs         34 files   sha256:f263007a6273996a6af236bf730223d4…
+  contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
   policy        8 files   sha256:17e8bab5b3056e9c17a709697a6083a2…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
@@ -113,6 +119,8 @@ sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.9.1   sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
+                     75 files — ADRs 34 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.9.0   sha256:c6da18a0ec65349925824a959d1ca5d82b0266c27b0a55664355d8bd605c9634
                      75 files — ADRs 34 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.8.0   sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea
@@ -144,7 +152,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
+python3 scripts/architecture_checksum.py --verify sha256:11d2685e902fe03eb4d5636b81b76ab235363915289274e8ee72daebea442ff5
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -199,7 +207,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 20 configuration sections (`preflight` added at 1.7.0), and the count is now measured by `doc-claims` |
-| **CI gates** | **22 gates, 146 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 28/28, gate coverage 22/22 |
+| **CI gates** | **22 gates, 146 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 29/29, gate coverage 22/22 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -1097,6 +1105,65 @@ version.
 
 The version moves because `docs/decisions/ADR-*.md` is in the checksum set. The file count
 stays at 75; only the ADRs group digest changes.
+
+---
+
+### 9.16 Version 1.10.0 — ADR-0034 in force, and the first stable contract to move
+
+Efe accepted ADR-0034 on 2026-08-27. It was `Proposed` for two days, and for those two days
+the schema edit it describes was not in the repository — which is the point of the
+withholding, and the fourth time this repository has practised it.
+
+**What changed.**
+
+| | |
+|---|---|
+| `contracts/mcp/v1/policy-ruleset.schema.json` | **1.0.0 → 1.1.0.** The `rule` description states both passes. `$defs.Rule` gains an `anyOf` requiring `decision`, `max_calls_per_turn` or `rate_limit_per_minute` |
+| `PolicyEngine._validate()` | refuses a rule carrying neither, naming it. ADR-0034 rule 4 |
+| `tests/unit/test_policy_engine.py` | `TestConstraintRules`, five cases |
+| `ci/self_test.sh` | 28 → **29** assertions: a decisionless, constraintless rule planted in the schema's own `examples`, asserting `JSON-004` |
+
+**Why MINOR, against a schema whose own note calls this MAJOR.** `compatibility.notes` has
+said since 1.0.0 that *"changing rule EVALUATION ORDER is MAJOR even with no schema change —
+order determines which rule matches, and a reordering silently alters every decision."* That
+sentence is the reason to stop and check rather than to wave the version through.
+
+The deciding order is not changed. Pass 2 is exactly 1.0.0's evaluation, unmodified: top to
+bottom, first match wins, `defaults.decision` as the fallthrough. What is added is a pass
+that runs before it and **cannot decide** — a constraint rule can stop a call, and can do
+nothing else. No ruleset's decisions move. The one ruleset that behaves differently under
+1.1.0 is one containing a rule that decides nothing and constrains nothing, which under
+1.0.0 did nothing at all; ADR-0034 rule 4 turns that from silence into a load error. The
+note now records both passes and this reasoning, so the next reader does not have to
+reconstruct it.
+
+**This is the first `stable` contract to change since the 1.0.0 freeze.** That is what §4
+exists for, and the sequence it required is the whole substance of what happened here: the
+implementation was already ahead of the contract, the argument *"the code works, the contract
+is merely imprecise"* was available, and taking it would have meant deciding by having
+shipped. The decision was made in writing, by the one person §5 gives it to, and only then
+was the contract moved.
+
+**The self-test plant cost three attempts, all to the same trap.** The plant is a Python
+block inside a heredoc inside `ci/self_test.sh`, and a `
+` written in that block is turned
+into a real newline before Python ever sees it — first as an unterminated string, then, after
+the fix, inside the comment written to explain the fix. It is the hazard this document has
+recorded twice before. The block now uses `chr(10)` and says why in prose containing no
+backslash.
+
+**Falsified before trusted.** Disabling the constraint pass in `_decide()` makes
+`test_a_constraint_rule_below_an_allowing_rule_still_bounds` fail with `'allow' != 'deny'`.
+A bound that passes whether or not the mechanism exists is the shape of the three defects the
+G1 sign-off audit found, and this one is about a bound.
+
+One of the five new tests is not about the engine at all: it reads
+`config/policy/default.toml` and asserts the last rule still has the shape ADR-0034 argues
+from — terminal `match.any`, no `decision`, `max_calls_per_turn = 40`. §9.15 exists because
+that claim was wrong once. It is now checked.
+
+The version moves because `contracts/**` and `docs/decisions/ADR-*.md` are both in the
+checksum set. 75 files, unchanged in count.
 
 ---
 
