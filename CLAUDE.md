@@ -1,9 +1,9 @@
 # L.I.O.N.E.L — working rules
 
 A local-first voice assistant whose defining constraint is an **offline autonomy guarantee**
-(ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. **Phase 1's work is
-done and its sign-off is prepared but unsigned** — `Phase1_Final_Signoff.md` §7 is Efe's,
-and G2 does not open until it carries a signature.
+(ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. **G1 was signed by Efe
+on 2026-08-28** — `Phase1_Final_Signoff.md` is now a dated record, and **Phase 2 (Memory
+Service, G2) is open**. Its DoD is MASTER_PLAN_v2 §10 Phase 2.
 
 **This repository is an architecture first, and runtime code second.** 35 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that

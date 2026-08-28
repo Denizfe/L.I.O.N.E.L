@@ -8,7 +8,13 @@
 # route to removal is not an exemption, it is a silently lowered standard.
 
 version: 1
-phase: "0"
+# Documentary only -- no gate reads this. It said "0" from the 1.0.0 freeze until
+# 2026-08-28, through G0's sign-off and the whole of Phase 1: a claim about the
+# repository, in the repository's own policy file, wrong for eighteen days because
+# nothing read it and nothing checked it. Moved to "2" when G1 was signed
+# (Phase1_Final_Signoff.md §7). If it goes stale again the fix is to delete it, not
+# to correct it -- a field nobody reads has no business asserting anything.
+phase: "2"
 
 repository:
   # Phase 0 forbids runtime code. This is the single loudest architectural signal
@@ -387,14 +393,15 @@ doc_claims:
       unblocked_by: "splitting the current-state table into its own section, then registering it"
     - doc: Phase1_Final_Signoff.md
       why: >-
-        Unsigned, so its numbers are current-state claims and not yet a record --
-        which is why they went stale across four versions before anyone looked.
-        Registering it would work today and become wrong the moment it is signed,
-        because a signed sign-off must stop tracking the present.
+        A dated audit record, signed by Efe on 2026-08-28. Its numbers describe
+        what was true at sign-off and must not move. Until that day it was
+        unsigned, its numbers were current-state claims, and they went stale
+        across four versions before anyone looked -- which is the reason this
+        entry exists rather than the document simply being absent from the file.
       owner: architecture
       unblocked_by: >-
-        the signature in section 7. On that day it becomes a dated record like
-        Phase0_Final_Signoff.md, and this entry's reason becomes that one's.
+        nothing -- correct as an exclusion now that it is signed, and listed so
+        the omission is visible rather than implied.
     - doc: Phase0_Final_Signoff.md
       why: "A dated audit record. Its numbers describe what was true at sign-off and must
             not move."

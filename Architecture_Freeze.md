@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.12.1** |
+| Architecture version | **1.13.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.12.1`** |
-| Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Tag | **`architecture-1.13.0`** |
+| Status | **FROZEN** — G1 signed 2026-08-28, Phase 2 open; the freeze governs the architecture, not the code written against it |
+| Previous versions | **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **0 ADRs pending.** ADR-0035 accepted 2026-08-28 and in force; ADR-0034 accepted 2026-08-27 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -36,6 +36,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.13.0** — MINOR over 1.12.1: **G1 signed and Phase 2 opened.** No ADR was added and no
+decision already in force changed; what moved is the phase, which is the same shape as
+1.6.0, where G0's sign-off opened Phase 1. §9.20.
 
 **1.12.1** — PATCH over 1.12.0: errata only. `Phase1_Final_Signoff.md`'s state block had
 gone stale across four versions while the document sat unsigned, in no registry at all. No
@@ -119,12 +123,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.12.1
-sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e
+ARCHITECTURE CHECKSUM                                          architecture 1.13.0
+sha256:f4a97de38f49313c466ff4b20b199c3bca8bfab156e6ca55a0116195741a0d9c
 
   ADRs         35 files   sha256:90d66c463ef899dd426257ee66fdf18f…
   contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
-  policy        8 files   sha256:3ba2ccb4c1a7817c1521ea5250ffcefe…
+  policy        8 files   sha256:361e99885c5a2e1cc5390ba5218aa4d2…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -134,6 +138,8 @@ sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.12.1  sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e
+                     76 files — ADRs 35 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.12.0  sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141
                      76 files — ADRs 35 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.11.0  sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
@@ -173,7 +179,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e
+python3 scripts/architecture_checksum.py --verify sha256:f4a97de38f49313c466ff4b20b199c3bca8bfab156e6ca55a0116195741a0d9c
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -1340,6 +1346,63 @@ moves. 76 files.
 
 ---
 
+### 9.20 Version 1.13.0 — G1 signed, and Phase 2 opens
+
+Efe signed `Phase1_Final_Signoff.md` §7 on 2026-08-28. Twelve DoD clauses, twelve artefacts,
+one of which is a witnessed run rather than a test — and the document says so in the row
+where it matters rather than in a footnote.
+
+**The signature came after three attempts at one command.** `bash scripts/check_env.sh
+--live` exercises clauses 1, 4 and 5. The first run reported `skip github — no Docker
+daemon`. The second, with Docker started, reported `skip github — secret://env/GITHUB_PAT
+does not resolve (SecretNotFound)`. The third reported `ok github verified — get_me returned
+login denizefekaracakaya`, with no "live check(s) did NOT run" note in the verdict.
+
+Two failures, two distinct causes, each named exactly, each refusing to read as a pass. That
+matters more than the pass. §9.13 records a version of this script that printed
+`ok github verified` for a credential it never managed to send, and §9.14 records the driver
+in which `pass` was the only reachable branch. **Clause 5's evidence is now a run through a
+driver observed failing twice on the same day it passed** — which is the strongest form the
+clause can take on one machine, and still only a fact about one machine at one moment. That
+residual is R-A20, and it stays open with a route.
+
+**What the sign-off found on its way to being signed.** The document's own §5 state block was
+1.8.0's: 22 gates, 146 rules, 28 assertions, 113 tests, 33 ADRs, a 74-file checksum. It had
+gone stale across four versions while the document sat unsigned, and it was about to be
+signed rather than caught. Corrected at 1.12.1, §9.19. It is frozen now — a signed sign-off
+must stop tracking the present.
+
+**And one more, in the policy file itself.** `ci/policy/policy.yaml` opened with
+`phase: "0"`. It had said that since the 1.0.0 freeze — through G0's sign-off on 2026-08-10
+and the whole of Phase 1. Eighteen days wrong, in the repository's own policy file, because
+no gate reads the field and nothing checks it. It now says `"2"`, with a comment saying that
+if it goes stale again the fix is to delete it: **a field nobody reads has no business
+asserting anything.**
+
+That is the sixth instance this week of the shape the sign-off audit named, and it is worth
+being plain about what the tally means. `doc-quotes` closed the fenced-block half two
+versions ago; it does not touch a bare YAML scalar in a config file, and no gate does. The
+count is not evidence that the pipeline is failing. It is evidence that **this repository
+states more about itself than it checks**, which is what ADR-0030 said in 2026-08-11 and is
+still the open question G2 inherits.
+
+**What opens.** `repository.runtime_code_forbidden_until` stays `null` and `STRUCT-004` stays
+dormant. `require_lockfile: uv.lock` was gated at G1 and `uv.lock` has existed since
+2026-08-10, so no rule changes state on this signature — checked before claiming G1 closed,
+because a phase transition that silently arms a rule is how a green pipeline goes red for
+reasons nobody connects to the transition.
+
+Phase 2's DoD is MASTER_PLAN_v2 §10 Phase 2: Qdrant digest-pinned behind a `VectorBackend`
+port, `forget(id)` provably removing a memory from retrieval, near-duplicate dedup, episodic
+decay under an accelerated clock, re-index against a second embedding model without data
+loss, and `qdrant-store` absent from the exposed capability surface — plus v1.0's two
+criteria carried forward verbatim, the `compose down && up` persistence proof and the
+semantic-recall test that keyword matching must fail.
+
+Only `ci/policy/policy.yaml` is in the checksum set. 76 files.
+
+---
+
 ### 9.4 If the Proposed ADRs are rejected — *historical, superseded by §9.6*
 
 All three were accepted on 2026-08-11, so this section no longer describes a live
@@ -1358,4 +1421,5 @@ Any of those is a MINOR bump of its own, not a revert of 1.1.0.
 ---
 
 *Prepared 2026-08-03. In force 2026-08-10: 1.0.0, extended to 1.1.0, corrected to 1.1.1 — all the same day.
-Extended to 1.2.0 and 1.3.0 on 2026-08-11, and to 1.4.0, 1.5.0 and 1.6.0 on 2026-08-24 — the day Phase 1 opened.*
+Extended to 1.2.0 and 1.3.0 on 2026-08-11, and to 1.4.0, 1.5.0 and 1.6.0 on 2026-08-24 — the day Phase 1 opened.
+Extended to 1.13.0 on 2026-08-28 — the day G1 was signed and Phase 2 opened.*

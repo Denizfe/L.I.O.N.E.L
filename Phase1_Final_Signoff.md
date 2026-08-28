@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | Gate | **G1 — Host Runtime Skeleton & Control Plane** |
-| Date | 2026-08-25 · **state block refreshed 2026-08-28** |
+| Date | Prepared 2026-08-25 · **signed 2026-08-28** |
 | Architecture | **1.12.0** · `sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141` |
 | Scope | Every DoD clause of MASTER_PLAN_v2 §10 Phase 1, which is v1.0's Phase 1 DoD **in full** plus five |
 | Method | Each clause traced to an artefact — a named test, a gate rule, or a recorded run. Not to a sentence |
-| **VERDICT** | **Prepared, unsigned.** §7 is Efe's, and only Efe's |
+| **VERDICT** | **PASS — signed by Efe, 2026-08-28. G1 closed; G2 may begin** |
 
 ---
 
@@ -138,13 +138,13 @@ preflight          6 tools · 4 packages · 7 hazard rows · 2 live checks
 ```
 
 **This block was 1.8.0's when the document was prepared on 2026-08-25, and it went stale
-across four versions while the document sat unsigned.** Refreshed 2026-08-28. Nothing in
-§2 or §3 moved — every clause was met at 1.8.0 and is met now — but a sign-off whose own
-state block is false would be a small instance of exactly what §1 is about, and it would be
-signed rather than caught. `doc-claims` does not watch this document;
-`doc_claims.out_of_scope` now records why, with an owner and a route to removal. The moment
-§7 carries a signature this becomes a dated record that must *stop* being refreshed, which
-is the route.
+across four versions while the document sat unsigned.** Refreshed 2026-08-28, immediately
+before signing. Nothing in §2 or §3 moved — every clause was met at 1.8.0 and is met now —
+but a sign-off whose own state block is false would have been signed rather than caught,
+which is a small instance of exactly what §1 is about.
+
+**These numbers are now frozen.** §7 carries a signature, so this is a dated record and the
+block stops tracking the present. Refreshing it again would be editing the archive.
 
 Four of the seven Git Bash hazard rows are gate rules (`SH-MSYS-DOCKER`, `SH-BARE-PYTHON`,
 `SH-CRLF`, `ARCH-017`), one is executed by the preflight (`HAZ-DOCKER-BACKEND`), and two are
@@ -165,31 +165,20 @@ carrying neither an owner nor a route to removal.
 
 ---
 
-## 7. Sign-off
+## 6b. The live checks, witnessed
 
-**Not signed.** `Architecture_Freeze.md` §5 gives this signature to Efe and to nobody else,
-and a document that signed itself would be the exact failure the twelve rows above exist to
-rule out.
-
-To sign, replace this section:
-
-```
-| Signed | Efe · YYYY-MM-DD |
-| Verdict | PASS — G1 closed, Phase 2 (Memory Service, G2) may begin |
-```
-
-Before signing, one command is worth re-running on the host, because it is the only clause
-above that no machine will ever re-check on its own:
+Clauses 1, 4 and 5 are the ones no machine re-checks on its own. One command exercises all
+three:
 
 ```bash
-bash scripts/check_env.sh --live      # clauses 1, 4 and 5
+bash scripts/check_env.sh --live
 ```
 
-Expect `ok filesystem verified`, `ok github verified — get_me returned login …`, and a
-verdict with **no** "live check(s) did NOT run" note. A `skip` there is not a pass, and the
-preflight now says so in as many words.
+The bar is `ok filesystem verified`, `ok github verified — get_me returned login …`, and a
+verdict carrying **no** "live check(s) did NOT run" note. A `skip` there is not a pass, and
+the preflight says so in as many words.
 
-**Run on the host 2026-08-25, immediately before this document was finalised:**
+**Run on the host 2026-08-25, immediately before this document was prepared:**
 
 ```
 ok    filesystem  verified   reads inside the root, refuses outside it —
@@ -200,34 +189,59 @@ PASS  everything required now is present.
 note  1 item(s) are needed at a later gate, not yet.
 ```
 
-The single `note` is `cl` — VS Build Tools, needed at G6 and correctly non-blocking here.
-No live check was skipped. **That run is clause 5's evidence of record.**
-
-### Re-run 2026-08-28, before signing
+**Re-run on the host 2026-08-28, immediately before signing:**
 
 ```
+ok    HAZ-DOCKER-BACKEND wsl2       6.18.33.2-microsoft-standard-WSL2
+
 ok    filesystem  verified   reads inside the root, refuses outside it —
                              Access denied - path outside allowed directories
-skip  github      not run    no Docker daemon — start Docker Desktop and re-run
+ok    github      verified   get_me returned login denizefekaracakaya
 
 PASS  everything required now is present.
 note  1 item(s) are needed at a later gate, not yet.
-note  1 live check(s) did NOT run. PASS above means the
-      environment is ready, not that those clauses were verified.
 ```
 
-**Docker Desktop was not running, so clause 5 did not re-run.** This changes nothing about
-the clause — its evidence is the 2026-08-25 run above, witnessed through a driver that had
-been observed failing — and it changes nothing about the repository. It is a fact about the
-host at one moment, which is the whole of what R-A20 says cannot be checked from CI.
+Both live checks verified, from the digest-pinned container, with the credential resolved
+through `secret://env/GITHUB_PAT` and passed into the child process environment and nowhere
+else. The single `note` is `cl` — VS Build Tools, needed at G6 and correctly non-blocking
+here. No live check was skipped.
 
-It is worth reading what the preflight did here, because it is the thing that was broken
-twice. It refused to let a skipped check read as a passed one: `PASS` on the line above, and
-immediately beneath it, in as many words, *"PASS above means the environment is ready, not
-that those clauses were verified."* Three weeks ago this same script would have printed
-`ok github verified` for a credential it never sent.
+**It took three attempts on 2026-08-28, and the two that failed are the more interesting
+evidence.** The first reported `skip github — no Docker daemon`. The second, with Docker
+started, reported `skip github — secret://env/GITHUB_PAT does not resolve (SecretNotFound)`.
+Two different causes, each named exactly, each refusing to read as a pass: `PASS everything
+required now is present`, and immediately beneath it, *"PASS above means the environment is
+ready, not that those clauses were verified."*
 
-**Every precondition in this document is met. Clause 5 rests on a witnessed run rather than
-on a re-run, and the choice of whether that is enough belongs to the same person as the
-signature.** Starting Docker Desktop and running the one command above removes the question
-entirely; it takes a minute.
+That is the whole of §4's argument, demonstrated rather than asserted. A signal that cannot
+show red carries no information when it shows green — and this one was watched showing red
+twice, for two distinct reasons, within the hour before it showed green. **Clause 5's
+evidence is a run through a driver observed failing on the same day it passed**, which is
+the strongest form this clause can take on one machine.
+
+What remains true, and is not fixed by any of this: it is a run, on one host, at one moment.
+It is re-runnable in one command and it is not continuously verified. That is R-A20, and
+§6 carries it.
+
+---
+
+## 7. Sign-off
+
+| | |
+|---|---|
+| Signed | **Efe · 2026-08-28** |
+| Verdict | **PASS — G1 closed, Phase 2 (Memory Service, G2) may begin** |
+| Architecture at signing | 1.12.1 · `sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e` |
+| Live checks | both verified on the host 2026-08-28, §6b |
+
+**This document is now a dated record.** Its numbers describe what was true at signing and
+must not be refreshed again — §5's state block stops tracking the present here.
+`doc_claims.out_of_scope` names the signature as this document's route out of the registry,
+and this is that day: the entry's reason becomes `Phase0_Final_Signoff.md`'s.
+
+`STRUCT-004` stays dormant, `repository.runtime_code_forbidden_until` stays `null`, and
+Phase 2's first commit is now in scope. **G2's gate is the Memory Service, and its DoD is
+MASTER_PLAN_v2 §10 Phase 2** — including the two v1.0 criteria carried forward verbatim, the
+persistence proof across `compose down && up` and the semantic-recall test that keyword
+matching must fail.
