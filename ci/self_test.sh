@@ -284,6 +284,29 @@ PLANT
 expect_violation jsonschema "JSON-004" "a policy rule that neither decides nor constrains"
 unplant "$PR_SCHEMA" "$PR_BAK"
 
+# 12c. ADR-0037: a LIVE record with empty text. Redaction clears the text and the schema's
+#      if/then allows it there; everywhere else `minLength: 1` still stands, because an
+#      empty-texted live record recalls nothing, matches nothing, and looks like a working
+#      memory in every listing. The plant flips `redacted` to false on the tombstone
+#      example, which is the smallest edit that makes the conditional take the other branch
+#      -- and it is exactly what a careless "just relax minLength" would have permitted.
+MR_SCHEMA="contracts/events/v1/memory-record.schema.json"
+MR_BAK="$(plant_in "$MR_SCHEMA")"
+python3 - "$MR_SCHEMA" <<'PLANT'
+import io, json, sys
+p = sys.argv[1]
+with io.open(p, encoding="utf-8", newline="") as f:
+    d = json.loads(f.read())
+tomb = next(e for e in d["examples"] if e.get("redacted") is True)
+tomb["redacted"] = False
+with io.open(p, "w", encoding="utf-8", newline="") as f:
+    # chr(10), not a backslash escape. This block is written into a heredoc, and a
+    # backslash-n here becomes a real newline before python ever sees it.
+    f.write(json.dumps(d, indent=2, ensure_ascii=False) + chr(10))
+PLANT
+expect_violation jsonschema "JSON-004" "a live memory record with empty text"
+unplant "$MR_SCHEMA" "$MR_BAK"
+
 # 13. Protobuf must compile. A .proto that does not is a data plane that does not exist.
 cat > contracts/grpc/v1/_selftest.proto <<'PROTO'
 syntax = "proto3";

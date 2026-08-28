@@ -249,17 +249,55 @@ class TestTheSurfaceMatchesTheContract(unittest.TestCase):
         self.assertEqual(rec["embedding_model"], "sentence-transformers/all-MiniLM-L6-v2")
         self.assertEqual(rec["embedding_dims"], DIMS)
 
-    def test_a_redacted_record_still_validates(self):
-        """Redaction clears the text, and the record schema requires `text` with
-        minLength 1. If those two are in tension the contract has to say which wins, and
-        this is where that shows up rather than at G4."""
+    def test_a_tombstone_validates(self):
+        """ADR-0037, accepted 2026-08-28. Until then this asserted the opposite.
+
+        `minLength: 1` and "its text is cleared" could not both hold, so a tombstone was a
+        record the record contract rejected — on the one path both schemas call mandatory.
+        The schema is 1.1.0 and the conditional resolves it.
+        """
         rid = self.svc.remember(TEXT, kind="durable", importance=0.8)["id"]
         self.svc.forget(rid)
-        found = errors(self.record_schema, self.svc._records[rid].to_contract())
-        self.assertNotEqual(
-            [], found,
-            "a cleared text SHOULD fail minLength — if it stops failing, the schema "
-            "changed and the tombstone shape needs a decision, not a silent pass")
+        rec = self.svc._records[rid].to_contract()
+        self.assertEqual(rec["text"], "")
+        self.assertIsNotNone(rec["redacted_at"])
+        self.assertEqual([], errors(self.record_schema, rec))
+
+    def test_a_live_record_with_empty_text_is_still_refused(self):
+        """The half of ADR-0037 that is a narrowing in effect, if not in form.
+
+        Relaxing `minLength` unconditionally would have been one line. It would also make
+        an empty-texted LIVE record valid — one that recalls nothing, matches nothing, and
+        looks like a working memory in every listing.
+        """
+        rid = self.svc.remember(TEXT, kind="durable", importance=0.8)["id"]
+        rec = self.svc._records[rid].to_contract()
+        rec["text"] = ""
+        self.assertNotEqual([], errors(self.record_schema, rec))
+
+    def test_a_tombstone_without_a_date_is_refused(self):
+        """A tombstone that cannot be ordered against a consolidation run cannot answer
+        the one question anyone asks it."""
+        rid = self.svc.remember(TEXT, kind="durable", importance=0.8)["id"]
+        self.svc.forget(rid)
+        rec = self.svc._records[rid].to_contract()
+        rec.pop("redacted_at")
+        self.assertNotEqual([], errors(self.record_schema, rec))
+
+    def test_the_conditional_actually_applies(self):
+        """The trap this schema fell into for one commit.
+
+        JSON Schema applies every applicable keyword: a base `properties.text.minLength: 1`
+        cannot be relaxed by `then`. Leaving it in place produced a conditional that read
+        correctly and did nothing — the shape this repository has spent a week naming. The
+        assertion is on the schema's structure, because the symptom is silence.
+        """
+        base = self.record_schema["properties"]["text"]
+        self.assertNotIn("minLength", base,
+                         "minLength belongs in the if/then branches; a base constraint "
+                         "silently overrides the conditional that appears to relax it")
+        self.assertEqual(self.record_schema["then"]["properties"]["text"]["minLength"], 0)
+        self.assertEqual(self.record_schema["else"]["properties"]["text"]["minLength"], 1)
 
 
 if __name__ == "__main__":

@@ -2,22 +2,21 @@
 
 | | |
 |---|---|
-| Architecture version | **1.16.0** |
+| Architecture version | **1.17.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.16.0`** |
+| Tag | **`architecture-1.17.0`** |
 | Status | **FROZEN** — G1 signed 2026-08-28, Phase 2 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **1 ADR pending — ADR-0037**, awaiting Efe. ADR-0036 accepted 2026-08-28 and in force |
+| Previous versions | **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** ADR-0037 accepted 2026-08-28 and in force |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **36 of 37 ADRs are in force.** ADR-0037 (2026-08-28) is `Proposed`: it moves
-> `memory-record.schema.json`'s stable surface, so §4 requires Efe's approval before the
-> change, and the schema is untouched. A contract test pins the current behaviour meanwhile.
-> §9.23.
+> **All 37 ADRs are in force.** ADR-0037 (2026-08-28) was accepted the same day and
+> implemented in the same version: `memory-record.schema.json` is 1.1.0 and a tombstone is
+> a record the architecture can describe. §9.24.
 >
 > ADR-0036 (2026-08-28) was accepted the same day and
 > implemented in the same version: `qdrant-client` and `fastembed` are declared, and
@@ -46,6 +45,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.17.0** — MINOR over 1.16.0: ADR-0037 accepted, so a pending decision comes into force,
+which §1 defines as MINOR. `memory-record.schema.json` goes to 1.1.0 — a widening: every
+record valid under 1.0.0 stays valid, and the only instances whose status changes are
+tombstones, which were invalid. §9.24.
 
 **1.16.0** — MINOR over 1.15.0: the Memory Service, and ADR-0037 added as `Proposed`. No
 decision in force changed. Runtime code under `src/lionel/` conforming to frozen contracts
@@ -146,11 +150,11 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.16.0
-sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
+ARCHITECTURE CHECKSUM                                          architecture 1.17.0
+sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
 
-  ADRs         37 files   sha256:7d0556b564640e8ab404692bd5957032…
-  contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
+  ADRs         37 files   sha256:d04d2665a84ddfed5d7ddf9eec0c2c3d…
+  contracts    31 files   sha256:68a5211592ebf31f04dbcc67195c7122…
   policy        8 files   sha256:7fffa2c4b38c33e732236f08bdf93069…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
@@ -161,6 +165,8 @@ sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.16.0  sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
+                     78 files — ADRs 37 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.15.0  sha256:efff3d763ddc40862a05e5dea6e35400b3178b4d1588092a7b6e52ad4f2458dd
                      77 files — ADRs 36 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.14.0  sha256:50f1226c43be4586f67a41ea2fc01074c487e855766262930309d73e9feed125
@@ -208,7 +214,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
+python3 scripts/architecture_checksum.py --verify sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -255,7 +261,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **37 ADRs, 0001–0037** — 36 in force, **1 ADR pending: ADR-0037**, which moves a contract's stable surface and so waits for Efe |
+| **Architecture decisions** | **37 ADRs, 0001–0037** — all in force, **0 ADRs pending** |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -263,7 +269,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 21 configuration sections (`doc_quotes` added at 1.12.0), and the count is now measured by `doc-claims` |
-| **CI gates** | **23 gates, 150 rules, 27 workflow jobs** — 18 checking the repository, 5 checking the pipeline (ADR-0030, ADR-0033, ADR-0035). Self-test 31/31, gate coverage 23/23 |
+| **CI gates** | **23 gates, 150 rules, 27 workflow jobs** — 18 checking the repository, 5 checking the pipeline (ADR-0030, ADR-0033, ADR-0035). Self-test 32/32, gate coverage 23/23 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -1627,6 +1633,61 @@ bounded nothing for four weeks, defended each week by the observation that nothi
 wrong yet.
 
 `docs/decisions/README.md` records **1 ADR pending**. 78 files.
+
+---
+
+### 9.24 Version 1.17.0 — ADR-0037 in force, and a conditional that did nothing
+
+Efe accepted ADR-0037 on 2026-08-28. `memory-record.schema.json` is **1.1.0**: a tombstone
+may carry an empty `text` and must carry `redacted_at`; everywhere else `minLength: 1`
+stands, because an empty-texted **live** record recalls nothing, matches nothing, and looks
+like a working memory in every listing. Seventh withholding, discharged the same day.
+
+> **Correction to §9.23.** That section said *"neither schema ships an example of a redacted
+> record — the only example that would have failed is the one nobody wrote."* **The schema
+> does ship one.** Its second example carries `"redacted": true` with `"text": "[redacted]"`
+> — a placeholder that satisfies `minLength: 1` and validates cleanly. Found by opening the
+> file before changing it, and corrected in ADR-0037's Context while the ADR was still
+> `Proposed` and its body still editable. Eleventh instance of the shape, and this one was
+> mine.
+
+**It makes the finding sharper, not softer.** Three places in one frozen contract described
+three different states: the field description says the text is cleared, the example keeps a
+placeholder, and `minLength: 1` permits only the second. The implementation followed the
+description, because a description is what an implementer reads. **Nothing in this
+repository can notice a schema whose prose and whose example disagree** — the `jsonschema`
+gate compares an example to its schema, never to the sentence beside it. That gap is not
+closed here and is not proposed to be; it is recorded so the twelfth instance is not a
+surprise.
+
+The example is now `""`, which reverses what the schema's author wrote. ADR-0037 says so in
+its Decision rather than letting it pass as tidying.
+
+### The first attempt read as a correct fix and did nothing
+
+`minLength: 1` stayed on the base `properties.text`, with `then: {text: {minLength: 0}}`
+added below. **JSON Schema applies every applicable keyword** — a base constraint is not
+relaxed by a conditional, both must pass. The tombstone example still failed, the `then`
+branch was decorative, and the diff looked right.
+
+Caught by running the validator against the two examples rather than by reading the diff,
+which is the same distinction ADR-0037's Context is about, one level down. `minLength` now
+lives only in the branches, and `test_the_conditional_actually_applies` asserts that
+structurally — because the symptom of getting it wrong is silence, and silence is not
+something a test of behaviour can see.
+
+Falsified in both directions before being trusted: a live record with empty text fails
+`'' should be non-empty`; a tombstone without `redacted_at` fails
+`'redacted_at' is a required property`. `ci/self_test.sh` plants the tombstone example with
+`redacted` flipped to `false` — the smallest edit that takes the other branch, and precisely
+what an unconditional relaxation would have permitted. 31 → **32** assertions.
+
+**Ten of the eleven instances this week were found by reading a file rather than by a gate.**
+That ratio is the argument for `doc-quotes` and `pending_adrs` and `DEP-003`, and equally
+the argument against believing the pipeline is the whole control. It is not, and
+`Architecture_Freeze.md` should not be read as saying it is.
+
+`docs/decisions/README.md` records **0 ADRs pending**. 78 files.
 
 ---
 

@@ -4,7 +4,7 @@
   "title": "MemoryRecord",
   "description": "A single unit of memory owned by the Memory Service (ADR-0010). Qdrant stores the vector and this payload; it does not own the policy. Everything below the embedding is what distinguishes a memory system from a similarity index.",
   "x-lionel": {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "adr": [
       "ADR-0010",
       "ADR-0012",
@@ -24,6 +24,9 @@
     "compatibility": {
       "since": "1.0.0",
       "breaking_changes": [],
+      "minor_changes": [
+        "1.1.0 (ADR-0037): a redacted record may carry an empty `text`, and must carry `redacted_at`. Under 1.0.0 `minLength: 1` made a tombstone -- the state `redacted`'s own description specifies -- an invalid MemoryRecord. A widening: every 1.0.0 record stays valid."
+      ],
       "notes": "`embedding_model` is stored ON EVERY RECORD, not once globally, because that is what makes the ADR-0010 re-index migration possible: records embedded with the old model are identifiable and re-embeddable in place. Without per-record provenance an embedding change is unrecoverable data loss disguised as gradually worsening recall. Changing the kind enum is MAJOR — retention policy keys on it."
     }
   },
@@ -43,8 +46,8 @@
     },
     "text": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 8192
+      "maxLength": 8192,
+      "$comment": "ADR-0037: `minLength` moved into the if/then below. A base constraint cannot be relaxed by a conditional -- every applicable keyword must pass -- so leaving `minLength: 1` here would have kept a tombstone invalid while the conditional silently did nothing."
     },
     "kind": {
       "type": "string",
@@ -152,6 +155,35 @@
     }
   },
   "additionalProperties": false,
+  "if": {
+    "properties": {
+      "redacted": {
+        "const": true
+      }
+    },
+    "required": [
+      "redacted"
+    ]
+  },
+  "then": {
+    "properties": {
+      "text": {
+        "minLength": 0
+      }
+    },
+    "required": [
+      "redacted_at"
+    ],
+    "$comment": "ADR-0037. A tombstone has no text -- that is what `redacted` means, in this schema's own words. `redacted_at` is required with it: a tombstone that cannot be ordered against a consolidation run cannot answer the one question anyone asks it."
+  },
+  "else": {
+    "properties": {
+      "text": {
+        "minLength": 1
+      }
+    },
+    "$comment": "A LIVE record with empty text recalls nothing, matches nothing, and looks like a working memory in every listing. It stays a schema error."
+  },
   "$defs": {
     "Provenance": {
       "type": "object",
@@ -223,7 +255,7 @@
     },
     {
       "id": "01JQ4XD1QRS4T730V3W6X9Y2ZB",
-      "text": "[redacted]",
+      "text": "",
       "kind": "episodic",
       "trust_level": "external_content",
       "salience": 0.4,
