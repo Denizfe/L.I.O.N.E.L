@@ -1,0 +1,55 @@
+# Qdrant for the Memory Service.  ADR-0004 (operational), ADR-0010 (framing), ADR-0013 (pin).
+#
+# MASTER_PLAN_v1 §2.2 sketched this file and MASTER_PLAN_v2 §783 retains it "digest-pinned".
+# The sketch used `qdrant/qdrant:latest`; a tag is advisory and re-pointable, so the image
+# below is the digest from artifacts.lock.yaml. `docker-digests` and `no-latest` both fail
+# this file otherwise, which is the difference between a pin and an intention.
+#
+# WHY COMPOSE RATHER THAN `docker run`
+#   MASTER_PLAN_v1 §2 hazard HAZ-HOST-MOUNT: under Git Bash, MSYS rewrites a leading-slash
+#   container path before Docker ever sees it -- `/qdrant/storage` becomes
+#   `C:/Program Files/Git/qdrant/storage` and the mount silently lands somewhere nobody
+#   looks. Compose does its own path handling, so the hazard does not arise here at all.
+#
+# WHY A NAMED VOLUME RATHER THAN A BIND MOUNT
+#   ADR-0004, carried forward unchanged by ADR-0010. It dodges the MSYS class of bug
+#   entirely, and under the WSL2 backend a named volume has markedly better I/O than a bind
+#   mount onto NTFS -- which surfaces at G2 as intermittent slow queries rather than as an
+#   error anyone can act on.
+#
+# LOOPBACK ONLY
+#   `127.0.0.1:` prefixes are load-bearing, not decoration. Without them Docker publishes on
+#   0.0.0.0 and an unauthenticated vector store holding everything the assistant has ever
+#   been told is reachable from the LAN. ADR-0007 keeps L0 offline; this keeps L0 local.
+
+services:
+  qdrant:
+    image: qdrant/qdrant@sha256:0bd98fa7977f1e75694779359ca4e212822e5a71334e28421182f72f209d5286
+    container_name: lionel-memory
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6333:6333"   # REST + dashboard
+      - "127.0.0.1:6334:6334"   # gRPC
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__ENABLE_TLS: "false"
+      QDRANT__LOG_LEVEL: "INFO"
+    healthcheck:
+      # A TCP probe, and it is worth knowing what that does NOT prove. Qdrant's /readyz
+      # would be the better signal -- the port accepts connections slightly before the
+      # collections are loaded, so this can report healthy inside a window where a query
+      # still fails. The image ships neither curl nor wget (checked, not assumed: it has
+      # bash and nothing else useful), so an HTTP probe would mean adding a package to a
+      # digest-pinned image, which is a worse trade than a two-second window.
+      # Callers must not treat `healthy` as "ready"; tests/integration/ waits on a real
+      # query instead.
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  qdrant_storage:
+    name: lionel_qdrant_storage

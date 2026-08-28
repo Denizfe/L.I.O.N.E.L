@@ -32,6 +32,8 @@ from lionel.memory import (  # noqa: E402
     QdrantBackend,
     VectorBackend,
     assert_dimensions,
+    ulid_to_uuid,
+    uuid_to_ulid,
 )
 
 
@@ -143,6 +145,43 @@ class TestAbsentPackagesFailByName(unittest.TestCase):
         sentinel = object()
         self.assertIs(QdrantBackend(spec=EmbeddingSpec.from_lock(), client=sentinel).client,
                       sentinel)
+
+
+class TestRecordIdsBecomeUuids(unittest.TestCase):
+    """Qdrant point ids are "either an unsigned integer or a UUID" — its own words, in the
+    400 it returns for anything else. The contract pins record ids to a ULID. They are the
+    same 128 bits, so the adapter re-spells rather than maps.
+
+    Found by running the adapter against a real container. No fake backend could have
+    reported it: the port permits any string id, and the constraint lives in Qdrant.
+    """
+
+    def test_the_round_trip_is_lossless(self):
+        from lionel.memory.service import new_ulid
+        for _ in range(500):
+            u = new_ulid()
+            self.assertEqual(uuid_to_ulid(ulid_to_uuid(u)), u)
+
+    def test_the_result_is_uuid_shaped(self):
+        from lionel.memory.service import new_ulid
+        import re
+        pat = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+        for _ in range(50):
+            self.assertRegex(ulid_to_uuid(new_ulid()), pat)
+
+    def test_distinct_ulids_stay_distinct(self):
+        """A collision here would silently overwrite one memory with another."""
+        from lionel.memory.service import new_ulid
+        ulids = {new_ulid() for _ in range(2000)}
+        self.assertEqual(len(ulids), len({ulid_to_uuid(u) for u in ulids}))
+
+    def test_a_non_ulid_is_refused_by_name(self):
+        with self.assertRaises(ValueError) as cm:
+            ulid_to_uuid("too-short")
+        self.assertIn("26", str(cm.exception))
+        with self.assertRaises(ValueError) as cm:
+            ulid_to_uuid("01ARZ3NDEKTSV4RRFFQ69G5FAI")  # I is excluded from Crockford
+        self.assertIn("Crockford", str(cm.exception))
 
 
 class _FakeBackend:

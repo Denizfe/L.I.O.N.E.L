@@ -53,6 +53,8 @@ __all__ = [
     "FastEmbedEmbedder",
     "QdrantBackend",
     "assert_dimensions",
+    "ulid_to_uuid",
+    "uuid_to_ulid",
     "LOCK_PATH",
 ]
 
@@ -238,12 +240,61 @@ class FastEmbedEmbedder:
         return out
 
 
+_CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+_CROCKFORD_INDEX = {c: i for i, c in enumerate(_CROCKFORD)}
+
+
+def ulid_to_uuid(ulid: str) -> str:
+    """A record id as Qdrant will accept it.
+
+    Qdrant point ids are "either an unsigned integer or a UUID" -- its own words, in the
+    400 it returns for anything else. `memory-record.schema.json` pins record ids to a ULID
+    (`^[0-9A-HJKMNP-TV-Z]{26}$`). Neither side is wrong and neither can move: the contract
+    is frozen and the store is upstream.
+
+    They are the same 128 bits. A ULID is 26 Crockford-base32 characters over 130 bits with
+    the top 2 unused; a UUID is those 16 bytes in hex. So this is a re-spelling, not a
+    mapping -- lossless, bijective, and needing no lookup table. `delete(ids)` therefore
+    still works from a caller holding only ULIDs, which a random-UUID-plus-payload scheme
+    would have broken.
+
+    Found by running the adapter against a real container. No fake backend could have
+    reported it: the port permits any string id, and the constraint lives in Qdrant.
+    """
+    if len(ulid) != 26:
+        raise ValueError(f"not a ULID: {ulid!r} is {len(ulid)} characters, expected 26")
+    value = 0
+    for ch in ulid:
+        try:
+            value = (value << 5) | _CROCKFORD_INDEX[ch]
+        except KeyError:
+            raise ValueError(
+                f"not a ULID: {ch!r} is not Crockford base32 (I, L, O and U are excluded)"
+            ) from None
+    raw = value.to_bytes(17, "big")[1:]  # 130 bits carried in 17 bytes; the top 2 are zero
+    h = raw.hex()
+    return f"{h[0:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}"
+
+
+def uuid_to_ulid(value: str) -> str:
+    """The inverse. A record read back from Qdrant carries its contract id again."""
+    raw = bytes.fromhex(value.replace("-", ""))
+    if len(raw) != 16:
+        raise ValueError(f"not a UUID: {value!r}")
+    n = int.from_bytes(raw, "big")
+    return "".join(_CROCKFORD[(n >> (i * 5)) & 0x1F] for i in range(25, -1, -1))
+
+
 class QdrantBackend:
     """Qdrant behind the `VectorBackend` port.  ADR-0004 (operational), ADR-0010 (framing).
 
     The operational decisions ADR-0004 made and ADR-0010 carried forward live here rather
     than in a caller: loopback-only by default, and a URL that can later point at a cluster
     without any caller changing.
+
+    Record ids are re-spelled as UUIDs on the way in and back to ULIDs on the way out --
+    see `ulid_to_uuid`. That translation is the adapter's business and nothing above it
+    knows it happens, which is the point of the port.
     """
 
     def __init__(self, url: str = "http://127.0.0.1:6333", *,
@@ -288,7 +339,7 @@ class QdrantBackend:
         for r in records:
             assert_dimensions(r.vector, self.spec, where=f"upsert into {collection!r}")
             points.append(PointStruct(
-                id=r.id, vector=list(r.vector),
+                id=ulid_to_uuid(r.id), vector=list(r.vector),
                 payload={"text": r.text, "trust": r.trust, **r.payload},
             ))
         if points:
@@ -306,7 +357,7 @@ class QdrantBackend:
         for h in hits:
             payload = dict(h.payload or {})
             out.append(MemoryRecord(
-                id=str(h.id), text=payload.pop("text", ""),
+                id=uuid_to_ulid(str(h.id)), text=payload.pop("text", ""),
                 vector=(), trust=payload.pop("trust", "untrusted"), payload=payload,
             ))
         return out
@@ -314,7 +365,8 @@ class QdrantBackend:
     def delete(self, collection: str, ids: Iterable[str]) -> int:
         wanted = list(ids)
         if wanted:
-            self.client.delete(collection_name=collection, points_selector=wanted)
+            self.client.delete(collection_name=collection,
+                               points_selector=[ulid_to_uuid(i) for i in wanted])
         return len(wanted)
 
     def count(self, collection: str) -> int:
