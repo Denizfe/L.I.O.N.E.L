@@ -385,6 +385,16 @@ doc_claims:
             restructuring the document."
       owner: architecture
       unblocked_by: "splitting the current-state table into its own section, then registering it"
+    - doc: Phase1_Final_Signoff.md
+      why: >-
+        Unsigned, so its numbers are current-state claims and not yet a record --
+        which is why they went stale across four versions before anyone looked.
+        Registering it would work today and become wrong the moment it is signed,
+        because a signed sign-off must stop tracking the present.
+      owner: architecture
+      unblocked_by: >-
+        the signature in section 7. On that day it becomes a dated record like
+        Phase0_Final_Signoff.md, and this entry's reason becomes that one's.
     - doc: Phase0_Final_Signoff.md
       why: "A dated audit record. Its numbers describe what was true at sign-off and must
             not move."

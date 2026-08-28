@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.12.0** |
+| Architecture version | **1.12.1** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.12.0`** |
+| Tag | **`architecture-1.12.1`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Previous versions | **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **0 ADRs pending.** ADR-0035 accepted 2026-08-28 and in force; ADR-0034 accepted 2026-08-27 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -36,6 +36,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.12.1** — PATCH over 1.12.0: errata only. `Phase1_Final_Signoff.md`'s state block had
+gone stale across four versions while the document sat unsigned, in no registry at all. No
+decision changed, no ADR added. §9.19.
 
 **1.12.0** — MINOR over 1.11.0: ADR-0035 accepted, so a pending decision comes into force,
 which §1 defines as MINOR. A 23rd gate, and no decision already in force changed. §9.18.
@@ -115,12 +119,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.12.0
-sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141
+ARCHITECTURE CHECKSUM                                          architecture 1.12.1
+sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e
 
   ADRs         35 files   sha256:90d66c463ef899dd426257ee66fdf18f…
   contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
-  policy        8 files   sha256:6ce9ce297a2309595a3f82a526744e13…
+  policy        8 files   sha256:3ba2ccb4c1a7817c1521ea5250ffcefe…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -130,6 +134,8 @@ sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.12.0  sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141
+                     76 files — ADRs 35 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.11.0  sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
                      76 files — ADRs 35 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.10.0  sha256:11d2685e902fe03eb4d5636b81b76ab235363915289274e8ee72daebea442ff5
@@ -167,7 +173,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141
+python3 scripts/architecture_checksum.py --verify sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -1293,6 +1299,44 @@ something that was written down turned out not to be true.
 
 The version moves because `docs/decisions/ADR-*.md` and `ci/policy/policy.yaml` are both in
 the checksum set. 76 files, unchanged in count.
+
+---
+
+### 9.19 Version 1.12.1 — the sign-off document's own numbers had gone stale
+
+`Phase1_Final_Signoff.md` was prepared on 2026-08-25 against architecture 1.8.0 and then sat
+unsigned while the repository moved through 1.9.0, 1.9.1, 1.10.0, 1.11.0 and 1.12.0. Its §5
+*"State at sign-off"* block still said 22 gates, 146 rules, 28 self-test assertions, 113
+tests, 33 ADRs and a 74-file checksum. **Every one of those was wrong**, and the document
+they were in is the one somebody was about to sign.
+
+Nothing it certifies moved — every DoD clause met at 1.8.0 is met now. What went stale is
+the block describing the repository around them, which is worse in one specific way: it is
+the part a reader checks in order to decide whether to trust the rest.
+
+`doc-claims` was not watching, because the document was in no registry at all — not
+registered, and not listed as out of scope either. That is the state ADR-0033's
+`out_of_scope` list exists to make impossible: an omission that is implied rather than
+written down. It now carries an entry with an owner and a route to removal, and the route is
+the signature itself — a signed sign-off must **stop** tracking the present, at which point
+it becomes a dated record like `Phase0_Final_Signoff.md` and this exemption becomes that
+one's.
+
+Also refreshed: §1's table, which recorded three instances of *something that could not do
+its job while appearing to* and is now five, with the two that have since been closed by
+machine marked as closed and the three that have not marked as not; §6's row on file-content
+claims, now half closed by `doc-quotes`; and §7, which records a re-run of the live preflight
+on 2026-08-28 in which the GitHub check **skipped** because no Docker daemon was running.
+
+That skip is worth keeping in the record. The preflight refused to let it read as a pass:
+`PASS everything required now is present`, and immediately beneath it, *"PASS above means the
+environment is ready, not that those clauses were verified."* Three weeks earlier the same
+script printed `ok github verified` for a credential it never managed to send. Clause 5's
+evidence remains the witnessed run of 2026-08-25.
+
+PATCH by §1: no ADR added, no decision changed, text corrected to state what is already in
+force. Only `ci/policy/policy.yaml` is in the checksum set, so only the policy group digest
+moves. 76 files.
 
 ---
 

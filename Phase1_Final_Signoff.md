@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Gate | **G1 — Host Runtime Skeleton & Control Plane** |
-| Date | 2026-08-25 |
-| Architecture | **1.8.0** · `sha256:94d264471f308811487a8e13c8de478b0ed05b7fa53194279b95dfdb7f2c46ea` |
+| Date | 2026-08-25 · **state block refreshed 2026-08-28** |
+| Architecture | **1.12.0** · `sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141` |
 | Scope | Every DoD clause of MASTER_PLAN_v2 §10 Phase 1, which is v1.0's Phase 1 DoD **in full** plus five |
 | Method | Each clause traced to an artefact — a named test, a gate rule, or a recorded run. Not to a sentence |
 | **VERDICT** | **Prepared, unsigned.** §7 is Efe's, and only Efe's |
@@ -17,19 +17,33 @@
 without a human; one (`get_me`) can only ever be checked on the host, by hand, because it
 needs a credential that must not exist in this repository.
 
-The interesting result is not the twelve. It is that **the sign-off audit found the same
-defect shape three times in one script**, and each time the shape was *a check that could
-not fail*:
+The interesting result is not the twelve. It is that **the sign-off audit kept finding the
+same defect shape** — *something that could not do its job while appearing to* — and kept
+finding it in things that had been read, reviewed and shipped:
 
 | | What it claimed | What it did |
 |---|---|---|
 | 1.7.0 | five hazard rows "recorded in `check_env.sh`" | nothing was there |
 | 1.8.0 | `get_me` verifies the login | the pipeline closed stdin before the server could answer; **`no login` for every input** |
 | audit | "401, 403 and silence are three different reports" | `set -e` killed the script on any non-zero exit; **only `pass` was reachable** |
+| 1.9.0 | a `max_calls_per_turn = 40` bound in `default.toml` | last rule, no `decision`; under the contract as written, unreachable — **a bound that bounds nothing** |
+| 1.9.1 | ADR-0034 and §9.14 quoting that rule | both omitted its `match.any = true` line and argued from the absent `match` — **wrong premise, right conclusion**, in the ADR written about the entry above |
 
-None of the three was caught by a gate. All three were caught by reading a claim and then
-checking the file. That is the residual gap ADR-0033's Costs section names, and it is the
-one thing this sign-off asks Efe to accept knowingly rather than silently.
+**Not one of the five was caught by a gate.** All five were caught by reading a claim and
+then opening the file. That is the residual gap ADR-0033's Costs section names, and it is
+the one thing this sign-off asks Efe to accept knowingly rather than silently.
+
+**Two of the five are now closed by machine, after this document was prepared.** ADR-0034
+(architecture 1.10.0) makes the constraint pass part of the contract and turns a rule that
+neither decides nor constrains into a load error. ADR-0035 (architecture 1.12.0) adds a
+23rd gate that checks every config-language fenced block in the ADRs and
+`Architecture_Freeze.md` against the file it quotes.
+
+**Three are not, and the honest statement of what remains is prose.** The first row above is
+a sentence, not a fenced block; `doc-quotes` walks past it, and so would any successor that
+respects the reproducibility a gate needs. What Efe is signing includes that: **claims this
+repository makes about itself in prose are still checked by a human reading carefully, and
+this document is evidence about how reliable that is.**
 
 ---
 
@@ -111,17 +125,26 @@ one command. It is not, and cannot be, continuously verified.
 ## 5. State at sign-off
 
 ```
-gates              22/22 · 0 violations · 0 broken
-rules             146
-workflow jobs      26 defined · 27 on GitHub
-self-test          28/28 planted violations caught
-tests             113 · 1 skipped (a POSIX-only kill-tree case)
-ADRs               33 · 0 pending
+gates              23/23 · 0 violations · 0 broken
+rules             149
+workflow jobs      27 defined · 28 on GitHub
+self-test          30/30 planted violations caught
+tests             118 · 1 skipped (a POSIX-only kill-tree case)
+ADRs               35 · 0 pending
 contracts          27 JSON Schemas + 3 protobuf · 5 planes
-checksum           sha256:94d264471f30… · 74 files · verified from a clean clone
+checksum           sha256:2901336ab88… · 76 files · verified from a clean clone
 CRLF               0 files
 preflight          6 tools · 4 packages · 7 hazard rows · 2 live checks
 ```
+
+**This block was 1.8.0's when the document was prepared on 2026-08-25, and it went stale
+across four versions while the document sat unsigned.** Refreshed 2026-08-28. Nothing in
+§2 or §3 moved — every clause was met at 1.8.0 and is met now — but a sign-off whose own
+state block is false would be a small instance of exactly what §1 is about, and it would be
+signed rather than caught. `doc-claims` does not watch this document;
+`doc_claims.out_of_scope` now records why, with an owner and a route to removal. The moment
+§7 carries a signature this becomes a dated record that must *stop* being refreshed, which
+is the route.
 
 Four of the seven Git Bash hazard rows are gate rules (`SH-MSYS-DOCKER`, `SH-BARE-PYTHON`,
 `SH-CRLF`, `ARCH-017`), one is executed by the preflight (`HAZ-DOCKER-BACKEND`), and two are
@@ -138,7 +161,7 @@ carrying neither an owner nor a route to removal.
 | **A host fact cannot be checked from CI.** Mitigated by `check_env.sh`; the residual risk is that nothing forces it to run, and nothing can. Route to closure is a checklist step at each gate, R-A20 | Moderate | platform · G2 |
 | ~~**Constraint-only policy rules contradict the contract.**~~ **Closed 2026-08-27.** ADR-0034 accepted; `policy-ruleset.schema.json` is 1.1.0 and states both passes, and a rule that neither decides nor constrains is now a load error. Architecture 1.10.0, §9.16 | — | closed |
 | **ADR-0029 rule 1 has no gate.** Append-only is enforced by a `PreToolUse` hook that sees `Edit`/`Write` but not `sed` through `Bash`. A guardrail, not a proof | Minor | architecture |
-| **Claims about what a file contains are unchecked.** `doc-claims` measures count-shaped claims in three registered documents. The three defects in §1 were none of those shapes | Minor | architecture |
+| **Claims about what a file contains are HALF checked.** `doc-quotes` (ADR-0035, closed 2026-08-28) checks every config-language fenced block in the ADRs and `Architecture_Freeze.md` against the file it quotes — `QUOTE-001`–`QUOTE-003`, architecture 1.12.0, §9.18. **Prose claims stay unchecked**, and a fourth instance of this shape was found on 2026-08-27, inside the ADR written about the third | Minor | architecture |
 
 ---
 
@@ -178,5 +201,33 @@ note  1 item(s) are needed at a later gate, not yet.
 ```
 
 The single `note` is `cl` — VS Build Tools, needed at G6 and correctly non-blocking here.
-No live check was skipped. **Every precondition in this document is met; only the signature
-is outstanding.**
+No live check was skipped. **That run is clause 5's evidence of record.**
+
+### Re-run 2026-08-28, before signing
+
+```
+ok    filesystem  verified   reads inside the root, refuses outside it —
+                             Access denied - path outside allowed directories
+skip  github      not run    no Docker daemon — start Docker Desktop and re-run
+
+PASS  everything required now is present.
+note  1 item(s) are needed at a later gate, not yet.
+note  1 live check(s) did NOT run. PASS above means the
+      environment is ready, not that those clauses were verified.
+```
+
+**Docker Desktop was not running, so clause 5 did not re-run.** This changes nothing about
+the clause — its evidence is the 2026-08-25 run above, witnessed through a driver that had
+been observed failing — and it changes nothing about the repository. It is a fact about the
+host at one moment, which is the whole of what R-A20 says cannot be checked from CI.
+
+It is worth reading what the preflight did here, because it is the thing that was broken
+twice. It refused to let a skipped check read as a passed one: `PASS` on the line above, and
+immediately beneath it, in as many words, *"PASS above means the environment is ready, not
+that those clauses were verified."* Three weeks ago this same script would have printed
+`ok github verified` for a credential it never sent.
+
+**Every precondition in this document is met. Clause 5 rests on a witnessed run rather than
+on a re-run, and the choice of whether that is enough belongs to the same person as the
+signature.** Starting Docker Desktop and running the one command above removes the question
+entirely; it takes a minute.
