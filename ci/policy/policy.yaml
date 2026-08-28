@@ -390,6 +390,12 @@ doc_claims:
           why: "A dated account of the drift that motivated the generator. Its numbers are
                 the point; correcting them would delete the evidence."
           owner: architecture
+    # Registered WHILE UNSIGNED, and deliberately. Phase1_Final_Signoff.md stated the
+    # same counts in an aligned block that matched no pattern, sat unsigned across four
+    # versions, and went stale inside itself (Architecture_Freeze.md 9.19). It moves to
+    # out_of_scope on the day section 7 carries a signature.
+    - doc: Phase2_Final_Signoff.md
+      region: "## 8. State at sign-off"
     - doc: CI_Architecture.md
       region: "## 8. Current state"
     - doc: Architecture_Freeze.md

@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.17.0** |
+| Architecture version | **1.17.1** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.17.0`** |
+| Tag | **`architecture-1.17.1`** |
 | Status | **FROZEN** — G1 signed 2026-08-28, Phase 2 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Previous versions | **1.17.0**, **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **0 ADRs pending.** ADR-0037 accepted 2026-08-28 and in force |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -45,6 +45,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.17.1** — PATCH over 1.17.0: `Phase2_Final_Signoff.md` §8 registered with `doc-claims`
+while the document is unsigned, so the failure recorded in §9.19 cannot repeat. No ADR
+added, no decision changed. §9.25.
 
 **1.17.0** — MINOR over 1.16.0: ADR-0037 accepted, so a pending decision comes into force,
 which §1 defines as MINOR. `memory-record.schema.json` goes to 1.1.0 — a widening: every
@@ -150,12 +154,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.17.0
-sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
+ARCHITECTURE CHECKSUM                                          architecture 1.17.1
+sha256:33896052dc2fc3af011fa940e26bea230f00bc2f6da65326bdac9bbd760e6ee3
 
   ADRs         37 files   sha256:d04d2665a84ddfed5d7ddf9eec0c2c3d…
   contracts    31 files   sha256:68a5211592ebf31f04dbcc67195c7122…
-  policy        8 files   sha256:7fffa2c4b38c33e732236f08bdf93069…
+  policy        8 files   sha256:03e5d990f30dbb0b1a1127e146755d4b…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -165,6 +169,8 @@ sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.17.0  sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
+                     78 files — ADRs 37 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.16.0  sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
                      78 files — ADRs 37 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.15.0  sha256:efff3d763ddc40862a05e5dea6e35400b3178b4d1588092a7b6e52ad4f2458dd
@@ -214,7 +220,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
+python3 scripts/architecture_checksum.py --verify sha256:33896052dc2fc3af011fa940e26bea230f00bc2f6da65326bdac9bbd760e6ee3
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -1688,6 +1694,33 @@ the argument against believing the pipeline is the whole control. It is not, and
 `Architecture_Freeze.md` should not be read as saying it is.
 
 `docs/decisions/README.md` records **0 ADRs pending**. 78 files.
+
+---
+
+### 9.25 Version 1.17.1 — a sign-off block that cannot go stale
+
+`Phase2_Final_Signoff.md` is prepared and unsigned, and its §8 state block is **registered
+with `doc-claims` while it waits**.
+
+That is the whole of this version. G1's sign-off stated the same counts in a neatly aligned
+block — `gates 22/22`, `rules 146`, `ADRs 33` — which matched not one of `doc_claims`'
+patterns. It sat unsigned across four versions and went stale inside itself, and was about
+to be signed rather than caught. §9.19 records it.
+
+The fix was not to be more careful. §8 is written in the phrasing the gate reads —
+*"**23 gates, 150 rules, 27 workflow jobs.** Self-test 32/32 … **37 ADRs**, 0 ADRs
+pending"* — and `doc_claims.documents` names the section. Four regions are checked now
+rather than three. Falsified before trusting it: `24 gates` in that block fails
+`CLAIM-001`.
+
+**On signing it moves to `out_of_scope`**, and the numbers stop tracking the present. A
+signed sign-off is a dated record; refreshing one is editing the archive. That transition is
+written into §8 itself, so whoever signs finds the instruction in the document rather than
+in a gate's configuration.
+
+PATCH by §1: no ADR added, no decision changed. `ADR-0033` already decided that
+current-state claims in registered documents are measured rather than remembered; this
+registers one more. Only `ci/policy/policy.yaml` is in the checksum set. 78 files.
 
 ---
 
