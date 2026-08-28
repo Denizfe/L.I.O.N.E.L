@@ -22,7 +22,7 @@ export PYTHONPATH="$GATES:${PYTHONPATH:-}"
 ORDER=(structure adr contracts jsonschema protobuf artifacts docker-digests
        no-latest no-pending no-todo secrets licenses markdown dependencies mcp
        shell architecture l0-conformance
-       checksum generated-docs doc-claims gate-coverage)
+       checksum generated-docs doc-claims doc-quotes gate-coverage)
 
 name_to_file() { echo "$GATES/gate_$(echo "$1" | tr '-' '_').py"; }
 

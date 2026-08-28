@@ -508,6 +508,32 @@ l0:
   media_payload_keys: [payload_b64, payload, pcm, audio_bytes, raw_audio]
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DOC QUOTES — a document that quotes a file must agree with that file.  ADR-0035.
+#
+# ADR-0033 closed count-shaped claims. This closes the half of the remainder that
+# can be closed mechanically: a fenced block in a configuration language must
+# appear verbatim in a repository file, or say that it is not a quotation.
+#
+# `documents` is a GLOB, not a list, so it cannot go stale as ADRs are added.
+# That is also why this is not folded into `doc_claims`, whose registry is
+# region-scoped over three named documents and whose corpus is the pipeline's own
+# measurements rather than every file in the repository.
+# ─────────────────────────────────────────────────────────────────────────────
+doc_quotes:
+  documents:
+    - "docs/decisions/ADR-*.md"
+    - "Architecture_Freeze.md"
+  # Configuration languages only. A `bash` block is a command someone runs, not a
+  # quotation, and `text` is prose in a box.
+  languages: [toml, json, yaml, yml, proto]
+  # A single line is an identifier or a path, not a quotation worth checking.
+  min_lines: 2
+  # An HTML comment: invisible in every markdown renderer, visible to this gate.
+  # The reason after it is required — QUOTE-002 — and QUOTE-003 fails it once the
+  # block starts matching a file, so it cannot outlive its reason.
+  marker: "lionel:illustration"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # PREFLIGHT — the host tooling table.  ADR-0002, ADR-0014.
 #
 # MASTER_PLAN_v1 §1.1 is a table of six tools a human was expected to check by

@@ -9,8 +9,8 @@ Every rule below is enforced by a gate that runs on every push and every pull re
 
 | | |
 |---|---|
-| Rules | **146** |
-| Gates | **22** |
+| Rules | **149** |
+| Gates | **23** |
 | Severity | **All rules are blocking.** There is no warnings-only tier |
 | Exit codes | `0` pass · `1` violation · `2` gate itself broken |
 
@@ -398,6 +398,20 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 
 **3 rules.**
 
+## `doc-quotes` — Quoted files are quoted correctly
+
+**Enforces:** ADR-0035, ADR-0033
+
+**Run:** `python3 ci/gates/gate_doc_quotes.py`
+
+| Rule | Triggers when |
+|---|---|
+| `QUOTE-001` | `{lang}` block matches no repository file: `{block[0][:56]}` |
+| `QUOTE-002` | `{marker}` on the block at line {ln} carries no reason |
+| `QUOTE-003` | `{marker}` on a block that DOES match `{where}` |
+
+**3 rules.**
+
 ## `gate-coverage` — Every gate has rejected something
 
 **Enforces:** ADR-0030, ADR-0016
@@ -455,7 +469,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 29 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 30 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -488,8 +502,9 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a CRLF file inside the architecture checksum set | `checksum` | CHECKSUM-004 |
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 | a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
+| a quoted config block that differs from the file by one line | `doc-quotes` | QUOTE-001 |
 
-**29/29 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**30/30 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

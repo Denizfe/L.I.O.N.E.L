@@ -210,3 +210,28 @@ argument is most persuasive when the work is already done. Removing a working, p
 from the repository in order to write this document first is the cost of the rule, and it is
 a small one against the alternative, which is a repository whose decisions are made by
 whoever implemented fastest.
+
+
+## Amendment — 2026-08-28: half of the remaining gap is now closed by ADR-0035
+
+This ADR's Costs section records that claims about what a file **contains** stay unchecked.
+That gap then cost twice, four days apart, with all 22 gates green both times: five Git Bash
+hazard rows recorded as being in `check_env.sh` when nothing was there, and a fenced block in
+ADR-0034 and `Architecture_Freeze.md` §9.14 that quoted `config/policy/default.toml` minus one
+line and argued from its absence.
+
+[ADR-0035](ADR-0035-verified-file-quotes.md), accepted 2026-08-28, closes the half that can be
+closed mechanically. A fenced block in a configuration language, in an ADR or in
+`Architecture_Freeze.md`, must appear verbatim in a repository file or carry a marker saying
+it is not a quotation. `gate_doc_quotes` enforces it as `QUOTE-001`–`QUOTE-003`.
+
+**This amendment adds scope and contradicts nothing here.** The two gates stay separate, and
+the reason is in ADR-0035's Alternatives Rejected: this gate's registry is region-scoped over
+three named documents and its corpus is the pipeline's own measurements, while that one is a
+glob over thirty-six documents and its corpus is every non-markdown file in the repository.
+Folding them together would buy one CI job and cost a gate whose exit-2 takes out two
+unrelated checks.
+
+**The half that remains is prose**, and it is named in ADR-0035 rather than left implied. The
+first of the two instances above is a sentence, not a block; `doc-quotes` walks past it, and
+so does this gate. Neither ADR claims otherwise.

@@ -7,7 +7,7 @@ and G2 does not open until it carries a signature.
 
 **This repository is an architecture first, and runtime code second.** 35 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
-enforces them: 22 gates, 146 rules, 26 CI jobs.
+enforces them: 23 gates, 149 rules, 27 CI jobs.
 
 ---
 
@@ -83,9 +83,9 @@ it — no fixed point to chase. Record it **last**.
 ## Verify before you claim anything
 
 ```bash
-bash ci/run_gates.sh                    # 22/22, 0 broken
+bash ci/run_gates.sh                    # 23/23, 0 broken
 bash ci/run_gates.sh <gate>             # one gate
-bash ci/self_test.sh                    # 29/29 assertions, 22/22 gates covered
+bash ci/self_test.sh                    # 30/30 assertions, 23/23 gates covered
 python3 scripts/architecture_checksum.py --verify
 python3 scripts/generate_ci_docs.py --check
 bash scripts/check_env.sh               # the host, not the repository
@@ -154,8 +154,8 @@ for every input, a valid credential included. Both handshakes now go through `MC
 `scripts/_preflight_table.py`, which holds stdin open and matches responses by id. §9.13.
 
 The preflight's first run found the `filesystem` capability rooted at a directory that does
-not exist (`Desktop/`, not `Projects/`), written identically in two config files, with all
-22 gates green — a host fact, and nothing that runs on another machine can check one.
+not exist (`Desktop/`, not `Projects/`), written identically in two config files, with every
+gate green — a host fact, and nothing that runs on another machine can check one.
 ADR-0002 carries the Erratum; **R-A20** carries the residual risk, which is that nothing
 forces the preflight to run and nothing can.
 
@@ -244,7 +244,7 @@ its checks.
 ```
 docs/decisions/          35 ADRs + README index (ARCH-016 requires the index be complete)
 contracts/               27 JSON Schemas + 3 protobuf, 5 planes, MANIFEST.json
-ci/gates/                22 gates + _lib.py (Finding, exit codes) + _checksum.py
+ci/gates/                23 gates + _lib.py (Finding, exit codes) + _checksum.py
 ci/policy/policy.yaml    ALL thresholds, allowlists and registries
 ci/run_gates.sh          ORDER is the canonical gate list
 ci/self_test.sh          plants violations; proves the gates bite

@@ -318,6 +318,20 @@ jobs:
       # nothing here reads a number out of a document except to compare it.
       - run: python3 ci/gates/gate_doc_claims.py
 
+  doc-quotes:
+    name: "doc-quotes · quoted files are quoted correctly"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      # ADR-0035. `doc-claims` checks the numbers a document states; this checks the FILES
+      # it quotes. A fenced block is read as the file rather than as a summary of it, so a
+      # wrong block is believed more readily than a wrong sentence — and by the readers who
+      # are reading the document instead of the repository.
+      - run: python3 ci/gates/gate_doc_quotes.py
+
   gate-coverage:
     name: "gate-coverage · every gate has rejected something"
     runs-on: ubuntu-latest

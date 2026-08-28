@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Proposed** — awaiting Efe. `Architecture_Freeze.md` §4 and §5 step 4 |
+| Status | **Accepted** — Efe, 2026-08-28. In force. See the Erratum |
 | Date | 2026-08-27 |
 | Phase | 1 |
 | Related | [ADR-0033](ADR-0033-hand-written-claim-checking.md), [ADR-0030](ADR-0030-self-enforcing-ci.md), [ADR-0029](ADR-0029-adr-errata-provision.md) |
@@ -144,3 +144,44 @@ block that is *almost* right, differing by one line — which is precisely what 
 
 Gate **G1**, immediately. This defect has no later phase in which it becomes cheaper: every
 version adds documents, and every document adds quotations.
+
+
+## Erratum — 2026-08-28: Accepted; the withholding it describes has been discharged
+
+This ADR was written while `Proposed`, and its Verification section describes that pending
+state as ongoing. Efe accepted it on 2026-08-28. The decision is unchanged — what follows
+corrects text that has stopped being true, per ADR-0029 rule 2.
+
+The Verification section opened:
+
+> **Withheld until this ADR is Accepted.** `gate_doc_quotes.py` is not in the repository while
+> this is `Proposed`. `CI_Architecture.md` §7 step 1 puts the ADR before the gate, and
+> `Architecture_Freeze.md` §4 requires Efe's approval before a new gate exists — shipping a
+> working gate alongside the proposal would make the approval ceremonial. ADR-0029, ADR-0032,
+> ADR-0033 and ADR-0034 each practised this withholding; this is the fifth.
+
+and continued:
+
+> The feasibility numbers in Consequences come from a throwaway scan run outside the
+> repository, not from a gate. They are a measurement, not an implementation.
+
+Both were true and are now discharged. As of architecture 1.12.0 the gate exists, is the
+**23rd** in `ORDER`, and the numbers in Consequences are no longer a scan's output but the
+gate's: five blocks across thirty-six documents, three matching a file, two marked.
+
+Two things the scan could not tell and the implementation settled:
+
+- **The marker is accepted on either of the two lines before the fence**, so that a blank
+  line between the comment and the fence — which markdown renders identically — does not
+  change whether the rule applies. A check that depends on invisible whitespace is a check
+  that fails for reasons nobody can see.
+- **Markdown files are excluded from the corpus.** Without that, one document quoting
+  another would satisfy the rule, and two documents could agree with each other while both
+  disagreed with the file. The corpus is 105 non-markdown files.
+
+All three rules were falsified before being trusted: `QUOTE-001` against the §9.15 block
+with one number changed, `QUOTE-002` against a marker stripped of its reason, `QUOTE-003`
+against a marker moved onto a block that does match. `ci/self_test.sh` plants the first of
+those permanently, and the plant is a real quotation minus one correct line rather than a
+block of nonsense — a gate proved against gibberish proves only that it can tell text from
+a file.

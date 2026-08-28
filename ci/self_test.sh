@@ -366,6 +366,26 @@ sed -i 's|run_gates.sh                    # [0-9]*/[0-9]*, 0 broken|run_gates.sh
 expect_violation doc-claims "CLAIM-001" "a hand-written count that disagrees with the pipeline"
 unplant CLAUDE.md "$DOC_BAK"
 
+# 19c. Quoted files. `doc-claims` checks the numbers a document states; this checks the
+#      FILES it quotes. The plant is deliberately NOT gibberish: it takes a block that
+#      really does quote config/policy/default.toml and changes one number, which is the
+#      exact shape of the defect — ADR-0034 and §9.14 quoted that rule minus one line and
+#      argued from its absence, with all 22 gates green. A gate proved against nonsense
+#      proves only that it can tell text from a file.
+#      Architecture_Freeze.md is NOT in the checksum set, but plant_in is used anyway:
+#      an unrestored plant here would leave a false quotation in the document that records
+#      what the architecture is.
+QUOTE_BAK="$(plant_in Architecture_Freeze.md)"
+sed -i '/^match\.any = true$/,+1 s/^max_calls_per_turn = 40$/max_calls_per_turn = 41/' Architecture_Freeze.md
+if ! grep -q '^max_calls_per_turn = 41' Architecture_Freeze.md; then
+  printf '  [31mFAIL[0m  %-16s could not plant the violation (§9.15 changed shape?)
+' "doc-quotes"
+  ((fail++))
+else
+  expect_violation doc-quotes "QUOTE-001" "a quoted config block that differs from the file by one line"
+fi
+unplant Architecture_Freeze.md "$QUOTE_BAK"
+
 # 20. Gate coverage itself. The plant goes into a COPY of this script: bash reads a script
 #     incrementally as it executes, so editing the running file could change the behaviour
 #     of the test doing the editing. The gate takes --suite for exactly this, the same way

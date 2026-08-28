@@ -2,21 +2,21 @@
 
 | | |
 |---|---|
-| Architecture version | **1.11.0** |
+| Architecture version | **1.12.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.11.0`** |
+| Tag | **`architecture-1.12.0`** |
 | Status | **FROZEN** — Phase 1 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **1 ADR pending — ADR-0035**, awaiting Efe. ADR-0034 accepted 2026-08-27 and in force |
+| Previous versions | **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** ADR-0035 accepted 2026-08-28 and in force; ADR-0034 accepted 2026-08-27 |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **34 of 35 ADRs are in force.** ADR-0035 (2026-08-27) is `Proposed`: it adds a gate, so §4
-> requires Efe's approval before the gate exists rather than after, and `gate_doc_quotes.py`
-> is deliberately not in the repository. §9.17.
+> **All 35 ADRs are in force.** ADR-0035 (2026-08-27) was accepted 2026-08-28 and
+> implemented in the same version: `gate_doc_quotes` is the 23rd gate. For the day it was
+> `Proposed`, the gate it describes was not in the repository. §9.18.
 >
 > ADR-0034 (2026-08-25) was accepted 2026-08-27 and
 > implemented in the same version. It changes `policy-ruleset.schema.json`'s stable surface,
@@ -36,6 +36,9 @@
 ---
 
 ## 1. Architecture version
+
+**1.12.0** — MINOR over 1.11.0: ADR-0035 accepted, so a pending decision comes into force,
+which §1 defines as MINOR. A 23rd gate, and no decision already in force changed. §9.18.
 
 **1.11.0** — MINOR over 1.10.0: ADR-0035 added, `Proposed`. No decision in force changed,
 and nothing it describes is implemented while it waits — §1's own definition of MINOR, and
@@ -112,12 +115,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.11.0
-sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
+ARCHITECTURE CHECKSUM                                          architecture 1.12.0
+sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141
 
-  ADRs         35 files   sha256:7e832aefe1f2c85c1de8141b3d1e9a13…
+  ADRs         35 files   sha256:90d66c463ef899dd426257ee66fdf18f…
   contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
-  policy        8 files   sha256:1b4885c1f8a57499151eb009a552d07c…
+  policy        8 files   sha256:6ce9ce297a2309595a3f82a526744e13…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -127,6 +130,8 @@ sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.11.0  sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
+                     76 files — ADRs 35 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.10.0  sha256:11d2685e902fe03eb4d5636b81b76ab235363915289274e8ee72daebea442ff5
                      75 files — ADRs 34 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.9.1   sha256:37a2bca58042dd851a49d6127e7ffbd916c1f313f0fb49320293da738a4300c0
@@ -162,7 +167,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:8a05103d5c9cdaaebbc637415ae70b9dc890edb3706e5274f36c1a2ef6cf5ff5
+python3 scripts/architecture_checksum.py --verify sha256:2901336ab884ae5d61143a72139822c05f55bb9ba55bf563031a4596cb22b141
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -216,8 +221,8 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Tier model** | L0–L3 per ADR-0007; L0 conformance is a blocking gate |
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
-| **Policy** | `ci/policy/policy.yaml` — 20 configuration sections (`preflight` added at 1.7.0), and the count is now measured by `doc-claims` |
-| **CI gates** | **22 gates, 146 rules, 26 workflow jobs** — 18 checking the repository, 4 checking the pipeline (ADR-0030, ADR-0033). Self-test 29/29, gate coverage 22/22 |
+| **Policy** | `ci/policy/policy.yaml` — 21 configuration sections (`doc_quotes` added at 1.12.0), and the count is now measured by `doc-claims` |
+| **CI gates** | **23 gates, 149 rules, 27 workflow jobs** — 18 checking the repository, 5 checking the pipeline (ADR-0030, ADR-0033, ADR-0035). Self-test 30/30, gate coverage 23/23 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -989,6 +994,7 @@ without its implementation, and for the reason §4 exists.
 
 **The finding.** `config/policy/default.toml` ends with:
 
+<!-- lionel:illustration — deliberately NOT from the repository. This is the misquote itself, kept because §9.15 is the correction that quotes it; the file has a `match.any = true` line this block omits -->
 ```toml
 [[rule]]
 name = "runaway containment"
@@ -1061,6 +1067,7 @@ decision already in force.
 **What was wrong.** ADR-0034 and §9.14 both quoted the last rule of
 `config/policy/default.toml` as:
 
+<!-- lionel:illustration — deliberately NOT from the repository. Quoting the wrong block is the point of this section; the correct one follows below and verifies on its own -->
 ```toml
 [[rule]]
 name = "runaway containment"
@@ -1225,6 +1232,67 @@ requires Efe's approval before a new gate exists. The gates count stays at **22*
 
 The version moves because `docs/decisions/ADR-*.md` and `ci/policy/policy.yaml` are both in
 the checksum set: 75 files becomes 76.
+
+---
+
+### 9.18 Version 1.12.0 — the 23rd gate, and half a gap closed on purpose
+
+Efe accepted ADR-0035 on 2026-08-28. It was `Proposed` for one day, and `gate_doc_quotes.py`
+was not in the repository for that day. Fifth withholding, discharged.
+
+**What changed.**
+
+| | |
+|---|---|
+| `ci/gates/gate_doc_quotes.py` | **the 23rd gate.** `QUOTE-001` an unmarked config block matching no repository file · `QUOTE-002` a marker with no reason · `QUOTE-003` a marker on a block that does match |
+| `ci/policy/policy.yaml` → `doc_quotes` | a glob, the language set, `min_lines: 2`, the marker token. 21 configuration sections |
+| `ORDER`, `.github/workflows/ci.yml` | 23 gates, 149 rules, 27 jobs |
+| `ci/self_test.sh` | 29 → **30** |
+| §9.14, §9.15 | the two markers the rollout needed |
+| `ADR-0033` | an Amendment: half its Costs gap is closed, and which half |
+
+**The numbers the ADR predicted are the numbers the gate reports.** Five config-language
+blocks of two or more lines across thirty-six documents, three matching a file, two marked —
+the two deliberately wrong TOML blocks in §9.14 and §9.15, which is correct behaviour, since
+§9.15 exists to quote what was wrong. The feasibility scan was run before the ADR was
+written, precisely so the proposal could state a rollout cost rather than promise one.
+
+**Two things the scan could not settle, and the implementation did.**
+
+- The marker is accepted on **either of the two lines** before the fence. Markdown renders a
+  comment with and without an intervening blank line identically, and a rule that turned on
+  invisible whitespace would fail for reasons nobody can see.
+- **Markdown is excluded from the corpus.** Without that, a document quoting another document
+  would satisfy the rule, and two documents could agree with each other while both disagreed
+  with the file. The corpus is 105 non-markdown files.
+
+**All three rules were falsified before being trusted.** `QUOTE-001` against the §9.15 block
+with one number changed; `QUOTE-002` against a marker stripped of its reason; `QUOTE-003`
+against a marker moved onto a block that does match — which named
+`config/policy/default.toml:41`, the line the whole affair has been about.
+
+**The planted violation is a real quotation minus one correct line**, not a block of
+nonsense. A gate proved against gibberish proves only that it can tell text apart from a
+file; the failure this exists to catch is a block that is *almost* right. The first attempt
+at the plant hit the §9.14 block instead — which is marked, so nothing fired — and the fix
+was to anchor the plant on `match.any = true`, the line that appears only in the correct
+block. That the wrong target produced silence rather than a false pass is the marker
+mechanism working.
+
+**Half the gap stays open, and it is written down rather than implied.** Prose claims are not
+fenced blocks. *"Five hazard rows are recorded in `check_env.sh`"* — the 2026-08-24 instance
+— would still walk past. ADR-0035's Consequences names it, ADR-0033's Amendment names it, and
+this section names it. It is not closed by an intention to be careful, and nobody should read
+23 green gates as saying otherwise.
+
+**Where this leaves the meta-gates.** Five of the twenty-three now check the pipeline rather
+than the repository: `checksum`, `generated-docs`, `gate-coverage`, `doc-claims`,
+`doc-quotes`. ADR-0030's premise was that an invariant this repository records about itself
+must have a gate, *including invariants about the gates*. Four of the five exist because
+something that was written down turned out not to be true.
+
+The version moves because `docs/decisions/ADR-*.md` and `ci/policy/policy.yaml` are both in
+the checksum set. 76 files, unchanged in count.
 
 ---
 
