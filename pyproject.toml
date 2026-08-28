@@ -48,6 +48,20 @@ dependencies = [
     # ADR-0015, and DEP-002 by name: the HTTP client. Two HTTP clients is drift, not
     # choice.
     "httpx>=0.27",
+    # ADR-0036 — the Memory Service's vector client and embedding runtime, arriving with
+    # the phase that builds against them (G2). Qdrant itself was chosen by ADR-0004 and
+    # re-framed by ADR-0010; these are the Python side.
+    #
+    # Declared DIRECTLY rather than as `qdrant-client[fastembed]`. The extra installs the
+    # same two packages while declaring one, and a dependency that appears only inside
+    # another package's extra is a dependency nobody diffed.
+    #
+    # fastembed runs all-MiniLM-L6-v2 under ONNX Runtime. sentence-transformers would pull
+    # PyTorch for a 384-dimension model — see ADR-0036's Alternatives Rejected.
+    # `onnxruntime` arrives transitively and is deliberately NOT bounded here: G6 needs it
+    # too, and two ADRs must not pin it independently.
+    "qdrant-client>=1.19",
+    "fastembed>=0.8",
 ]
 
 [project.optional-dependencies]

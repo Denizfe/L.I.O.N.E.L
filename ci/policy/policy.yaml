@@ -356,8 +356,11 @@ doc_claims:
     - id: jobs
       regex: '(\d+) (?:workflow |CI )?jobs'
       fact: jobs
+    # The negative lookahead keeps this off `0 ADRs pending`, which belongs to
+    # `pending-adrs` below. Without it the first pattern wins and reports the ADR
+    # count against a pending count -- two true numbers, compared to each other.
     - id: adrs
-      regex: '(\d+) ADRs'
+      regex: '(\d+) ADRs(?! pending)'
       fact: adrs
     - id: selftest
       regex: '[Ss]elf-test (\d+)/(\d+)'
@@ -435,6 +438,24 @@ dependencies:
       why: "httpx is already a dependency. Two HTTP clients is drift, not choice."
   require_lockfile: uv.lock
   lockfile_required_at: "G1"
+  # DEP-003. A forbidden package that arrives as somebody else's dependency is
+  # invisible to DEP-002, which reads pyproject.toml. It is not automatically
+  # wrong -- DEP-002 is about which client OUR code calls -- but it must be a
+  # decision on the record rather than something the resolver did quietly.
+  transitive_exemptions:
+    - package: requests
+      pulled_by: fastembed
+      why: >-
+        fastembed depends on requests directly, for model download from the
+        HuggingFace CDN. Nothing in src/lionel/ imports it, and nothing may:
+        DEP-002 governs the client this repository's own code calls, and httpx
+        remains that client. Arrived with ADR-0036 at architecture 1.15.0.
+      owner: core-orchestration
+      unblocked_by: >-
+        fastembed moving to httpx, or the embedding runtime being replaced. Until
+        then this is a fact about a vendored library, not a choice this repository
+        made -- and DEP-003 fails if fastembed ever leaves the lock while this
+        entry stays.
 
 shell:
   require_strict_mode: true              # set -euo pipefail

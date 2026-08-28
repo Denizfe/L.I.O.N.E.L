@@ -8,12 +8,12 @@
 | | |
 |---|---|
 | Gates | **23** |
-| Rules | **149** |
+| Rules | **150** |
 | Workflow jobs | **27** |
 | Current state | **all gates pass · 0 broken** |
 | Runner | `bash ci/run_gates.sh [gate]` |
-| Self-test | `bash ci/self_test.sh` — 30/30 planted violations caught |
-| Runtime code | **7 files** under `src/lionel/` |
+| Self-test | `bash ci/self_test.sh` — 31/31 planted violations caught |
+| Runtime code | **8 files** under `src/lionel/` |
 
 ---
 
@@ -36,7 +36,7 @@ Every gate is a standalone script. None depends on another, so a failure never c
 | 11 | [`secrets`](ci/gates/gate_secrets.py) | ADR-0015, ADR-0022 | 16 |
 | 12 | [`licenses`](ci/gates/gate_licenses.py) | ADR-0013 | 6 |
 | 13 | [`markdown`](ci/gates/gate_markdown.py) | — | 3 |
-| 14 | [`dependencies`](ci/gates/gate_dependencies.py) | ADR-0013 | 2 |
+| 14 | [`dependencies`](ci/gates/gate_dependencies.py) | ADR-0013 | 3 |
 | 15 | [`mcp`](ci/gates/gate_mcp.py) | ADR-0032, ADR-0013, ADR-0015 | 4 |
 | 16 | [`shell`](ci/gates/gate_shell.py) | ADR-0011, ADR-0014 | 3 |
 | 17 | [`architecture`](ci/gates/gate_architecture.py) | ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0025, ADR-0026 | 17 |
@@ -104,7 +104,7 @@ Which decisions have an executable test, and which do not.
 | Job | Type | Notes |
 |---|---|---|
 | 23 policy gates | one per gate | **No `needs:` between them.** Independent by design |
-| `gate-self-test` | meta | Plants 30 known violations, asserts each is caught |
+| `gate-self-test` | meta | Plants 31 known violations, asserts each is caught |
 | `l0-conformance` | blocking | `needs: [structure, contracts, architecture]`. ADR-0007 |
 | `checksum` · `generated-docs` · `gate-coverage` | **meta** | Check the pipeline, not the repository. ADR-0030 |
 | `windows-policy-gates` | platform | `windows-latest` under Git Bash. ADR-0002, ADR-0014 |
@@ -158,8 +158,9 @@ A gate that passes a clean repository but would miss a real violation is decorat
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 | a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
 | a quoted config block that differs from the file by one line | `doc-quotes` | QUOTE-001 |
+| a forbidden package installed transitively | `dependencies` | DEP-003 |
 
-**30/30 caught.**
+**31/31 caught.**
 
 ---
 

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Proposed** — awaiting Efe. `Architecture_Freeze.md` §4 and §5 step 4 |
+| Status | **Accepted** — Efe, 2026-08-28. In force. See the Erratum |
 | Date | 2026-08-28 |
 | Phase | 2 |
 | Related | [ADR-0010](ADR-0010-memory-service.md), [ADR-0013](ADR-0013-artifact-pinning.md), [ADR-0007](ADR-0007-degradation-ladder.md), [ADR-0004](ADR-0004-qdrant-in-docker.md) |
@@ -152,3 +152,67 @@ accelerated clock, re-index against a second embedding model completes without d
 `qdrant-store` is absent from the exposed capability surface — plus v1.0's two criteria
 carried forward, the `compose down && up` persistence proof and the semantic-recall test that
 keyword matching must fail.
+
+## Erratum — 2026-08-28: Accepted; the withholding is discharged, and the resolver had an opinion
+
+This ADR was written while `Proposed`, and its Verification section describes that pending
+state as ongoing. Efe accepted it on 2026-08-28. The decision is unchanged — what follows
+corrects text that has stopped being true, per ADR-0029 rule 2, and records one thing the
+acceptance surfaced that the proposal did not anticipate.
+
+The Verification section opened:
+
+> **Withheld until this ADR is Accepted.** Neither package is in `pyproject.toml` while this is
+> `Proposed`, and `uv.lock` is unchanged. `Architecture_Freeze.md` §4 requires an ADR *and*
+> Efe's approval before a new dependency exists, and running `uv add` alongside the proposal
+> would make the approval ceremonial. ADR-0029, ADR-0032, ADR-0033, ADR-0034 and ADR-0035 each
+> practised this withholding; this is the sixth.
+
+Discharged. As of architecture 1.15.0 `pyproject.toml` declares `qdrant-client>=1.19` and
+`fastembed>=0.8`, each carrying this ADR's number; `uv.lock` resolves 58 packages;
+`src/lionel/memory/` holds the `VectorBackend` port, the Qdrant adapter, the embedding pin
+and its assertion; and `tests/unit/test_memory.py` holds 20 cases, all of which run with
+neither package installed — which is not a convenience but the point, since both are lazily
+imported and a suite that needed them present could not test their absence.
+
+### What the resolver did that this ADR did not predict
+
+`uv lock` pulled **`requests`** — the one package `dependencies.forbid_packages` names, on
+the grounds that *"httpx is already a dependency. Two HTTP clients is drift, not choice."*
+`fastembed` depends on it directly, for model download from the HuggingFace CDN.
+
+**Every gate stayed green.** `DEP-002` reads `pyproject.toml`, so it expressed a decision
+about what may be **installed** while checking only what was **declared**. A forbidden
+package arriving as somebody else's dependency was invisible to it, and would have stayed
+invisible.
+
+This is not the same as the decision being wrong. DEP-002 governs the client this
+repository's own code calls, and `src/lionel/` imports `httpx` and nothing else. But the
+difference between "a vendored library brings its own HTTP stack" and "we quietly acquired a
+second HTTP client" is a judgement, and a judgement that nobody makes is not a judgement.
+
+So the rule now reads the lock:
+
+| | |
+|---|---|
+| `DEP-003` | a forbidden package present in `uv.lock` but not declared, with no registered exemption |
+| | an exemption missing `pulled_by`, `why`, `owner` or `unblocked_by` |
+| | an exemption naming a `pulled_by` that is no longer in the lock — the stale-escape-hatch shape `COV-003` and `QUOTE-003` already police |
+| | an exemption for a package that is not installed at all |
+
+`requests` is registered against `fastembed`, owned by `core-orchestration`, unblocked by
+fastembed moving to httpx or the embedding runtime being replaced. `ci/self_test.sh` plants
+a package that is genuinely in the lock and genuinely undeclared, so `DEP-003` is exercised
+against the real lock rather than a fixture.
+
+Widening a rule to enforce a decision already in force needs no ADR — `Architecture_Freeze.md`
+§4's permitted list says so. It is recorded here because the ADR that caused it is the place
+someone will look.
+
+### One correction to this document's own reasoning
+
+The Decision says `onnxruntime` "arrives transitively through `fastembed`". True. The first
+draft of `gate_dependencies.py`'s docstring also said `requests` arrives *via
+`huggingface-hub`*. It does not — `huggingface-hub` uses httpx, and `fastembed` depends on
+`requests` itself. Corrected before commit, by reading `uv.lock` instead of assuming the
+obvious suspect.

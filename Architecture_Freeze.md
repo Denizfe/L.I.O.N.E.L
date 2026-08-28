@@ -2,21 +2,22 @@
 
 | | |
 |---|---|
-| Architecture version | **1.14.0** |
+| Architecture version | **1.15.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.14.0`** |
+| Tag | **`architecture-1.15.0`** |
 | Status | **FROZEN** — G1 signed 2026-08-28, Phase 2 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **1 ADR pending — ADR-0036**, awaiting Efe. ADR-0035 accepted 2026-08-28 and in force |
+| Previous versions | **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** ADR-0036 accepted 2026-08-28 and in force; G2's first runtime code exists |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **35 of 36 ADRs are in force.** ADR-0036 (2026-08-28) is `Proposed`: it adds two
-> dependencies, so §4 requires Efe's approval before they exist rather than after, and
-> neither `qdrant-client` nor `fastembed` is in `pyproject.toml`. §9.21.
+> **All 36 ADRs are in force.** ADR-0036 (2026-08-28) was accepted the same day and
+> implemented in the same version: `qdrant-client` and `fastembed` are declared, and
+> `src/lionel/memory/` holds the `VectorBackend` port. Its Erratum records what the resolver
+> did that the proposal did not predict. §9.22.
 >
 > ADR-0035 (2026-08-27) was accepted 2026-08-28 and
 > implemented in the same version: `gate_doc_quotes` is the 23rd gate. For the day it was
@@ -40,6 +41,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.15.0** — MINOR over 1.14.0: ADR-0036 accepted, so a pending decision comes into force,
+which §1 defines as MINOR. Two dependencies, G2's first runtime code, and `DEP-003` — which
+needs no ADR: DEP-002's decision is unchanged, only the file the rule reads. §9.22.
 
 **1.14.0** — MINOR over 1.13.0: ADR-0036 added, `Proposed` — Phase 2's first. No decision in
 force changed, and neither dependency it names is declared while it waits. `doc-claims` also
@@ -132,12 +137,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.14.0
-sha256:50f1226c43be4586f67a41ea2fc01074c487e855766262930309d73e9feed125
+ARCHITECTURE CHECKSUM                                          architecture 1.15.0
+sha256:efff3d763ddc40862a05e5dea6e35400b3178b4d1588092a7b6e52ad4f2458dd
 
-  ADRs         36 files   sha256:4cef9dcb9c9af07cc3573d8a85b2eb07…
+  ADRs         36 files   sha256:cf030232f0d7cc8695b923eb99a1c663…
   contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
-  policy        8 files   sha256:d3279be014b041bc6a47f801d3d4c50b…
+  policy        8 files   sha256:f2f3eac1a70adfb3af0bf7d7e909e895…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -147,6 +152,8 @@ sha256:50f1226c43be4586f67a41ea2fc01074c487e855766262930309d73e9feed125
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.14.0  sha256:50f1226c43be4586f67a41ea2fc01074c487e855766262930309d73e9feed125
+                     77 files — ADRs 36 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.13.0  sha256:f4a97de38f49313c466ff4b20b199c3bca8bfab156e6ca55a0116195741a0d9c
                      76 files — ADRs 35 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.12.1  sha256:029c9ee946a4b0cce6937939212b1a600735f56180843d49fa75fa867ba9c54e
@@ -190,7 +197,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:50f1226c43be4586f67a41ea2fc01074c487e855766262930309d73e9feed125
+python3 scripts/architecture_checksum.py --verify sha256:efff3d763ddc40862a05e5dea6e35400b3178b4d1588092a7b6e52ad4f2458dd
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -237,7 +244,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **36 ADRs, 0001–0036** — 35 Accepted or Superseded, **1 pending: ADR-0036**, which adds two dependencies and so waits for Efe |
+| **Architecture decisions** | **36 ADRs, 0001–0036** — all in force, **0 ADRs pending** |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -245,7 +252,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 | **Trust model** | 4 levels, monotonically non-increasing within a turn (ADR-0012) |
 | **Plane separation** | MCP = control, gRPC = data; no PCM on the control plane (ADR-0006) |
 | **Policy** | `ci/policy/policy.yaml` — 21 configuration sections (`doc_quotes` added at 1.12.0), and the count is now measured by `doc-claims` |
-| **CI gates** | **23 gates, 149 rules, 27 workflow jobs** — 18 checking the repository, 5 checking the pipeline (ADR-0030, ADR-0033, ADR-0035). Self-test 30/30, gate coverage 23/23 |
+| **CI gates** | **23 gates, 150 rules, 27 workflow jobs** — 18 checking the repository, 5 checking the pipeline (ADR-0030, ADR-0033, ADR-0035). Self-test 31/31, gate coverage 23/23 |
 | **Phase plan** | MASTER_PLAN_v2 — 11 gated phases, G0–G10 |
 
 ---
@@ -1478,6 +1485,76 @@ is one rule whether it reads seven patterns or nine, which is why the generated 
 did not move.
 
 `docs/decisions/README.md` records **1 ADR pending**. 77 files.
+
+---
+
+### 9.22 Version 1.15.0 — ADR-0036 in force, and a rule that checked the wrong file
+
+Efe accepted ADR-0036 on 2026-08-28, and G2's first runtime code exists. Sixth withholding,
+discharged the same day it was made.
+
+**What landed.** `pyproject.toml` declares `qdrant-client>=1.19` and `fastembed>=0.8`, each
+naming the ADR; `uv.lock` resolves 58 packages. `src/lionel/memory/` holds the
+`VectorBackend` port, the Qdrant adapter, and `EmbeddingSpec` — and `tests/unit/test_memory.py`
+holds twenty cases that all run **with neither package installed**, which is the point rather
+than a convenience: both are lazily imported, and a suite that needed them present could not
+test their absence.
+
+**The pin stopped being a sentence.** `artifacts.lock.yaml`'s `embedding` entry is the only
+one with `sha256: null`, and it has justified that since 2026-08-02 by saying the pin *is*
+"the identifier plus a dimension assertion that fails loudly on substitution". No such
+assertion existed. `assert_dimensions()` is it: planting a 512-wide vector now raises, naming
+both widths, the model, and the re-index ADR-0010 requires. Falsified by rewriting the reader
+to return 512 and watching four tests go red.
+
+The reader is narrow on purpose — a regex over two scalars, because `pyyaml` is CI tooling
+and adding a YAML parser to the runtime would need its own ADR. A narrow reader that quietly
+disagrees with the file would be worse than none, so a test parses the lock with real YAML
+and asserts the two agree. That is the only part that could drift.
+
+### `uv lock` had an opinion, and DEP-002 could not see it
+
+The resolver pulled **`requests`** — the one package `dependencies.forbid_packages` names,
+on the grounds that *"httpx is already a dependency. Two HTTP clients is drift, not choice."*
+`fastembed` depends on it directly.
+
+**Every gate stayed green.** `DEP-002` reads `pyproject.toml`. It expressed a decision about
+what may be **installed** and checked only what was **declared**, so a forbidden package
+arriving as somebody else's dependency was invisible to it — and would have stayed invisible,
+because nothing else looks at the lock either.
+
+The decision is not wrong. DEP-002 governs the client this repository's own code calls, and
+`src/lionel/` imports `httpx` and nothing else. But the gap between *"a vendored library
+brings its own HTTP stack"* and *"we quietly acquired a second HTTP client"* is a judgement,
+and **a judgement nobody makes is not a judgement.** `DEP-003` now reads `uv.lock`, and the
+exemption for `requests` carries `pulled_by`, `why`, `owner` and a route out — plus the
+stale-escape-hatch check that `COV-003` and `QUOTE-003` already have, so it fails if
+`fastembed` ever leaves the lock while the exemption stays.
+
+No ADR was needed. §4's permitted list covers a gate enforcing an existing decision more
+completely, and DEP-002's decision is unchanged; what changed is which file the rule reads.
+
+**Ninth instance.** Same family: a rule, or a sentence, that was true about the thing it
+looked at and silent about the thing that mattered. It is the second one this week found by
+doing the work rather than by auditing — the first was `fastembed` appearing nowhere but in
+a prose `method:` field.
+
+### The pending rule caught its first real one, immediately
+
+`pending_adrs` shipped at 1.14.0 with a falsification and no live case. Accepting ADR-0036
+gave it one within the hour: `Architecture_Freeze.md` §3 still said `1 pending: ADR-0036`
+after the ADR was accepted, and `doc-claims` failed the push. **Exactly the defect it was
+built for**, on its first use, in the same sentence and the same document as the instance
+that motivated it.
+
+It also exposed a pattern collision worth recording. The fix reads `0 ADRs pending`, and
+`(\d+) ADRs` matched `0 ADRs` before `pending-adrs` could — reporting the ADR count against
+a pending count, two true numbers compared to each other. The `adrs` pattern now carries a
+negative lookahead. A regex registry is a place where rules can shadow each other silently,
+and this is the first time two have.
+
+`docs/decisions/README.md` records **0 ADRs pending**. 23 gates, **150** rules, self-test
+**31/31**, 138 tests. 77 files.
 
 ---
 

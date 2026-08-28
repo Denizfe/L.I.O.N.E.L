@@ -9,7 +9,7 @@ Every rule below is enforced by a gate that runs on every push and every pull re
 
 | | |
 |---|---|
-| Rules | **149** |
+| Rules | **150** |
 | Gates | **23** |
 | Severity | **All rules are blocking.** There is no warnings-only tier |
 | Exit codes | `0` pass · `1` violation · `2` gate itself broken |
@@ -257,8 +257,9 @@ A warning is a rule nobody enforces. Within a few sprints the log is full of the
 |---|---|
 | `DEP-001` | `{base}` has no version bound |
 | `DEP-002` | forbidden package `{base}` |
+| `DEP-003` | forbidden package `{name}` is installed transitively |
 
-**2 rules.**
+**3 rules.**
 
 ## `mcp` — Dev-tooling MCP servers are pinned and disclosed
 
@@ -469,7 +470,7 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 
 ## Proving the gates bite
 
-`bash ci/self_test.sh` plants a known violation for 30 cases and asserts each is rejected, then verifies its own cleanup.
+`bash ci/self_test.sh` plants a known violation for 31 cases and asserts each is rejected, then verifies its own cleanup.
 
 | Planted | Gate | Rule |
 |---|---|---|
@@ -503,8 +504,9 @@ Both exclusions narrow *where* a rule applies, never *what* it forbids.
 | a hand-edited generated document | `generated-docs` | GEN-001 |
 | a hand-written count that disagrees with the pipeline | `doc-claims` | CLAIM-001 |
 | a quoted config block that differs from the file by one line | `doc-quotes` | QUOTE-001 |
+| a forbidden package installed transitively | `dependencies` | DEP-003 |
 
-**30/30 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
+**31/31 caught.** A gate that has never rejected anything is unproven, however carefully it was written.
 
 ---
 

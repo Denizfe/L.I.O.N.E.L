@@ -386,6 +386,28 @@ else
 fi
 unplant Architecture_Freeze.md "$QUOTE_BAK"
 
+# 19d. A forbidden package that arrives as somebody else's dependency. DEP-002 reads
+#      pyproject.toml, so until 2026-08-28 it expressed a decision about what may be
+#      INSTALLED while checking only what was DECLARED. Accepting ADR-0036 put `requests`
+#      in uv.lock via fastembed with every gate green. The plant forbids a package that is
+#      genuinely in the lock and genuinely not declared, so DEP-003 is exercised against
+#      the real lock rather than against a fixture.
+DEP_BAK="$(plant_in ci/policy/policy.yaml)"
+python3 - <<'PLANT'
+import io
+p = "ci/policy/policy.yaml"
+with io.open(p, encoding="utf-8", newline="") as f:
+    s = f.read()
+anchor = "  forbid_packages:" + chr(10)
+assert anchor in s, "forbid_packages anchor moved"
+s = s.replace(anchor, anchor + "    - name: tqdm" + chr(10) +
+              '      why: "self-test plant"' + chr(10), 1)
+with io.open(p, "w", encoding="utf-8", newline="") as f:
+    f.write(s)
+PLANT
+expect_violation dependencies "DEP-003" "a forbidden package installed transitively"
+unplant ci/policy/policy.yaml "$DEP_BAK"
+
 # 20. Gate coverage itself. The plant goes into a COPY of this script: bash reads a script
 #     incrementally as it executes, so editing the running file could change the behaviour
 #     of the test doing the editing. The gate takes --suite for exactly this, the same way

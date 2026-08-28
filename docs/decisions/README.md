@@ -65,12 +65,14 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0033](ADR-0033-hand-written-claim-checking.md) | Count-shaped claims in hand-written documents are measured, not remembered | Accepted | 0 |
 | [0034](ADR-0034-constraint-only-policy-rules.md) | A policy rule may constrain without deciding | Accepted | 0 |
 | [0035](ADR-0035-verified-file-quotes.md) | A document that quotes a file is checked against that file | Accepted | 0 |
-| [0036](ADR-0036-memory-client-and-embedding-runtime.md) | The Memory Service's vector client and embedding runtime | **Proposed** | 0 |
+| [0036](ADR-0036-memory-client-and-embedding-runtime.md) | The Memory Service's vector client and embedding runtime | Accepted | 0 |
 
-**1 ADR pending — ADR-0036**, awaiting Efe under `Architecture_Freeze.md` §5 step 4. It adds
-two dependencies, so §4 requires the approval before they exist rather than after: neither
-`qdrant-client` nor `fastembed` is in `pyproject.toml` while it is `Proposed`, and `uv.lock`
-is unchanged.
+**0 ADRs pending.** ADR-0036 was accepted 2026-08-28 and implemented in the same version
+(architecture 1.15.0): `qdrant-client` and `fastembed` are declared, `src/lionel/memory/`
+holds the `VectorBackend` port and its Qdrant adapter, and the embedding pin is an assertion
+rather than a sentence. Its Erratum records what the resolver did that the proposal did not
+predict — `fastembed` pulls `requests`, which `forbid_packages` names, and `DEP-002` could
+not see it.
 
 ADR-0035 was accepted 2026-08-28 and implemented in the same version
 (architecture 1.12.0): `gate_doc_quotes` is the 23rd gate, `QUOTE-001`–`QUOTE-003`, and
