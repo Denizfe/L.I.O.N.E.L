@@ -66,8 +66,14 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0034](ADR-0034-constraint-only-policy-rules.md) | A policy rule may constrain without deciding | Accepted | 0 |
 | [0035](ADR-0035-verified-file-quotes.md) | A document that quotes a file is checked against that file | Accepted | 0 |
 | [0036](ADR-0036-memory-client-and-embedding-runtime.md) | The Memory Service's vector client and embedding runtime | Accepted | 0 |
+| [0037](ADR-0037-tombstone-record-shape.md) | A tombstone is a MemoryRecord, and the contract has no shape for one | **Proposed** | 0 |
 
-**0 ADRs pending.** ADR-0036 was accepted 2026-08-28 and implemented in the same version
+**1 ADR pending — ADR-0037**, awaiting Efe under `Architecture_Freeze.md` §5 step 4. It moves
+a contract's stable surface, so §4 requires the approval before the change:
+`memory-record.schema.json` is unchanged while it is `Proposed`, and a contract test pins
+the current behaviour so it cannot drift meanwhile.
+
+ADR-0036 was accepted 2026-08-28 and implemented in the same version
 (architecture 1.15.0): `qdrant-client` and `fastembed` are declared, `src/lionel/memory/`
 holds the `VectorBackend` port and its Qdrant adapter, and the embedding pin is an assertion
 rather than a sentence. Its Erratum records what the resolver did that the proposal did not

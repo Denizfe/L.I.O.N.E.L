@@ -5,7 +5,7 @@ A local-first voice assistant whose defining constraint is an **offline autonomy
 on 2026-08-28** — `Phase1_Final_Signoff.md` is now a dated record, and **Phase 2 (Memory
 Service, G2) is open**. Its DoD is MASTER_PLAN_v2 §10 Phase 2.
 
-**This repository is an architecture first, and runtime code second.** 36 ADRs, 27
+**This repository is an architecture first, and runtime code second.** 37 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
 enforces them: 23 gates, 150 rules, 27 CI jobs.
 
@@ -242,7 +242,7 @@ its checks.
 ## Where things are
 
 ```
-docs/decisions/          36 ADRs + README index (ARCH-016 requires the index be complete)
+docs/decisions/          37 ADRs + README index (ARCH-016 requires the index be complete)
 contracts/               27 JSON Schemas + 3 protobuf, 5 planes, MANIFEST.json
 ci/gates/                23 gates + _lib.py (Finding, exit codes) + _checksum.py
 ci/policy/policy.yaml    ALL thresholds, allowlists and registries

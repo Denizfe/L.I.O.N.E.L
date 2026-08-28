@@ -2,19 +2,24 @@
 
 | | |
 |---|---|
-| Architecture version | **1.15.0** |
+| Architecture version | **1.16.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.15.0`** |
+| Tag | **`architecture-1.16.0`** |
 | Status | **FROZEN** — G1 signed 2026-08-28, Phase 2 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **0 ADRs pending.** ADR-0036 accepted 2026-08-28 and in force; G2's first runtime code exists |
+| Previous versions | **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **1 ADR pending — ADR-0037**, awaiting Efe. ADR-0036 accepted 2026-08-28 and in force |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **All 36 ADRs are in force.** ADR-0036 (2026-08-28) was accepted the same day and
+> **36 of 37 ADRs are in force.** ADR-0037 (2026-08-28) is `Proposed`: it moves
+> `memory-record.schema.json`'s stable surface, so §4 requires Efe's approval before the
+> change, and the schema is untouched. A contract test pins the current behaviour meanwhile.
+> §9.23.
+>
+> ADR-0036 (2026-08-28) was accepted the same day and
 > implemented in the same version: `qdrant-client` and `fastembed` are declared, and
 > `src/lionel/memory/` holds the `VectorBackend` port. Its Erratum records what the resolver
 > did that the proposal did not predict. §9.22.
@@ -41,6 +46,10 @@
 ---
 
 ## 1. Architecture version
+
+**1.16.0** — MINOR over 1.15.0: the Memory Service, and ADR-0037 added as `Proposed`. No
+decision in force changed. Runtime code under `src/lionel/` conforming to frozen contracts
+needs no ADR; the contradiction it found in one of those contracts does. §9.23.
 
 **1.15.0** — MINOR over 1.14.0: ADR-0036 accepted, so a pending decision comes into force,
 which §1 defines as MINOR. Two dependencies, G2's first runtime code, and `DEP-003` — which
@@ -137,21 +146,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.15.0
-sha256:efff3d763ddc40862a05e5dea6e35400b3178b4d1588092a7b6e52ad4f2458dd
+ARCHITECTURE CHECKSUM                                          architecture 1.16.0
+sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
 
-  ADRs         36 files   sha256:cf030232f0d7cc8695b923eb99a1c663…
+  ADRs         37 files   sha256:7d0556b564640e8ab404692bd5957032…
   contracts    31 files   sha256:b86796d9e583ad2a8bcd18d03a746589…
-  policy        8 files   sha256:f2f3eac1a70adfb3af0bf7d7e909e895…
+  policy        8 files   sha256:7fffa2c4b38c33e732236f08bdf93069…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
-  77 files hashed
+  78 files hashed
 ```
 
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.15.0  sha256:efff3d763ddc40862a05e5dea6e35400b3178b4d1588092a7b6e52ad4f2458dd
+                     77 files — ADRs 36 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.14.0  sha256:50f1226c43be4586f67a41ea2fc01074c487e855766262930309d73e9feed125
                      77 files — ADRs 36 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.13.0  sha256:f4a97de38f49313c466ff4b20b199c3bca8bfab156e6ca55a0116195741a0d9c
@@ -197,7 +208,7 @@ and 1.1.0 it was recorded and checked by nothing — which is how it came to be 
 **Verified against a clean clone on 2026-08-24** (1.4.0 and 1.5.0, the same day). Reproduce it with:
 
 ```bash
-python3 scripts/architecture_checksum.py --verify sha256:efff3d763ddc40862a05e5dea6e35400b3178b4d1588092a7b6e52ad4f2458dd
+python3 scripts/architecture_checksum.py --verify sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
 ```
 
 The algorithm is: files partitioned into the five groups below; within a group, sorted by
@@ -244,7 +255,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **36 ADRs, 0001–0036** — all in force, **0 ADRs pending** |
+| **Architecture decisions** | **37 ADRs, 0001–0037** — 36 in force, **1 ADR pending: ADR-0037**, which moves a contract's stable surface and so waits for Efe |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -1555,6 +1566,67 @@ and this is the first time two have.
 
 `docs/decisions/README.md` records **0 ADRs pending**. 23 gates, **150** rules, self-test
 **31/31**, 138 tests. 77 files.
+
+---
+
+### 9.23 Version 1.16.0 — the Memory Service, and a contract with no shape for a tombstone
+
+G2's substance. `src/lionel/memory/service.py` is ADR-0010's Memory Service: salience-gated
+ingestion, near-duplicate folding, hybrid ranking with its components exposed, episodic
+decay, tombstoned redaction, consolidation that supersedes rather than deletes, and the
+embedding re-index migration. 197 tests, up from 138.
+
+**Five of G2's DoD clauses now have an executable test**, and the two that do not are named
+rather than implied:
+
+| Clause | State |
+|---|---|
+| `forget(id)` provably removes a memory from retrieval | test |
+| near-duplicate ingestion is deduplicated | test |
+| episodic decay under an accelerated clock | test — the clock is injected, which is why this is a test and not a thirty-day wait |
+| re-index against a second embedding model without data loss | test |
+| `qdrant-store` absent from the capability surface | test |
+| `compose down && up` → memory survives | **needs a running Qdrant.** G2 integration |
+| semantic recall where keyword matching fails | **needs the real model.** The retrieval *path* is tested with a scripted embedder and a query sharing no tokens; the test says so rather than claiming to have tested MiniLM |
+
+The embedder in the tests is scripted, not hashed. A hash-based fake makes the geometry an
+accident of the hash function, and a dedup test that passes because two strings happened to
+collide proves nothing about dedup.
+
+### The tenth instance, and the first inside a `stable` contract's own text
+
+`contracts/events/v1/memory-record.schema.json` requires `text` with `minLength: 1`. The
+same schema documents `redacted` as the state where *"its text is cleared, but the tombstone
+remains so consolidation cannot resurrect the content from an earlier summary"*.
+
+**Both cannot hold.** A tombstone is a record the record contract rejects — on the one path
+`memory-service.schema.json` calls mandatory, in its own words *"required from v1.0.0 and
+MUST NOT become optional"*.
+
+Frozen 2026-08-02. Found 2026-08-28, on the first run of the first consumer either schema
+has ever had. That is the whole mechanism: **a contract nothing tests against reality cannot
+be wrong**, and for twenty-six days nothing did. The `jsonschema` gate could not have caught
+it — it validates each schema against its metaschema and each schema's own `examples`, both
+of which pass, and neither schema ships an example of a redacted record. The only example
+that would have failed is the one nobody wrote.
+
+ADR-0037 proposes a conditional — `text` may be empty when `redacted` is true, `redacted_at`
+becomes required alongside it, and the schema gains the missing example so the gate exercises
+the shape from then on. `Proposed`; the schema is untouched. **Seventh withholding.**
+
+The current behaviour is pinned rather than left to drift: a contract test asserts that a
+tombstone **does** fail validation today, and its assertion message says that if it stops
+failing, the schema changed and the tombstone shape needs a decision rather than a silent
+pass. That test has to be rewritten on acceptance, which is the right amount of friction.
+
+**Why it is worth a version now rather than at G4.** The Memory Service is in-process at L0,
+so nothing serialises a tombstone and nothing is broken today. At L1 it moves out of process
+and records cross a wire where they are validated. This is the last moment the contradiction
+costs nothing, and ADR-0034 is the precedent for what deferring one looks like: a bound that
+bounded nothing for four weeks, defended each week by the observation that nothing had gone
+wrong yet.
+
+`docs/decisions/README.md` records **1 ADR pending**. 78 files.
 
 ---
 
