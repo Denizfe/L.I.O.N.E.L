@@ -71,7 +71,7 @@ repository:
 
 adr:
   dir: docs/decisions
-  expected_count: 35
+  expected_count: 36
   required_sections: ["## Context", "## Decision", "## Consequences", "## Alternatives Rejected", "## Verification"]
   valid_statuses: ["Accepted", "Provisional", "Superseded", "Proposed", "Deprecated"]
   # ── ADR-0029: Errata / Amendments / Corrections ──────────────────────────
@@ -368,6 +368,16 @@ doc_claims:
     - id: policy-sections
       regex: '(\d+) configuration sections'
       fact: policy_sections
+    # A status claim, not a count -- and it went wrong the same way a count does.
+    # `1 pending: ADR-0035` stood in Architecture_Freeze.md §3 through three tags
+    # after ADR-0035 was accepted, inside a region this gate already reads. Both
+    # phrasings the documents actually use are covered.
+    - id: pending-adrs
+      regex: '(\d+) ADRs? pending'
+      fact: pending_adrs
+    - id: pending-colon
+      regex: '(\d+) pending[:,]'
+      fact: pending_adrs
 
   documents:
     - doc: CLAUDE.md

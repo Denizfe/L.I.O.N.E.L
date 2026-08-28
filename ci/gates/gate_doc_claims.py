@@ -50,6 +50,24 @@ from _lib import Gate, ROOT, gate_error, load_policy, read_text
 sys.path.insert(0, str(ROOT / "scripts"))
 
 
+_STATUS = re.compile(r"^\|\s*Status\s*\|\s*(.+?)\s*\|", re.M)
+
+
+def _pending_adrs() -> int:
+    """ADRs whose Status row says Proposed.
+
+    Same notion of "status" gate_adr uses -- the first `| Status | ... |` row. Two
+    implementations of "which ADRs are pending" would drift, and the whole point of this
+    fact is that it cannot.
+    """
+    n = 0
+    for f in sorted((ROOT / "docs" / "decisions").glob("ADR-*.md")):
+        m = _STATUS.search(read_text(f))
+        if m and "proposed" in m.group(1).lower():
+            n += 1
+    return n
+
+
 def measure() -> dict[str, int]:
     """Ground truth, measured every run. Nothing here reads a document."""
     try:
@@ -77,6 +95,13 @@ def measure() -> dict[str, int]:
             # anyone counted — inside the very section this gate already watches,
             # for want of a pattern that matched the sentence.
             "policy_sections": len(load_policy()),
+            # Added 2026-08-28. `| **Architecture decisions** | 35 ADRs ... 1 pending:
+            # ADR-0035 |` sat in this gate's own registered region for three tags after
+            # ADR-0035 was accepted. The gate read `35 ADRs`, found it true, and walked
+            # past `1 pending` in the same sentence -- count-shaped claims were measured
+            # and a status claim beside them was not. The status is as measurable as the
+            # count; it just had no pattern.
+            "pending_adrs": _pending_adrs(),
         }
     except Exception as e:
         gate_error("scripts/generate_ci_docs.py changed shape", f"{type(e).__name__}: {e}")
