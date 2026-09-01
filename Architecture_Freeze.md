@@ -2,19 +2,24 @@
 
 | | |
 |---|---|
-| Architecture version | **1.17.1** |
+| Architecture version | **1.18.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.17.1`** |
+| Tag | **`architecture-1.18.0`** |
 | Status | **FROZEN** — G1 signed 2026-08-28, Phase 2 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.17.0**, **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **0 ADRs pending.** ADR-0037 accepted 2026-08-28 and in force |
+| Previous versions | **1.17.1**, **1.17.0**, **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **0 ADRs pending.** ADR-0038 accepted 2026-09-01 and in force |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **All 37 ADRs are in force.** ADR-0037 (2026-08-28) was accepted the same day and
+> **All 38 ADRs are in force.** ADR-0038 (2026-09-01) was accepted the same day and
+> implemented in the same version: `scripts/memory_backup.sh` exists, and the restore path
+> is exercised by a round-trip that compares point ids rather than counts. It reinstates the
+> one MASTER_PLAN_v1 Phase 2 item that MASTER_PLAN_v2 dropped with no migration row. §9.26.
+>
+> ADR-0037 (2026-08-28) was accepted the same day and
 > implemented in the same version: `memory-record.schema.json` is 1.1.0 and a tombstone is
 > a record the architecture can describe. §9.24.
 >
@@ -45,6 +50,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.18.0** — MINOR over 1.17.1: ADR-0038 accepted, so a decision comes into force, which
+§1 defines as MINOR. It adds no dependency, moves no contract and touches no stable surface;
+what it adds is an operator tool and the exercised restore that makes it a backup rather
+than a file. §9.26.
 
 **1.17.1** — PATCH over 1.17.0: `Phase2_Final_Signoff.md` §8 registered with `doc-claims`
 while the document is unsigned, so the failure recorded in §9.19 cannot repeat. No ADR
@@ -154,21 +164,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.17.1
-sha256:33896052dc2fc3af011fa940e26bea230f00bc2f6da65326bdac9bbd760e6ee3
+ARCHITECTURE CHECKSUM                                          architecture 1.18.0
+sha256:1d8a33c7efc4c046be4ce2211f846ae112ff1c7b0e6165cb413b3c66b95928ef
 
-  ADRs         37 files   sha256:d04d2665a84ddfed5d7ddf9eec0c2c3d…
+  ADRs         38 files   sha256:dfc7a70ac5758f782001d827e7525bba…
   contracts    31 files   sha256:68a5211592ebf31f04dbcc67195c7122…
-  policy        8 files   sha256:03e5d990f30dbb0b1a1127e146755d4b…
+  policy        8 files   sha256:179989c8ef6c696e4a9e3a1fa2a4c750…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
-  78 files hashed
+  79 files hashed
 ```
 
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.17.1  sha256:33896052dc2fc3af011fa940e26bea230f00bc2f6da65326bdac9bbd760e6ee3
+                     78 files — ADRs 37 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.17.0  sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
                      78 files — ADRs 37 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.16.0  sha256:124de50597ec16e21126dc068b72446fee1e21c31bcc7dfb7a9210303d12e144
@@ -267,7 +279,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **37 ADRs, 0001–0037** — all in force, **0 ADRs pending** |
+| **Architecture decisions** | **38 ADRs, 0001–0038** — all in force, **0 ADRs pending** |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -1721,6 +1733,52 @@ in a gate's configuration.
 PATCH by §1: no ADR added, no decision changed. `ADR-0033` already decided that
 current-state claims in registered documents are measured rather than remembered; this
 registers one more. Only `ci/policy/policy.yaml` is in the checksum set. 78 files.
+
+---
+
+### 9.26 Version 1.18.0 — the backup that MASTER_PLAN_v2 lost, and a test that agreed with whichever interpreter you typed
+
+**ADR-0038 reinstates `scripts/memory_backup.sh`.** `MASTER_PLAN_v1.md` §2.6 required it;
+`MASTER_PLAN_v2.md` rewrote the phase plan with a migration table giving a reason for every
+v1.0 item it retained or deleted, **and has no row for this one**. `Phase2_Final_Signoff.md`
+§6 carried it as a Major with no mitigation and §7 put it to Efe as the thing to weigh
+before signing: from the moment G2 closes, memory has a single copy, and `docker compose
+down -v` — one character from the command `verify_memory.sh` runs on every pass — ends it.
+
+Efe approved the reinstatement on 2026-09-01, before any of it was written. That is §4's
+sequence and not a formality: the item's absence from v2 makes adding it a change to the
+phase plan, which is exactly what §4 reserves.
+
+**What makes this a backup rather than a file** is `selftest`. It takes a real snapshot of a
+real collection, restores it into a scratch collection, and compares **a sha256 over the
+sorted point ids** — not the point count, which is the one property a restore of the wrong
+snapshot is most likely to share in a directory of similarly named dated files. The count
+comparison was written first and rejected once stated out loud. The disaster drill was then
+run for real: `lionel_memory` deleted outright, restored from the snapshot, same digest.
+
+The refusals were falsified too — a corrupted snapshot is refused on its checksum *before*
+any upload, because a recovery deletes the collection before Qdrant discovers the file is
+unreadable; an unattended `restore` with no tty and no `LIONEL_BACKUP_YES` refuses; with
+Qdrant stopped, `create` exits 1 and names the command to start it while `list` still
+verifies every checksum, because it needs no container.
+
+**And a test that had quietly stopped testing anything.** `TestAbsentPackagesFailByName`
+opens with *"Both are absent in this environment, so these assert the real path rather than
+a mock"*. That was true when ADR-0036 was written and false by the end of the same day:
+`.venv` has `qdrant-client` and `fastembed`, because `verify_memory.sh` needs them. Under
+that interpreter all three assertions failed — the named errors are unreachable when the
+imports succeed — and under a bare `python3` they passed. **The suite's verdict depended on
+which interpreter you typed**, and the number in `Phase2_Final_Signoff.md` §8 was the
+passing one. The absence is now simulated by a `sys.meta_path` finder, and both interpreters
+report 217 tests passing.
+
+It is the same shape as the four defects G2's sign-off records: something reviewed, frozen,
+and not executed in the configuration that mattered. Found by running it, not by reading it.
+
+MINOR by §1: a decision comes into force. No dependency added — the download and the
+multipart upload are `urllib`; `qdrant-client` was already ADR-0036's. No contract, schema or
+stable surface moves. `docs/decisions/ADR-0038-memory-backup-and-restore.md` and
+`ci/policy/policy.yaml` are in the checksum set. 79 files.
 
 ---
 

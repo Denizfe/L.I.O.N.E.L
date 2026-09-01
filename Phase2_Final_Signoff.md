@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Gate | **G2 — Memory Service** |
-| Date | Prepared 2026-08-28 |
-| Architecture at preparation | **1.17.1** · `sha256:33896052dc2fc3af011fa940e26bea230f00bc2f6da65326bdac9bbd760e6ee3` |
+| Date | Prepared 2026-08-28 · §6 and §8 updated 2026-09-01, when ADR-0038 closed the first open item |
+| Architecture at preparation | **1.18.0** · `sha256:1d8a33c7efc4c046be4ce2211f846ae112ff1c7b0e6165cb413b3c66b95928ef` — 1.17.1 when first prepared |
 | | *A dated fact, not a current-state claim — §8 carries the numbers that must stay true, and it is registered with `doc-claims` for as long as this document is unsigned* |
 | Scope | MASTER_PLAN_v2 §10 Phase 2, plus the two v1.0 clauses it carries forward by name, plus U1 and U2 |
 | Method | Each clause traced to an artefact — a named test, a gate rule, or a witnessed run. Not to a sentence |
@@ -155,7 +155,7 @@ test their absence, which is the failure L0 is about.
 
 | | Severity | Owner |
 |---|---|---|
-| **No backup path exists.** v1.0's Phase 2 DoD required `scripts/memory_backup.sh` snapshotting to `backups/` via the Qdrant snapshot API. MASTER_PLAN_v2's migration table has **no row for it** — neither retained nor deleted, simply absent. A single `docker compose down -v` destroys every durable memory with nothing to restore from, and durable memory is by definition the part that was worth keeping | **Major** | memory · G2+1 |
+| **~~No backup path exists.~~ Closed 2026-09-01 by ADR-0038.** v1.0's Phase 2 DoD required `scripts/memory_backup.sh` snapshotting to `backups/` via the Qdrant snapshot API. MASTER_PLAN_v2's migration table had **no row for it** — neither retained nor deleted, simply absent. The item is reinstated: `create` · `list` · `restore` · `selftest`, checksummed snapshots, a restore that refuses a corrupt file, and a round-trip compared on point ids rather than on a count. The disaster drill — the durable collection deleted outright and restored — was witnessed on the host on 2026-09-01. **The residual is that nothing schedules it**: the newest backup is as old as the last time anyone remembered, which is the same shape as R-A20 | ~~Major~~ **Minor** | memory · operator |
 | **Turkish TTS is personal-use only.** `tr_TR-dfki-medium` is CC-BY-NC-SA-4.0 and is the only Turkish voice. Blocks distribution, not Phase 2. R-A15 | Major | sensory · G6c |
 | **A host fact cannot be checked from CI.** Clauses 6 and 7 are witnessed runs. Mitigated by `verify_memory.sh`; the residual is that nothing forces it to run. R-A20 | Moderate | platform · G3 |
 | **A schema's prose and its examples can disagree, and nothing notices.** `memory-record.schema.json` described a cleared text, exemplified a `"[redacted]"` placeholder, and permitted only the second. The `jsonschema` gate compares an example to its schema, never to the sentence beside it. ADR-0037 fixed the instance; the class is open | Moderate | architecture |
@@ -194,24 +194,30 @@ Expect `ok persistence survived`, `ok semantic retrieved`, and **no** `skip` on 
 row. A `skip` there means the fixture embedder was used, and the verdict says in as many
 words that the semantic clause is then **not** verified by that run.
 
-**One thing to weigh before signing, which is not a precondition.** §6's first row is a
-Major with no mitigation: there is no way to back up or restore memory. It does not block
-G2's DoD, because v2 does not carry that item forward. It does mean that from the moment G2
-closes, the project's memory has a single copy.
+**One thing to weigh before signing, which is not a precondition.** §6's first row was a
+Major with no mitigation: there was no way to back up or restore memory. It did not block
+G2's DoD, because v2 does not carry that item forward. It did mean that from the moment G2
+closes, the project's memory would have a single copy.
+
+**Closed on 2026-09-01, before signing rather than after.** ADR-0038 reinstates
+`scripts/memory_backup.sh`, and the restore is exercised rather than documented — see §6's
+first row for what was witnessed. Nothing about G2's Definition of Done changed; what
+changed is that signing it no longer starts a period in which memory has one copy.
 
 ---
 
 ## 8. State at sign-off
 
 **23 gates, 150 rules, 27 workflow jobs.** Self-test 32/32, gate coverage 23/23.
-**37 ADRs**, 0 ADRs pending. 204 tests, 1 skipped (a POSIX-only kill-tree case).
+**38 ADRs**, 0 ADRs pending. 217 tests, 1 skipped (a POSIX-only kill-tree case).
 `ci/policy/policy.yaml` holds 21 configuration sections.
 
 ```
 contracts   27 JSON Schemas + 3 protobuf · 5 planes
-checksum    sha256:33896052dc2f… · 78 files · verified from a clean clone
+checksum    sha256:1d8a33c7efc4… · 79 files · verified from a clean clone
 memory      VectorBackend port · Qdrant adapter · 384-dim pin asserted at startup
 container   qdrant/qdrant@sha256:0bd98fa7… · loopback-only · named volume
+backup      memory_backup.sh · snapshot + sha256 · restore exercised on point ids (ADR-0038)
 ```
 
 **This section is written in the phrasing `doc-claims` reads, and registered.** G1's

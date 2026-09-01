@@ -5,7 +5,7 @@ A local-first voice assistant whose defining constraint is an **offline autonomy
 on 2026-08-28** — `Phase1_Final_Signoff.md` is now a dated record, and **Phase 2 (Memory
 Service, G2) is open**. Its DoD is MASTER_PLAN_v2 §10 Phase 2.
 
-**This repository is an architecture first, and runtime code second.** 37 ADRs, 27
+**This repository is an architecture first, and runtime code second.** 38 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
 enforces them: 23 gates, 150 rules, 27 CI jobs.
 
@@ -90,6 +90,7 @@ python3 scripts/architecture_checksum.py --verify
 python3 scripts/generate_ci_docs.py --check
 bash scripts/check_env.sh               # the host, not the repository
 bash scripts/verify_memory.sh           # G2's live clauses. Starts and stops Qdrant
+bash scripts/memory_backup.sh selftest  # ADR-0038. Round-trips a real snapshot, live data untouched
 ```
 
 Requires `pyyaml`, `jsonschema` and **`grpcio-tools`**. Without the last one the `protobuf`
@@ -243,7 +244,7 @@ its checks.
 ## Where things are
 
 ```
-docs/decisions/          37 ADRs + README index (ARCH-016 requires the index be complete)
+docs/decisions/          38 ADRs + README index (ARCH-016 requires the index be complete)
 contracts/               27 JSON Schemas + 3 protobuf, 5 planes, MANIFEST.json
 ci/gates/                23 gates + _lib.py (Finding, exit codes) + _checksum.py
 ci/policy/policy.yaml    ALL thresholds, allowlists and registries
@@ -252,6 +253,7 @@ ci/self_test.sh          plants violations; proves the gates bite
 scripts/                 architecture_checksum.py · generate_ci_docs.py · verify_artifacts.sh
                          check_env.sh — the host preflight, table in policy.yaml `preflight`
                          verify_memory.sh — G2's two live clauses; needs Docker
+                         memory_backup.sh — create · list · restore · selftest (ADR-0038)
 MASTER_PLAN_v2.md        11 gated phases, G0–G10. Phase 1 scope is §10
 Architecture_Freeze.md   the frozen state, the checksum, and the change-control rules
 .mcp.json                dev-tooling MCP servers (ADR-0032). Pinned, egress-declared,

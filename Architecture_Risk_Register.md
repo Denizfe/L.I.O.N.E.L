@@ -33,6 +33,7 @@ not the product.
 | **R-A18** | Cancellation incomplete at L2; orphaned cluster work | Med | Med | Minor | G7 | core-orchestration | DESIGNED |
 | **R-A19** | Eleven-phase plan outlasts motivation | Med | Med | **Informational** | — | Efe | **NEWLY RAISED** |
 | **R-A20** | Host fact unverifiable by CI; stale filesystem root undetected | **High** | Med | **Moderate** | — | platform | **MITIGATED 2026-08-25** |
+| **R-A21** | Durable memory has one copy; nothing schedules a backup | Med | **High** | **Moderate** | — | memory | **MITIGATED 2026-09-01** — ADR-0038; the residual is that nothing runs it |
 
 \* ~~Likelihood Low **only while use stays personal**~~ — superseded 2026-08-10. The condition was not the artifact anyone was watching. See R-A15.
 
@@ -191,6 +192,35 @@ Turkish is not a nice-to-have here; it is half the product.
 *Mitigation:* pull the quality judgement forward. A five-minute listening test on
 `tr_TR-dfki-medium` samples, done **now**, converts a G6c surprise into a Phase 0 decision.
 The samples are published in the same HF repo already pinned.
+
+### R-A21 — Durable memory has one copy, and nothing schedules the second · **Moderate** *(raised 2026-09-01)*
+
+`docker-compose.yml` keeps memory in a named volume so that `docker compose down && up`
+preserves it — `scripts/verify_memory.sh` proves that on every run. The command one
+character away, `docker compose down -v`, removes the volume. It is what people reach for
+when a container misbehaves, it prints nothing alarming, and until 2026-09-01 there was
+nothing to restore from.
+
+Durable memory is the one thing in this project that is **not reproducible**. The ADRs can
+be re-read, the models re-downloaded, `uv.lock` can rebuild the environment. What Efe told
+the assistant six months ago exists in one place. MASTER_PLAN_v1 §2.6 required a backup
+script; MASTER_PLAN_v2's migration table, which gives a reason for every other item it
+dropped, has no row for it.
+
+*Mitigated, not closed.* ADR-0038 (2026-09-01) reinstates `scripts/memory_backup.sh`:
+snapshots downloaded to the host and checksummed, a `restore` that refuses a corrupt file
+before it deletes anything, and a `selftest` that round-trips a real snapshot and compares a
+digest over the point ids rather than a count. The disaster drill was witnessed — the
+durable collection deleted outright and restored to the same digest.
+
+**The residual is that nothing schedules it.** The risk is no longer "no backup exists" but
+"the newest backup is as old as the last time anyone remembered", which is strictly smaller
+and is the same shape as R-A20: an operator habit where a gate is impossible. Scheduling it
+would put an unattended job on Efe's primary machine writing unencrypted memory to disk on a
+timer, which ADR-0038 rejects as a decision needing its own ADR rather than a detail of that
+one.
+
+---
 
 ### R-A20 — A host fact cannot be checked by CI, and CI is where checking happens · **Moderate** *(raised 2026-08-25)*
 

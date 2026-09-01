@@ -67,8 +67,16 @@ into the Memory Service on merge so `memory.recall` surfaces them months later.
 | [0035](ADR-0035-verified-file-quotes.md) | A document that quotes a file is checked against that file | Accepted | 0 |
 | [0036](ADR-0036-memory-client-and-embedding-runtime.md) | The Memory Service's vector client and embedding runtime | Accepted | 0 |
 | [0037](ADR-0037-tombstone-record-shape.md) | A tombstone is a MemoryRecord, and the contract has no shape for one | Accepted | 0 |
+| [0038](ADR-0038-memory-backup-and-restore.md) | Memory has a second copy, and the restore is exercised rather than assumed | Accepted | 2 |
 
-**0 ADRs pending.** ADR-0037 was accepted 2026-08-28 and implemented in the same version
+**0 ADRs pending.** ADR-0038 was accepted 2026-09-01 and implemented in the same version
+(architecture 1.18.0): `scripts/memory_backup.sh` and `scripts/_memory_snapshot.py` exist,
+a snapshot restores to the same point ids rather than merely the same count, and the
+disaster drill — delete the durable collection outright, restore it — was witnessed on the
+host. It reinstates the one MASTER_PLAN_v1 Phase 2 item that MASTER_PLAN_v2 dropped without
+a migration row, which `Phase2_Final_Signoff.md` §6 carries as a Major with no mitigation.
+
+ADR-0037 was accepted 2026-08-28 and implemented in the same version
 (architecture 1.17.0): `memory-record.schema.json` is 1.1.0, a tombstone is a record the
 architecture can describe, and a live record with empty text is still a schema error. Its
 Erratum records the trap in the first attempt — a conditional that could not relax a base

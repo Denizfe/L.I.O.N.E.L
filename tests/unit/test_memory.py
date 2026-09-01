@@ -7,6 +7,15 @@ startup error rather than a recall returning nothing.
 Everything here runs with neither `qdrant-client` nor `fastembed` installed, which is not a
 convenience — it is the point. Those two packages are lazily imported by design, and a test
 suite that needed them present could not check what happens when they are absent.
+
+WHICH IS WHY THE ABSENCE IS NOW SIMULATED RATHER THAN ASSUMED
+    It was assumed until 2026-09-01, and it stopped being true the day ADR-0036 was
+    implemented: `.venv` has both packages, because `verify_memory.sh` needs them. Run
+    under that interpreter, `TestAbsentPackagesFailByName` failed all three of its
+    assertions — the named errors it exists to check are unreachable when the imports
+    succeed. Run under a bare `python3` it passed, and the suite's verdict depended on
+    which interpreter you typed. `blocked_import` below makes both interpreters assert the
+    same thing.
 """
 import sys
 import unittest
@@ -108,14 +117,50 @@ class TestDimensionAssertion(unittest.TestCase):
             b.ensure_collection("durable", dims=768)
 
 
+class blocked_import:
+    """Make `import <name>` fail for the duration of the block, whatever is installed.
+
+    A finder placed at the FRONT of `sys.meta_path` and a purge of anything already
+    imported under that name. Both halves are needed: the finder alone is bypassed by
+    `sys.modules`, and the purge alone is undone by the first successful re-import.
+    Modules are restored on exit, so this leaves the interpreter as it found it.
+    """
+
+    def __init__(self, *names):
+        self.names = names
+        self.saved = {}
+
+    def find_module(self, fullname, path=None):     # pre-PEP-451 hook, still consulted
+        return self.find_spec(fullname, path)
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname in self.names or fullname.split(".")[0] in self.names:
+            raise ImportError(f"blocked by the test: {fullname}")
+        return None
+
+    def __enter__(self):
+        for mod in list(sys.modules):
+            if mod in self.names or mod.split(".")[0] in self.names:
+                self.saved[mod] = sys.modules.pop(mod)
+        sys.meta_path.insert(0, self)
+        return self
+
+    def __exit__(self, *exc):
+        sys.meta_path.remove(self)
+        sys.modules.update(self.saved)
+        return False
+
+
 class TestAbsentPackagesFailByName(unittest.TestCase):
     """The failure this file exists for: a missing package must not become an empty recall.
 
-    Both are absent in this environment, so these assert the real path rather than a mock.
+    The absence is simulated, not assumed — see the module docstring. `blocked_import`
+    holds on the CI runners, where the packages really are missing, and on the host, where
+    `.venv` has them for `verify_memory.sh`.
     """
 
     def test_fastembed_absent_raises_a_named_error(self):
-        with self.assertRaises(EmbeddingUnavailable) as cm:
+        with blocked_import("fastembed"), self.assertRaises(EmbeddingUnavailable) as cm:
             FastEmbedEmbedder(EmbeddingSpec.from_lock()).embed(["hello"])
         msg = str(cm.exception)
         self.assertIn("fastembed", msg)
@@ -126,7 +171,7 @@ class TestAbsentPackagesFailByName(unittest.TestCase):
     def test_the_named_error_says_why_it_is_not_an_empty_result(self):
         """The distinction is the reason this raises at all, so it belongs in the text a
         reader actually sees, not only in a docstring."""
-        with self.assertRaises(EmbeddingUnavailable) as cm:
+        with blocked_import("fastembed"), self.assertRaises(EmbeddingUnavailable) as cm:
             FastEmbedEmbedder(EmbeddingSpec.from_lock()).embed(["hello"])
         self.assertIn("silently returns nothing", str(cm.exception))
 
@@ -137,7 +182,7 @@ class TestAbsentPackagesFailByName(unittest.TestCase):
         FastEmbedEmbedder(EmbeddingSpec.from_lock())
 
     def test_qdrant_client_absent_raises_a_named_error(self):
-        with self.assertRaises(MemoryConfigurationError) as cm:
+        with blocked_import("qdrant_client"), self.assertRaises(MemoryConfigurationError) as cm:
             _ = QdrantBackend(spec=EmbeddingSpec.from_lock()).client
         self.assertIn("qdrant-client", str(cm.exception))
 
