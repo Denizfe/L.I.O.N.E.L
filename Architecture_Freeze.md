@@ -2,19 +2,19 @@
 
 | | |
 |---|---|
-| Architecture version | **1.19.0** |
+| Architecture version | **1.20.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.19.0`** |
+| Tag | **`architecture-1.20.0`** |
 | Status | **FROZEN** — G2 signed 2026-09-02, Phase 3 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.18.0**, **1.17.1**, **1.17.0**, **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
-| Governance | **0 ADRs pending.** ADR-0038 accepted 2026-09-01 and in force |
+| Previous versions | **1.19.0**, **1.18.0**, **1.17.1**, **1.17.0**, **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Governance | **1 ADR pending: ADR-0039**, drafted 2026-09-02. No schema it names is edited while it waits |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
 > decision already in force. `architecture-1.0.0` is untouched and remains a valid freeze of
 > what it froze. **Clone the tag, not a commit** — §8.3 explains why that distinction
 > matters here.
 >
-> **All 38 ADRs are in force.** ADR-0038 (2026-09-01) was accepted the same day and
+> **All 38 accepted ADRs are in force; ADR-0039 is `Proposed`.** ADR-0038 (2026-09-01) was accepted the same day and
 > implemented in the same version: `scripts/memory_backup.sh` exists, and the restore path
 > is exercised by a round-trip that compares point ids rather than counts. It reinstates the
 > one MASTER_PLAN_v1 Phase 2 item that MASTER_PLAN_v2 dropped with no migration row. §9.26.
@@ -50,6 +50,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.20.0** — MINOR over 1.19.0: ADR-0039 added, `Proposed` — Phase 3's first. No decision
+in force changed, and **not one of the five schemas it names is edited while it waits**.
+`tests/contract/test_brain_contract.py` lands with it, pinning the current behaviour, which
+needs no ADR: it is a test. §9.28.
 
 **1.19.0** — MINOR over 1.18.0: **G2 signed.** `Phase2_Final_Signoff.md` §7 carries Efe's
 signature of 2026-09-02, the document moves from `doc_claims.documents` to
@@ -169,21 +174,23 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.19.0
-sha256:0585d19fc64db1ae63a07415af6acecb86c7db7051ec99f5319b39425736b764
+ARCHITECTURE CHECKSUM                                          architecture 1.20.0
+sha256:38c9b925aae41422e0758c28866e8bd0124243c83bb8a61ca1c6b789c54ef1fc
 
-  ADRs         38 files   sha256:dfc7a70ac5758f782001d827e7525bba…
+  ADRs         39 files   sha256:a40b982595d6ce50501aa3f6f612c51b…
   contracts    31 files   sha256:68a5211592ebf31f04dbcc67195c7122…
-  policy        8 files   sha256:a5e33cf6d42c2f3c1386bd781290c10a…
+  policy        8 files   sha256:f67dcb5753c385f7f70163c596b658d8…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
-  79 files hashed
+  80 files hashed
 ```
 
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.19.0  sha256:0585d19fc64db1ae63a07415af6acecb86c7db7051ec99f5319b39425736b764
+                     79 files — ADRs 38 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.18.0  sha256:1d8a33c7efc4c046be4ce2211f846ae112ff1c7b0e6165cb413b3c66b95928ef
                      79 files — ADRs 38 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.17.1  sha256:33896052dc2fc3af011fa940e26bea230f00bc2f6da65326bdac9bbd760e6ee3
@@ -286,7 +293,7 @@ The following are **frozen** at version 1.0.0. Changing any of them requires an 
 
 | Element | Frozen state |
 |---|---|
-| **Architecture decisions** | **38 ADRs, 0001–0038** — all in force, **0 ADRs pending** |
+| **Architecture decisions** | **39 ADRs, 0001–0039** — 38 in force, **1 ADR pending: ADR-0039** |
 | **Contracts** | Contract set 1.1.0 — 27 JSON Schemas + 3 protobuf, 5 planes |
 | **Capability registry** | 5 capabilities, each declaring `requires_network`, `offline_allowed`, `owner`, `phase`, `trust_level` |
 | **Artifact lock** | 13 artifacts, all RESOLVED, tiers A=8 B=2 C=2 D=1 |
@@ -1818,6 +1825,42 @@ witnessed the same day.
 MINOR by §1: a phase gate closes and the next opens, as 1.13.0 was for G1. No ADR added, no
 decision changed, no contract moved. Only `ci/policy/policy.yaml` is in the checksum set —
 the sign-off document is not, which is why signing moves the version at all. 79 files.
+
+---
+
+### 9.28 Version 1.20.0 — Phase 3's first act was a test, and it found four
+
+`Phase3_Entry_Checklist.md` item 5 says the first thing to write is the contract test, not
+the provider, because the five brain contracts were in the position
+`memory-record.schema.json` was in for twenty-six days: `stability: stable`, inside this
+checksum set, frozen on 2026-08-02, and **never once consumed**.
+`tests/contract/test_brain_contract.py` ran before any provider code existed and found four
+disagreements. ADR-0039 records them and is `Proposed`; **no schema it names is edited while
+it waits.**
+
+| | |
+|---|---|
+| **HealthStatus, twice** | `core/v1/health-status.schema.json` calls itself the report for *every service and provider*, names `brain_gateway` in its own producer list, requires `service`, and forbids extra properties. `provider-capabilities.schema.json` defines a second one with no `service` and forbids extra properties. **No object satisfies both**, and their `state` enums differ by two values. Phase 3's `health()` DoD clause cannot be written until one wins |
+| **Usage, twice** | `token_counts_estimated` is on the terminal usage and not the streamed one, both `additionalProperties: false`. The quota ceiling *halts generation*, so the guard reads streamed events — the flag telling it not to trust the number is available only after the generation it was meant to stop |
+| **A cancellation token** | a ULID in `cancellation.schema.json`, an unconstrained `string` in `ProviderRequest`, whose description reads *"ADR-0025. Non-optional."* The empty string satisfies it |
+| **A tool name** | pinned in `ToolSpec` to a lowercase pattern whose description cites ADR-0023 by name, and unconstrained in both places it is reported back. `İSTANBUL.read` validates in a `ProviderResponse` |
+
+**All four are the class ADR-0037 left open.** That ADR closed one instance of *"a schema's
+prose and its examples can disagree, and nothing notices"* and recorded the class with an
+owner. One level up, two schemas can disagree, and `JSON-004` cannot see that either: it
+validates each schema against its metaschema and against its own examples, never one schema
+against another.
+
+**The tests assert the defects rather than the fix**, which is ADR-0037's practice: four of
+the twelve say, in their assertion messages, that a change in the result means the schema
+moved and needs a decision. The other eight pin coherence that already holds — the provider
+enum being the same in three places, the configured provider being inside it, `tools` still
+being the ToolSpec IR, and the two verbatim `StopReason` copies still agreeing. That last one
+exists because nothing else would notice the day they stop.
+
+MINOR by §1: an ADR is added as `Proposed`, as 1.14.0 was for ADR-0036. No decision in force
+changed. `docs/decisions/ADR-0039-brain-contract-coherence.md` and `ci/policy/policy.yaml`
+are in the checksum set. 80 files.
 
 ---
 
