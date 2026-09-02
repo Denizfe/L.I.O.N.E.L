@@ -3,12 +3,12 @@
 | | |
 |---|---|
 | Gate | **G2 — Memory Service** |
-| Date | Prepared 2026-08-28 · §6 and §8 updated 2026-09-01, when ADR-0038 closed the first open item |
+| Date | Prepared 2026-08-28 · §6 and §8 updated 2026-09-01, when ADR-0038 closed the first open item · **signed 2026-09-02** |
 | Architecture at preparation | **1.18.0** · `sha256:1d8a33c7efc4c046be4ce2211f846ae112ff1c7b0e6165cb413b3c66b95928ef` — 1.17.1 when first prepared |
-| | *A dated fact, not a current-state claim — §8 carries the numbers that must stay true, and it is registered with `doc-claims` for as long as this document is unsigned* |
+| | *A dated fact, not a current-state claim. §8 carried the numbers that had to stay true, and `doc-claims` held them there for the five days this document sat unsigned* |
 | Scope | MASTER_PLAN_v2 §10 Phase 2, plus the two v1.0 clauses it carries forward by name, plus U1 and U2 |
 | Method | Each clause traced to an artefact — a named test, a gate rule, or a witnessed run. Not to a sentence |
-| **VERDICT** | **Prepared, unsigned.** §7 is Efe's, and only Efe's |
+| **VERDICT** | **PASS — signed by Efe, 2026-09-02.** G2 is closed and Phase 3 may begin. §7 carries the signature |
 
 ---
 
@@ -167,42 +167,44 @@ test their absence, which is the failure L0 is about.
 
 ## 7. Sign-off
 
-**Not signed.** `Architecture_Freeze.md` §5 gives this signature to Efe and to nobody else,
-and a document that signed itself would be the exact failure the seven rows above exist to
-rule out.
+| | |
+|---|---|
+| Signed | **Efe · 2026-09-02** |
+| Verdict | **PASS — G2 closed, Phase 3 (Brain Gateway, G3) may begin** |
+| Architecture at signing | **1.19.0** · `sha256:0585d19fc64db1ae63a07415af6acecb86c7db7051ec99f5319b39425736b764` |
 
-To sign, replace this section:
+Recorded on Efe's instruction on 2026-09-02. `Architecture_Freeze.md` §5 gives this
+signature to Efe and to nobody else; what is written here is his decision, not an
+assessment made on his behalf. The seven rows above are the evidence it was made against.
 
-```
-| Signed | Efe · YYYY-MM-DD |
-| Verdict | PASS — G2 closed, Phase 3 (Brain Gateway, G3) may begin |
-| Architecture at signing | <version> · <checksum> |
-```
-
-and move this document from `doc_claims.documents` to `doc_claims.out_of_scope`, which is
-what stops §8 tracking the present.
-
-Before signing, one command is worth re-running on the host, because clauses 6 and 7 are the
-only ones no machine will re-check on its own:
+**Re-run on the host before signing**, because clauses 6 and 7 are the only ones no machine
+re-checks on its own:
 
 ```bash
 docker compose up -d qdrant
 bash scripts/verify_memory.sh
 ```
 
-Expect `ok persistence survived`, `ok semantic retrieved`, and **no** `skip` on the embedder
-row. A `skip` there means the fixture embedder was used, and the verdict says in as many
-words that the semantic clause is then **not** verified by that run.
+Witnessed 2026-09-02: `ok persistence survived`, `ok semantic retrieved`, and **no** `skip`
+on the embedder row — `sentence-transformers/all-MiniLM-L6-v2` loaded from a warm cache, so
+the semantic clause is verified by that run rather than deferred to a fixture. The dissimilar
+query shared **0 words** with the target it retrieved and 2 with a distractor it did not.
 
-**One thing to weigh before signing, which is not a precondition.** §6's first row was a
-Major with no mitigation: there was no way to back up or restore memory. It did not block
-G2's DoD, because v2 does not carry that item forward. It did mean that from the moment G2
-closes, the project's memory would have a single copy.
+`bash scripts/memory_backup.sh selftest` was witnessed the same day: a real snapshot of
+`lionel_memory` restored into a scratch collection with the same point-id digest, and the
+live collection untouched.
 
-**Closed on 2026-09-01, before signing rather than after.** ADR-0038 reinstates
-`scripts/memory_backup.sh`, and the restore is exercised rather than documented — see §6's
-first row for what was witnessed. Nothing about G2's Definition of Done changed; what
-changed is that signing it no longer starts a period in which memory has one copy.
+**§6's first row was closed before signing rather than after.** It was a Major with no
+mitigation — there was no way to back up or restore memory — and it did not block this DoD,
+because MASTER_PLAN_v2 does not carry that item forward. ADR-0038 (2026-09-01) reinstates
+`scripts/memory_backup.sh` with the restore exercised rather than documented. Nothing about
+G2's Definition of Done changed; what changed is that closing G2 no longer starts a period
+in which the project's memory has a single copy.
+
+**On signing, this document moved from `doc_claims.documents` to `doc_claims.out_of_scope`**
+— the transition §8 describes. Its numbers stop tracking the present as of this date. They
+were still true on the day it was signed because the gate held them there for the five days
+it sat unsigned, which is the whole of what `Architecture_Freeze.md` §9.19 asked for.
 
 ---
 
@@ -214,19 +216,22 @@ changed is that signing it no longer starts a period in which memory has one cop
 
 ```
 contracts   27 JSON Schemas + 3 protobuf · 5 planes
-checksum    sha256:1d8a33c7efc4… · 79 files · verified from a clean clone
+checksum    sha256:0585d19fc64d… · 79 files · verified from a clean clone
 memory      VectorBackend port · Qdrant adapter · 384-dim pin asserted at startup
 container   qdrant/qdrant@sha256:0bd98fa7… · loopback-only · named volume
 backup      memory_backup.sh · snapshot + sha256 · restore exercised on point ids (ADR-0038)
 ```
 
-**This section is written in the phrasing `doc-claims` reads, and registered.** G1's
-sign-off stated the same counts in an aligned block that matched no pattern, sat unsigned
-across four versions, and went stale inside itself — `Architecture_Freeze.md` §9.19 records
-it. A state block that cannot be checked is a state block that will be wrong, and the fix
-is not to be more careful. `doc_claims.documents` now names this section, so every push
-compares these numbers against the pipeline.
+**This section was written in the phrasing `doc-claims` reads, and registered while this
+document was unsigned.** G1's sign-off stated the same counts in an aligned block that
+matched no pattern, sat unsigned across four versions, and went stale inside itself —
+`Architecture_Freeze.md` §9.19 records it. A state block that cannot be checked is a state
+block that will be wrong, and the fix is not to be more careful. For the five days between
+preparation and signature, every push compared these numbers against the pipeline; the one
+correction it forced is visible above, where ADR-0038 moved the ADR count and the checksum.
 
-**On signing, this document moves to `doc_claims.out_of_scope`** and the numbers stop
+**On 2026-09-02 this document moved to `doc_claims.out_of_scope`**, and the numbers stopped
 tracking the present, exactly as `Phase0_Final_Signoff.md` and `Phase1_Final_Signoff.md`
-have. A signed sign-off is a dated record; refreshing one is editing the archive.
+have. A signed sign-off is a dated record; refreshing one is editing the archive. The
+numbers above are what was true on the day it was signed, and the gate is why that sentence
+can be made at all.

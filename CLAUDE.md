@@ -1,9 +1,11 @@
 # L.I.O.N.E.L — working rules
 
 A local-first voice assistant whose defining constraint is an **offline autonomy guarantee**
-(ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. **G1 was signed by Efe
-on 2026-08-28** — `Phase1_Final_Signoff.md` is now a dated record, and **Phase 2 (Memory
-Service, G2) is open**. Its DoD is MASTER_PLAN_v2 §10 Phase 2.
+(ADR-0007). Phase 0 is complete and frozen at `architecture-1.2.0`. **G2 was signed by Efe
+on 2026-09-02** — `Phase2_Final_Signoff.md` is now a dated record and out of `doc-claims`
+scope, and **Phase 3 (Brain Gateway, G3) is open**. Its DoD is MASTER_PLAN_v2 §10 Phase 3,
+and `Phase3_Entry_Checklist.md` separates the three clauses blocked on an ADR from the work
+that is permitted without one.
 
 **This repository is an architecture first, and runtime code second.** 38 ADRs, 27
 JSON Schemas + 3 protobuf contracts, a pinned artifact lock — and a policy pipeline that
@@ -254,7 +256,8 @@ scripts/                 architecture_checksum.py · generate_ci_docs.py · veri
                          check_env.sh — the host preflight, table in policy.yaml `preflight`
                          verify_memory.sh — G2's two live clauses; needs Docker
                          memory_backup.sh — create · list · restore · selftest (ADR-0038)
-MASTER_PLAN_v2.md        11 gated phases, G0–G10. Phase 1 scope is §10
+Phase3_Entry_Checklist.md  8 items, 1 blocking. What must be decided before G3 work starts
+MASTER_PLAN_v2.md        11 gated phases, G0–G10. Phase 3 scope is §10
 Architecture_Freeze.md   the frozen state, the checksum, and the change-control rules
 .mcp.json                dev-tooling MCP servers (ADR-0032). Pinned, egress-declared,
                          credential-free. NOT in the checksum set; no gate may depend on it

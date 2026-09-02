@@ -390,12 +390,6 @@ doc_claims:
           why: "A dated account of the drift that motivated the generator. Its numbers are
                 the point; correcting them would delete the evidence."
           owner: architecture
-    # Registered WHILE UNSIGNED, and deliberately. Phase1_Final_Signoff.md stated the
-    # same counts in an aligned block that matched no pattern, sat unsigned across four
-    # versions, and went stale inside itself (Architecture_Freeze.md 9.19). It moves to
-    # out_of_scope on the day section 7 carries a signature.
-    - doc: Phase2_Final_Signoff.md
-      region: "## 8. State at sign-off"
     - doc: CI_Architecture.md
       region: "## 8. Current state"
     - doc: Architecture_Freeze.md
@@ -410,6 +404,22 @@ doc_claims:
             restructuring the document."
       owner: architecture
       unblocked_by: "splitting the current-state table into its own section, then registering it"
+    # Moved here from `documents` on 2026-09-02, the day section 7 was signed -- which is
+    # the transition its own section 8 describes. It was registered WHILE UNSIGNED, and
+    # deliberately: Phase1_Final_Signoff.md stated the same counts in an aligned block that
+    # matched no pattern, sat unsigned across four versions, and went stale inside itself
+    # (Architecture_Freeze.md 9.19). Registration is for a document whose numbers must track
+    # the present; a signed one's must not.
+    - doc: Phase2_Final_Signoff.md
+      why: >-
+        A dated audit record, signed by Efe on 2026-09-02. Its numbers describe what
+        was true at sign-off and must not move. It was registered under `documents`
+        for the five days it was unsigned, which is why they were still true on the
+        day it was signed.
+      owner: architecture
+      unblocked_by: >-
+        nothing -- correct as an exclusion now that it is signed, and listed so the
+        omission is visible rather than implied.
     - doc: Phase1_Final_Signoff.md
       why: >-
         A dated audit record, signed by Efe on 2026-08-28. Its numbers describe

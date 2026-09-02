@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Architecture version | **1.18.0** |
+| Architecture version | **1.19.0** |
 | Freeze date | **2026-08-10** |
-| Tag | **`architecture-1.18.0`** |
-| Status | **FROZEN** — G1 signed 2026-08-28, Phase 2 open; the freeze governs the architecture, not the code written against it |
-| Previous versions | **1.17.1**, **1.17.0**, **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
+| Tag | **`architecture-1.19.0`** |
+| Status | **FROZEN** — G2 signed 2026-09-02, Phase 3 open; the freeze governs the architecture, not the code written against it |
+| Previous versions | **1.18.0**, **1.17.1**, **1.17.0**, **1.16.0**, **1.15.0**, **1.14.0**, **1.13.0**, **1.12.1**, **1.12.0**, **1.11.0**, **1.10.0**, **1.9.1**, **1.9.0**, **1.8.0**, **1.7.0**, **1.6.0**, **1.5.0**, **1.4.0**, **1.3.0**, **1.2.0**, **1.1.1**, **1.1.0**, **1.0.0** — all tagged, all unchanged and still valid |
 | Governance | **0 ADRs pending.** ADR-0038 accepted 2026-09-01 and in force |
 
 > **In force.** 1.1.0 is additive: it adds three decisions and three gates, and changes no
@@ -50,6 +50,11 @@
 ---
 
 ## 1. Architecture version
+
+**1.19.0** — MINOR over 1.18.0: **G2 signed.** `Phase2_Final_Signoff.md` §7 carries Efe's
+signature of 2026-09-02, the document moves from `doc_claims.documents` to
+`doc_claims.out_of_scope`, and Phase 3 opens. Only `ci/policy/policy.yaml` is in the checksum
+set; the sign-off itself is not, which is why signing moves the version at all. §9.27.
 
 **1.18.0** — MINOR over 1.17.1: ADR-0038 accepted, so a decision comes into force, which
 §1 defines as MINOR. It adds no dependency, moves no contract and touches no stable surface;
@@ -164,12 +169,12 @@ Deterministic SHA-256 over the architecture-defining set — sorted paths, path 
 file bytes, grouped, then the group digests concatenated and hashed.
 
 ```
-ARCHITECTURE CHECKSUM                                          architecture 1.18.0
-sha256:1d8a33c7efc4c046be4ce2211f846ae112ff1c7b0e6165cb413b3c66b95928ef
+ARCHITECTURE CHECKSUM                                          architecture 1.19.0
+sha256:0585d19fc64db1ae63a07415af6acecb86c7db7051ec99f5319b39425736b764
 
   ADRs         38 files   sha256:dfc7a70ac5758f782001d827e7525bba…
   contracts    31 files   sha256:68a5211592ebf31f04dbcc67195c7122…
-  policy        8 files   sha256:179989c8ef6c696e4a9e3a1fa2a4c750…
+  policy        8 files   sha256:a5e33cf6d42c2f3c1386bd781290c10a…
   artifacts     1 file    sha256:fc4d6a69230d0b3b5fb25d3f12b71176…
   plan          1 file    sha256:fb9f2e57f26eff1fd50854bc96680f7e…
 
@@ -179,6 +184,8 @@ sha256:1d8a33c7efc4c046be4ce2211f846ae112ff1c7b0e6165cb413b3c66b95928ef
 Superseded values, kept so the earlier tags stay verifiable:
 
 ```
+architecture 1.18.0  sha256:1d8a33c7efc4c046be4ce2211f846ae112ff1c7b0e6165cb413b3c66b95928ef
+                     79 files — ADRs 38 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.17.1  sha256:33896052dc2fc3af011fa940e26bea230f00bc2f6da65326bdac9bbd760e6ee3
                      78 files — ADRs 37 · contracts 31 · policy 8 · artifacts 1 · plan 1
 architecture 1.17.0  sha256:4d10c4e048737b4298f570f390dfca149b5eb795ed8265b25a8cc3c62713222c
@@ -1779,6 +1786,38 @@ MINOR by §1: a decision comes into force. No dependency added — the download 
 multipart upload are `urllib`; `qdrant-client` was already ADR-0036's. No contract, schema or
 stable surface moves. `docs/decisions/ADR-0038-memory-backup-and-restore.md` and
 `ci/policy/policy.yaml` are in the checksum set. 79 files.
+
+---
+
+### 9.27 Version 1.19.0 — G2 signed, and what the gate held still for five days
+
+**Efe signed `Phase2_Final_Signoff.md` §7 on 2026-09-02.** G2 is closed, Phase 3 (Brain
+Gateway) is open, and the document moved from `doc_claims.documents` to
+`doc_claims.out_of_scope` — the transition its own §8 describes, so whoever signs finds the
+instruction in the document rather than in a gate's configuration.
+
+**The registration earned its keep in the five days it was live.** §9.25 registered §8 while
+the document was unsigned, on the argument that G1's sign-off had stated the same counts in
+an aligned block matching no pattern, sat unsigned across four versions, and gone stale
+inside itself. That was a prediction. What happened is that ADR-0038 landed on 2026-09-01,
+the ADR count moved 37 → 38 and the checksum moved with it, and `doc-claims` failed the push
+until §8 said so — along with `CLAUDE.md` in two places and §7 of the freeze. **Four
+documents were wrong about the same checkable fact within one commit of it changing**, and
+none of them was corrected by anyone noticing.
+
+The order matters and was deliberate: §6's Major closed *before* the signature rather than
+after. Signing G2 with no backup path would have started a period, of unknown length, in
+which the project's memory had a single copy — and the item was absent from MASTER_PLAN_v2
+with no migration row, so nothing would have raised it again.
+
+Both live clauses were re-witnessed on the host on the day of signing, with the real
+embedder rather than the fixture: `ok persistence survived`, `ok semantic retrieved`, 0 words
+shared between the query and the fact it retrieved. `memory_backup.sh selftest` was
+witnessed the same day.
+
+MINOR by §1: a phase gate closes and the next opens, as 1.13.0 was for G1. No ADR added, no
+decision changed, no contract moved. Only `ci/policy/policy.yaml` is in the checksum set —
+the sign-off document is not, which is why signing moves the version at all. 79 files.
 
 ---
 

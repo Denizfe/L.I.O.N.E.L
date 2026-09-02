@@ -6,10 +6,10 @@ Phase 3 — Brain Gateway & Provider Abstraction, gate **G3**.
 | | |
 |---|---|
 | Gate | G2 → G3 |
-| Status | **NOT OPEN** — item 1 is blocking and belongs to Efe |
+| Status | **OPEN** — G2 signed 2026-09-02; item 1 cleared, the rest are Phase 3 work |
 | Items | 8 |
-| Done | 0 of 8 |
-| Blocking | 1 |
+| Done | **1 of 8** |
+| Blocking | 0 |
 
 **This document states no counts about the pipeline.** `Phase1_Entry_Checklist.md` is out of
 `doc-claims` scope because its per-item records and its current-state claims are interleaved
@@ -20,15 +20,25 @@ of that shape. Where a number matters it is in `Architecture_Freeze.md` or in
 
 ---
 
-## BLOCKING — must complete before any Phase 3 work
+## BLOCKING — had to complete before any Phase 3 work
 
-### ☐ 1. Sign G2
+### ☑ 1. Sign G2 — **DONE 2026-09-02**
 
-`Phase2_Final_Signoff.md` §7 is Efe's and nobody else's. Phase 3 cannot open while G2 is
+```
+Phase2_Final_Signoff.md §7   Signed | Efe · 2026-09-02
+                             Verdict | PASS — G2 closed, Phase 3 may begin
+                             Architecture at signing | 1.19.0 · sha256:0585d19fc64d…
+```
+
+`Phase2_Final_Signoff.md` §7 is Efe's and nobody else's. Phase 3 could not open while G2 was
 unsigned; that is what a gated phase plan means, and G1's sign-off was blocking in exactly
 the same way.
 
-Two things happen on signing, both written into the document rather than into a gate's
+Both live clauses were re-witnessed on the host on the day of signing, with the real
+embedder rather than the fixture — `ok persistence survived`, `ok semantic retrieved`, and
+no `skip` on the embedder row — and `memory_backup.sh selftest` the same day.
+
+Two things happened on signing, both written into the document rather than into a gate's
 configuration:
 
 | | |
@@ -36,8 +46,8 @@ configuration:
 | §7 | replaced with the signature block, the verdict, and the architecture version at signing |
 | `doc_claims.documents` → `doc_claims.out_of_scope` | §8 stops tracking the present. A signed sign-off is a dated record; refreshing one is editing the archive |
 
-Worth re-running on the host first, because clauses 6 and 7 are the only ones no machine
-re-checks on its own — and, since 2026-09-01, one more:
+Worth re-running on the host before signing, because clauses 6 and 7 are the only ones no
+machine re-checks on its own — and, since 2026-09-01, one more:
 
 ```bash
 docker compose up -d qdrant
@@ -98,7 +108,7 @@ is the first time a provider that needs egress becomes reachable from the turn p
 
 ---
 
-## PERMITTED WITHOUT AN ADR — work, once item 1 clears
+## PERMITTED WITHOUT AN ADR — work, and item 1 has cleared
 
 ### ☐ 5. `src/lionel/brain/` against the frozen contracts
 
